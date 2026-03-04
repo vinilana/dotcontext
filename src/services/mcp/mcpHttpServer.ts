@@ -165,10 +165,10 @@ export class AIContextMCPHttpServer {
     };
 
     sessionServer = new AIContextMCPServer({
-      repoPath: this.options.repoPath,
-      name: this.options.name,
-      verbose: this.options.verbose,
-      contextBuilder: this.options.contextBuilder,
+      ...(this.options.repoPath ? { repoPath: this.options.repoPath } : {}),
+      ...(this.options.name ? { name: this.options.name } : {}),
+      ...(this.options.verbose !== undefined ? { verbose: this.options.verbose } : {}),
+      ...(this.options.contextBuilder ? { contextBuilder: this.options.contextBuilder } : {}),
     });
 
     await sessionServer.connectTransport(transport);

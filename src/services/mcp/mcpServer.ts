@@ -71,9 +71,10 @@ export class AIContextMCPServer {
 
   constructor(options: MCPServerOptions = {}) {
     this.options = {
-      name: 'ai-context',
-      verbose: false,
-      ...options
+      repoPath: options.repoPath,
+      name: options.name ?? 'ai-context',
+      verbose: options.verbose ?? false,
+      contextBuilder: options.contextBuilder,
     };
 
     this.server = new McpServer({
