@@ -492,6 +492,8 @@ program
   .option('--host <host>', 'Host to bind', '127.0.0.1')
   .option('--port <number>', 'Port to bind', (value: string) => parseInt(value, 10), 3000)
   .option('--path <path>', 'MCP endpoint path', '/mcp')
+  .option('--json-response', 'Return JSON responses for Streamable HTTP requests (recommended for compatibility)', true)
+  .option('--stateless', 'Disable session state (recommended for load-balanced remote deployments)')
   .option('-v, --verbose', 'Enable verbose logging to stderr')
   .action(async (options: any) => {
     try {
@@ -500,6 +502,8 @@ program
         host: options.host,
         port: options.port,
         endpointPath: options.path,
+        jsonResponse: options.jsonResponse !== false,
+        stateless: Boolean(options.stateless),
         verbose: options.verbose,
       });
 

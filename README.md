@@ -215,6 +215,12 @@ For clients that connect over HTTP instead of spawning stdio, start the MCP serv
 npx @ai-coders/context mcp:http --host 127.0.0.1 --port 3000 --path /mcp
 ```
 
+For remote/load-balanced deployments (for example MCP-Use), use stateless mode:
+
+```bash
+node dist/index.js mcp:http --host 0.0.0.0 --port 3000 --path /mcp --stateless --json-response
+```
+
 Local development shortcut:
 
 ```bash
@@ -224,6 +230,7 @@ npm run mcp:http -- --host 127.0.0.1 --port 3000 --path /mcp
 Endpoint:
 - `http://127.0.0.1:3000/mcp`
 - Methods supported by the MCP Streamable HTTP transport: `POST`, `GET`, `DELETE`
+- `--stateless` disables server-side session stickiness requirements for multi-instance environments
 
 ### Claude Code Project Bootstrap (opt-in)
 

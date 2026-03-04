@@ -18,20 +18,27 @@ export interface MCPHttpServerOptions extends MCPServerOptions {
   host?: string;
   port?: number;
   endpointPath?: string;
+  jsonResponse?: boolean;
+  stateless?: boolean;
 }
 
 export class AIContextMCPHttpServer {
-  private options: Required<Pick<MCPHttpServerOptions, 'host' | 'port' | 'endpointPath'>> & MCPServerOptions;
+  private options: Required<Pick<MCPHttpServerOptions, 'host' | 'port' | 'endpointPath' | 'jsonResponse' | 'stateless'>> & MCPServerOptions;
   private app = createMcpExpressApp();
   private httpServer: HTTPServer | null = null;
   private transports = new Map<string, StreamableHTTPServerTransport>();
   private sessionServers = new Map<string, AIContextMCPServer>();
+  private statelessTransport: StreamableHTTPServerTransport | null = null;
+  private statelessServer: AIContextMCPServer | null = null;
+  private statelessInitPromise: Promise<StreamableHTTPServerTransport> | null = null;
 
   constructor(options: MCPHttpServerOptions = {}) {
     this.options = {
       host: options.host || '127.0.0.1',
       port: options.port ?? 3000,
       endpointPath: this.normalizePath(options.endpointPath || '/mcp'),
+      jsonResponse: options.jsonResponse ?? true,
+      stateless: options.stateless ?? false,
       repoPath: options.repoPath,
       name: options.name,
       verbose: options.verbose,
@@ -39,6 +46,7 @@ export class AIContextMCPHttpServer {
     };
 
     this.app = createMcpExpressApp({ host: this.options.host });
+    this.registerStatusRoute();
     this.registerRoutes();
   }
 
@@ -57,11 +65,32 @@ export class AIContextMCPHttpServer {
     });
 
     this.log(
-      `MCP Streamable HTTP server listening on http://${this.options.host}:${this.getPort()}${this.options.endpointPath}`
+      `MCP Streamable HTTP server listening on http://${this.options.host}:${this.getPort()}${this.options.endpointPath} (mode=${this.options.stateless ? 'stateless' : 'stateful'})`
     );
   }
 
   async stop(): Promise<void> {
+    if (this.statelessTransport) {
+      try {
+        this.statelessTransport.onclose = undefined;
+        await this.statelessTransport.close();
+      } catch (error) {
+        this.log(`Failed to close stateless transport: ${String(error)}`);
+      } finally {
+        this.statelessTransport = null;
+      }
+    }
+
+    if (this.statelessServer) {
+      try {
+        await this.statelessServer.stop();
+      } catch (error) {
+        this.log(`Failed to close stateless MCP server: ${String(error)}`);
+      } finally {
+        this.statelessServer = null;
+      }
+    }
+
     for (const [sessionId, transport] of this.transports.entries()) {
       try {
         transport.onclose = undefined;
@@ -114,6 +143,11 @@ export class AIContextMCPHttpServer {
   private registerRoutes(): void {
     this.app.all(this.options.endpointPath, async (req: any, res: any) => {
       try {
+        if (this.options.stateless) {
+          await this.handleStatelessRequest(req, res);
+          return;
+        }
+
         const sessionId = this.getHeaderValue(req.headers['mcp-session-id']);
 
         if (sessionId) {
@@ -142,11 +176,72 @@ export class AIContextMCPHttpServer {
     });
   }
 
+  private async handleStatelessRequest(req: any, res: any): Promise<void> {
+    const transport = await this.getOrCreateStatelessTransport();
+    await transport.handleRequest(req, res, req.body);
+  }
+
+  private async getOrCreateStatelessTransport(): Promise<StreamableHTTPServerTransport> {
+    if (this.statelessTransport) {
+      return this.statelessTransport;
+    }
+
+    if (this.statelessInitPromise) {
+      return this.statelessInitPromise;
+    }
+
+    this.statelessInitPromise = (async () => {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        enableJsonResponse: this.options.jsonResponse,
+      });
+
+      transport.onclose = () => {
+        this.log('Stateless transport closed');
+      };
+
+      const server = new AIContextMCPServer({
+        ...(this.options.repoPath ? { repoPath: this.options.repoPath } : {}),
+        ...(this.options.name ? { name: this.options.name } : {}),
+        ...(this.options.verbose !== undefined ? { verbose: this.options.verbose } : {}),
+        ...(this.options.contextBuilder ? { contextBuilder: this.options.contextBuilder } : {}),
+      });
+
+      await server.connectTransport(transport);
+
+      this.statelessTransport = transport;
+      this.statelessServer = server;
+      this.log('Initialized stateless Streamable HTTP transport');
+
+      return transport;
+    })();
+
+    try {
+      return await this.statelessInitPromise;
+    } finally {
+      this.statelessInitPromise = null;
+    }
+  }
+
+  private registerStatusRoute(): void {
+    this.app.get('/', (_req: any, res: any) => {
+      res.status(200).json({
+        service: 'ai-context-mcp-http',
+        status: 'ok',
+        endpoint: this.options.endpointPath,
+        transport: 'streamable-http',
+        jsonResponse: this.options.jsonResponse,
+        mode: this.options.stateless ? 'stateless' : 'stateful',
+      });
+    });
+  }
+
   private async handleInitializeRequest(req: any, res: any): Promise<void> {
     let sessionServer: AIContextMCPServer | null = null;
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
+      enableJsonResponse: this.options.jsonResponse,
       onsessioninitialized: (sessionId) => {
         this.transports.set(sessionId, transport);
         if (sessionServer) {
