@@ -36,6 +36,7 @@ output/
 
 # AI Context state files
 context-log.json
+.claude/settings.local.json
 
 # Temporary files
 *.tmp

@@ -207,6 +207,53 @@ This interactive command:
 - Includes dry-run mode to preview changes
 - Works with Claude Code, Cursor, Windsurf, Cline, Continue.dev, and more
 
+### Streamable HTTP Mode (Codex IDE / Remote Clients)
+
+For clients that connect over HTTP instead of spawning stdio, start the MCP server in Streamable HTTP mode:
+
+```bash
+npx @ai-coders/context mcp:http --host 127.0.0.1 --port 3000 --path /mcp
+```
+
+For remote/load-balanced deployments (for example MCP-Use), use stateless mode:
+
+```bash
+node dist/index.js mcp:http --host 0.0.0.0 --port 3000 --path /mcp --stateless --json-response
+```
+
+Local development shortcut:
+
+```bash
+npm run mcp:http -- --host 127.0.0.1 --port 3000 --path /mcp
+```
+
+Endpoint:
+- `http://127.0.0.1:3000/mcp`
+- Methods supported by the MCP Streamable HTTP transport: `POST`, `GET`, `DELETE`
+- `--stateless` disables server-side session stickiness requirements for multi-instance environments
+
+### Claude Code Project Bootstrap (opt-in)
+
+Enable Claude Code integration per repository:
+
+```bash
+npx @ai-coders/context claude:bootstrap
+```
+
+Local development shortcut:
+
+```bash
+npm run claude:bootstrap
+```
+
+What it adds (safe merge, idempotent):
+- `.mcp.json` with `mcpServers.ai-context` (preserves existing servers/keys)
+- `.claude/settings.json` with conservative permissions + `PreToolUse` and `Stop` hooks
+- `.claude/agents/*.md` exported from `.context/agents/*.md` (updates only managed files)
+
+How to revert:
+- Remove `.claude/` and `.mcp.json`
+
 ### Manual Configuration
 
 Alternatively, manually configure for your preferred tool.

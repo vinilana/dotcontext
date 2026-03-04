@@ -18,7 +18,7 @@ import { PlanService } from './services/plan/planService';
 import { SyncService } from './services/sync/syncService';
 import { ImportRulesService, ImportAgentsService } from './services/import';
 import { ServeService } from './services/serve';
-import { startMCPServer, MCPInstallService } from './services/mcp';
+import { startMCPServer, startMCPHttpServer, MCPInstallService } from './services/mcp';
 import { StateDetector } from './services/state';
 import { UpdateService } from './services/update';
 import { WorkflowService, WorkflowServiceDependencies } from './services/workflow';
@@ -28,6 +28,7 @@ import { ReportService } from './services/report';
 import { StackDetector } from './services/stack';
 import { QuickSyncService, QuickSyncOptions } from './services/quickSync';
 import { ReverseQuickSyncService, type MergeStrategy } from './services/reverseSync';
+import { ClaudeBootstrapService } from './services/claude';
 import { AutoAdvanceDetector } from './services/workflow/autoAdvance';
 import { getScaleName, PHASE_NAMES_PT, PHASE_NAMES_EN, ROLE_DISPLAY_NAMES, ROLE_DISPLAY_NAMES_EN, type PrevcRole, ProjectScale } from './workflow';
 import { DEFAULT_MODELS, getApiKeyFromEnv } from './services/ai/providerFactory';
@@ -44,7 +45,7 @@ import {
 import { VERSION, PACKAGE_NAME } from './version';
 
 const rawArgs = process.argv.slice(2);
-const isMcpCommand = rawArgs.includes('mcp');
+const isMcpCommand = rawArgs.includes('mcp') || rawArgs.includes('mcp:http');
 
 // Determine if we're in interactive mode (no command args, only flags like --lang)
 const isInteractiveMode = rawArgs.every(arg =>
@@ -484,6 +485,45 @@ program
     }
   });
 
+program
+  .command('mcp:http')
+  .description('Start MCP Streamable HTTP server for IDE integrations (Codex, remote clients)')
+  .option('-r, --repo-path <path>', 'Default repository path for tools')
+  .option('--host <host>', 'Host to bind', '127.0.0.1')
+  .option('--port <number>', 'Port to bind', (value: string) => parseInt(value, 10), 3000)
+  .option('--path <path>', 'MCP endpoint path', '/mcp')
+  .option('--json-response', 'Return JSON responses for Streamable HTTP requests (recommended for compatibility)', true)
+  .option('--stateless', 'Disable session state (recommended for load-balanced remote deployments)')
+  .option('-v, --verbose', 'Enable verbose logging to stderr')
+  .action(async (options: any) => {
+    try {
+      const server = await startMCPHttpServer({
+        repoPath: options.repoPath,
+        host: options.host,
+        port: options.port,
+        endpointPath: options.path,
+        jsonResponse: options.jsonResponse !== false,
+        stateless: Boolean(options.stateless),
+        verbose: options.verbose,
+      });
+
+      process.on('SIGINT', async () => {
+        await server.stop();
+        process.exit(0);
+      });
+
+      process.on('SIGTERM', async () => {
+        await server.stop();
+        process.exit(0);
+      });
+    } catch (error) {
+      if (options.verbose) {
+        process.stderr.write(`[mcp:http] Error: ${error}\n`);
+      }
+      process.exit(1);
+    }
+  });
+
 // MCP Install Command
 program
   .command('mcp:install [tool]')
@@ -538,6 +578,33 @@ program
       }
     } catch (error) {
       ui.displayError(t('errors.mcp.installFailed', { tool: tool || 'unknown' }), error as Error);
+      process.exit(1);
+    }
+  });
+
+// Claude Code Bootstrap Command (opt-in)
+program
+  .command('claude:bootstrap')
+  .description('Bootstrap Claude Code integration (opt-in): .mcp.json, .claude/settings.json, .claude/agents')
+  .argument('[repo-path]', 'Repository path', process.cwd())
+  .option('--force', 'Force-update managed ai-context MCP server config')
+  .option('--dry-run', 'Preview changes without writing')
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (repoPath: string, options: any) => {
+    try {
+      const claudeBootstrapService = new ClaudeBootstrapService({
+        ui,
+        t,
+        version: VERSION,
+      });
+
+      await claudeBootstrapService.run(repoPath, {
+        force: options.force,
+        dryRun: options.dryRun,
+        verbose: options.verbose,
+      });
+    } catch (error) {
+      ui.displayError('Failed to bootstrap Claude Code integration', error as Error);
       process.exit(1);
     }
   });
