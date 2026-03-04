@@ -1,5 +1,10 @@
 export { AIContextMCPServer, startMCPServer, type MCPServerOptions } from './mcpServer';
 export {
+  AIContextMCPHttpServer,
+  startMCPHttpServer,
+  type MCPHttpServerOptions,
+} from './mcpHttpServer';
+export {
   MCPInstallService,
   type MCPInstallServiceDependencies,
   type MCPInstallOptions,

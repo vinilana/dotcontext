@@ -207,6 +207,24 @@ This interactive command:
 - Includes dry-run mode to preview changes
 - Works with Claude Code, Cursor, Windsurf, Cline, Continue.dev, and more
 
+### Streamable HTTP Mode (Codex IDE / Remote Clients)
+
+For clients that connect over HTTP instead of spawning stdio, start the MCP server in Streamable HTTP mode:
+
+```bash
+npx @ai-coders/context mcp:http --host 127.0.0.1 --port 3000 --path /mcp
+```
+
+Local development shortcut:
+
+```bash
+npm run mcp:http -- --host 127.0.0.1 --port 3000 --path /mcp
+```
+
+Endpoint:
+- `http://127.0.0.1:3000/mcp`
+- Methods supported by the MCP Streamable HTTP transport: `POST`, `GET`, `DELETE`
+
 ### Claude Code Project Bootstrap (opt-in)
 
 Enable Claude Code integration per repository:

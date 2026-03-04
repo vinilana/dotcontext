@@ -9,6 +9,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { z } from 'zod';
 import * as path from 'path';
 import * as fs from 'fs-extra';
@@ -64,7 +65,7 @@ export class AIContextMCPServer {
   private server: McpServer;
   private contextBuilder: SemanticContextBuilder;
   private options: MCPServerOptions;
-  private transport: StdioServerTransport | null = null;
+  private transport: Transport | null = null;
   private initialRepoPath: string | null = null;
   private cachedRepoPath: string | null = null;
 
@@ -865,9 +866,18 @@ Actions:
    * Start the MCP server with stdio transport
    */
   async start(): Promise<void> {
-    this.transport = new StdioServerTransport();
-    await this.server.connect(this.transport);
+    const transport = new StdioServerTransport();
+    await this.connectTransport(transport);
     this.log('MCP Server started on stdio');
+  }
+
+  /**
+   * Connect server to a transport instance.
+   * Useful for non-stdio transports (e.g., Streamable HTTP).
+   */
+  async connectTransport(transport: Transport): Promise<void> {
+    this.transport = transport;
+    await this.server.connect(transport);
   }
 
   /**

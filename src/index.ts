@@ -18,7 +18,7 @@ import { PlanService } from './services/plan/planService';
 import { SyncService } from './services/sync/syncService';
 import { ImportRulesService, ImportAgentsService } from './services/import';
 import { ServeService } from './services/serve';
-import { startMCPServer, MCPInstallService } from './services/mcp';
+import { startMCPServer, startMCPHttpServer, MCPInstallService } from './services/mcp';
 import { StateDetector } from './services/state';
 import { UpdateService } from './services/update';
 import { WorkflowService, WorkflowServiceDependencies } from './services/workflow';
@@ -45,7 +45,7 @@ import {
 import { VERSION, PACKAGE_NAME } from './version';
 
 const rawArgs = process.argv.slice(2);
-const isMcpCommand = rawArgs.includes('mcp');
+const isMcpCommand = rawArgs.includes('mcp') || rawArgs.includes('mcp:http');
 
 // Determine if we're in interactive mode (no command args, only flags like --lang)
 const isInteractiveMode = rawArgs.every(arg =>
@@ -480,6 +480,41 @@ program
     } catch (error) {
       if (options.verbose) {
         process.stderr.write(`[mcp] Error: ${error}\n`);
+      }
+      process.exit(1);
+    }
+  });
+
+program
+  .command('mcp:http')
+  .description('Start MCP Streamable HTTP server for IDE integrations (Codex, remote clients)')
+  .option('-r, --repo-path <path>', 'Default repository path for tools')
+  .option('--host <host>', 'Host to bind', '127.0.0.1')
+  .option('--port <number>', 'Port to bind', (value: string) => parseInt(value, 10), 3000)
+  .option('--path <path>', 'MCP endpoint path', '/mcp')
+  .option('-v, --verbose', 'Enable verbose logging to stderr')
+  .action(async (options: any) => {
+    try {
+      const server = await startMCPHttpServer({
+        repoPath: options.repoPath,
+        host: options.host,
+        port: options.port,
+        endpointPath: options.path,
+        verbose: options.verbose,
+      });
+
+      process.on('SIGINT', async () => {
+        await server.stop();
+        process.exit(0);
+      });
+
+      process.on('SIGTERM', async () => {
+        await server.stop();
+        process.exit(0);
+      });
+    } catch (error) {
+      if (options.verbose) {
+        process.stderr.write(`[mcp:http] Error: ${error}\n`);
       }
       process.exit(1);
     }

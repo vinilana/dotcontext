@@ -19,6 +19,7 @@
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
+    "mcp:http": "tsx src/index.ts mcp:http",
     "claude:bootstrap": "tsx src/index.ts claude:bootstrap",
     "test": "jest",
     "prepublishOnly": "npm run build",
