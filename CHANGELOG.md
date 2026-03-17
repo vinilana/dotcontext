@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.1]
 
+### Included Pull Requests
+
+- [#31](https://github.com/vinilana/ai-coders-context/pull/31) - fix: exclude venv from semantic analysis
+  - Excludes `venv/` and `.venv/` from semantic analysis by default to avoid noisy Python environment paths.
+  - Persists user-defined `exclude` patterns during `init`, so `fillSingle` uses project-specific exclusions.
+  - Aligns semantic analysis to shared default exclude patterns for consistent behavior across tools.
+- [#23](https://github.com/vinilana/ai-coders-context/pull/23) - [Fix] Auto-fill files without LLMs
+  - Adds project-type-aware filtering so generated scaffolding better matches CLI, web, backend, and other stacks.
+  - Introduces static `defaultContent` across docs, agents, and skills, enabling usable output without LLM enhancement.
+  - Replaces placeholder scaffold content with practical starter templates.
+
 ### Added
 
 - **Project Type Filtering in InitService**: Scaffolds are now automatically filtered based on detected project type
@@ -51,6 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Now: Practical template content that works for any project type
   - AutoFill still enhances with project-specific content when semantic analysis is available
 
+### Fixed
+
+- **Exclude Python virtual environments from semantic analysis by default**
+  - Added `venv/` and `.venv/` to default exclude patterns
+  - Unified `SemanticContextBuilder` to use shared default exclude patterns
+  - Persisted user-provided `exclude` patterns from `init` into `.context/config.json` so `fillSingle` respects them
+
 ### Technical Details
 
 #### Modified Files
@@ -69,6 +87,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `src/generators/shared/structures/documentation/security.ts` — Added default content
 - `src/generators/shared/structures/documentation/glossary.ts` — Added default content
 - `src/generators/shared/structures/documentation/dataFlow.ts` — Added default content
+- `src/services/semantic/types.ts` — Added `venv/` and `.venv/` to default exclude patterns
+- `src/services/semantic/contextBuilder.ts` — Uses shared default exclude patterns in semantic analysis
+- `src/services/ai/tools/initializeContextTool.ts` — Persists user exclude patterns in `.context/config.json`
+- `src/services/ai/tools/fillScaffoldingTool.ts` — Applies persisted exclude patterns during `fillSingle`
 
 ## [0.7.0]
 
