@@ -52,13 +52,31 @@ export function isScaffoldFrontmatter(fm: FrontMatter | ParsedScaffoldFrontmatte
 const FRONT_MATTER_DELIMITER = '---';
 
 /**
- * Check if a file needs to be filled by reading only the first few lines.
- * Much faster than reading entire file content.
+ * Check if a file needs to be filled by reading only the frontmatter block.
+ * Searches for 'status: unfilled' only within the YAML frontmatter (between --- delimiters),
+ * not in the document body where example code might contain the same string.
  */
 export async function needsFill(filePath: string): Promise<boolean> {
   try {
-    const firstLines = await readFirstLines(filePath, 3);
-    return firstLines.some(line => line.includes('status: unfilled'));
+    const { readFile } = await import('fs-extra');
+    const content = await readFile(filePath, 'utf-8');
+    const lines = content.split('\n');
+
+    if (lines[0]?.trim() !== FRONT_MATTER_DELIMITER) {
+      return false;
+    }
+
+    for (let i = 1; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (trimmed === FRONT_MATTER_DELIMITER) {
+        break; // End of frontmatter
+      }
+      if (trimmed.includes('status: unfilled')) {
+        return true;
+      }
+    }
+
+    return false;
   } catch {
     return false;
   }
@@ -70,8 +88,9 @@ export async function needsFill(filePath: string): Promise<boolean> {
 async function readFirstLines(filePath: string, n: number): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const lines: string[] = [];
+    const stream = createReadStream(filePath);
     const rl = readline.createInterface({
-      input: createReadStream(filePath),
+      input: stream,
       crlfDelay: Infinity
     });
 
@@ -79,6 +98,7 @@ async function readFirstLines(filePath: string, n: number): Promise<string[]> {
       lines.push(line);
       if (lines.length >= n) {
         rl.close();
+        stream.destroy();
       }
     });
 

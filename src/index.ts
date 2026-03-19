@@ -5,7 +5,8 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import inquirer from 'inquirer';
 
-import { colors } from './utils/theme';
+import { colors, typography } from './utils/theme';
+import { themedSelect, themedConfirm, Separator } from './utils/themedPrompt';
 import { PlanGenerator } from './generators/plans/planGenerator';
 import { CLIInterface } from './utils/cliUI';
 import { checkForUpdates } from './utils/versionChecker';
@@ -1044,18 +1045,14 @@ export async function runLlmFill(repoPath: string, rawOptions: any): Promise<voi
 }
 
 async function selectLocale(showWelcome: boolean): Promise<void> {
-  const { locale } = await inquirer.prompt<{ locale: Locale }>([
-    {
-      type: 'list',
-      name: 'locale',
-      message: t('prompts.language.select'),
-      default: currentLocale,
-      choices: SUPPORTED_LOCALES.map(option => ({
-        value: option,
-        name: t(localeLabelKeys[option])
-      }))
-    }
-  ]);
+  const locale = await themedSelect<Locale>({
+    message: t('prompts.language.select'),
+    default: currentLocale,
+    choices: SUPPORTED_LOCALES.map(option => ({
+      value: option,
+      name: t(localeLabelKeys[option])
+    }))
+  });
 
   const normalizedLocale = normalizeLocale(locale);
   currentLocale = normalizedLocale;
@@ -1068,7 +1065,7 @@ async function selectLocale(showWelcome: boolean): Promise<void> {
 }
 
 type InteractiveAction = 'scaffold' | 'fill' | 'plan' | 'syncAgents' | 'update' | 'workflow' | 'skills' | 'changeLanguage' | 'exit' | 'quickSync' | 'reverseSync' | 'agents' | 'settings' | 'mcpInstall' | 'more';
-type StateAction = 'create' | 'enhance' | 'fill' | 'menu' | 'exit' | 'scaffold';
+type StateAction = 'create' | 'enhance' | 'fill' | 'menu' | 'exit' | 'scaffold' | 'viewPending';
 
 async function runInteractive(): Promise<void> {
   await selectLocale(false); // Don't show welcome yet
@@ -1080,9 +1077,25 @@ async function runInteractive(): Promise<void> {
   const detector = new StateDetector({ projectPath });
   const result = await detector.detect();
 
+  // Detect smart defaults for display
+  const defaults = await detectSmartDefaults(projectPath);
+
   // Display compact header
   console.log('');
   console.log(`${colors.primaryBold(`${PACKAGE_NAME}`)} ${colors.secondary(`v${VERSION}`)}`);
+
+  // Show what was detected from environment/project
+  const detectedParts: string[] = [];
+  if (defaults.detectedLanguages.length > 0) {
+    const langs = defaults.detectedLanguages.map(l => l.charAt(0).toUpperCase() + l.slice(1)).join(', ');
+    detectedParts.push(t('status.detected.project', { languages: langs }));
+  }
+  if (defaults.provider && defaults.apiKeyConfigured) {
+    detectedParts.push(t('status.detected.provider', { provider: defaults.provider }));
+  }
+  if (detectedParts.length > 0) {
+    console.log(colors.secondaryDim(detectedParts.join(', ')));
+  }
 
   // Show compact status line based on state
   if (result.state === 'new') {
@@ -1118,19 +1131,15 @@ async function runInteractive(): Promise<void> {
   // Handle state-based flow: auto-detect what to show
   if (result.state === 'new') {
     // New project: show quick setup options + MCP install
-    const { action } = await inquirer.prompt<{ action: StateAction }>([
-      {
-        type: 'list',
-        name: 'action',
-        message: t('prompts.main.action'),
-        choices: [
-          { name: t('prompts.main.choice.quickSetup'), value: 'create' },
-          { name: t('prompts.main.choice.enhanceWithAI'), value: 'enhance' },
-          { name: t('prompts.main.choice.mcpInstall'), value: 'scaffold' },
-          { name: t('prompts.main.choice.exit'), value: 'exit' }
-        ]
-      }
-    ]);
+    const action = await themedSelect<StateAction>({
+      message: t('prompts.main.action'),
+      choices: [
+        { name: t('prompts.main.choice.quickSetup'), value: 'create' },
+        { name: t('prompts.main.choice.enhanceWithAI'), value: 'enhance' },
+        { name: t('prompts.main.choice.mcpInstall'), value: 'scaffold' },
+        { name: t('prompts.main.choice.exit'), value: 'exit' }
+      ]
+    });
 
     if (action === 'create') {
       await runQuickSetup(projectPath);
@@ -1144,24 +1153,36 @@ async function runInteractive(): Promise<void> {
   }
 
   if (result.state === 'unfilled') {
-    const { action } = await inquirer.prompt<{ action: StateAction }>([
-      {
-        type: 'list',
-        name: 'action',
+    let action: StateAction | undefined;
+    while (action !== 'exit') {
+      action = await themedSelect<StateAction>({
         message: t('prompts.main.unfilledPrompt', { count: result.details.unfilledFiles }),
         choices: [
           { name: t('prompts.main.choice.fill'), value: 'fill' },
+          { name: t('prompts.main.choice.viewPending'), value: 'viewPending' },
           { name: t('prompts.main.choice.moreOptions'), value: 'menu' },
           { name: t('prompts.main.choice.exit'), value: 'exit' }
         ]
-      }
-    ]);
+      });
 
-    if (action === 'fill') {
-      await runInteractiveLlmFill();
-      return;
-    } else if (action === 'menu') {
-      await runFullMenu();
+      if (action === 'fill') {
+        await runInteractiveLlmFill();
+        return;
+      } else if (action === 'viewPending') {
+        const { getUnfilledFiles } = await import('./utils/frontMatter');
+        const unfilled = await getUnfilledFiles(result.contextDir);
+        const contextDir = result.contextDir;
+        console.log();
+        console.log(typography.subheader(t('prompts.main.pendingFilesHeader')));
+        for (const file of unfilled) {
+          const relative = path.relative(contextDir, file);
+          console.log(`  ${colors.secondary('•')} ${colors.primary(relative)}`);
+        }
+        console.log();
+      } else if (action === 'menu') {
+        await runFullMenu();
+        return;
+      }
     }
     return;
   }
@@ -1274,19 +1295,15 @@ async function runFullMenu(daysBehind?: number): Promise<void> {
       { name: t('prompts.main.choice.createPlan'), value: 'plan' as InteractiveAction },
       { name: updateLabel, value: 'fill' as InteractiveAction },
       { name: t('prompts.main.choice.manageSkills'), value: 'skills' as InteractiveAction },
-      new inquirer.Separator(),
+      new Separator(),
       { name: t('prompts.main.choice.moreOptions'), value: 'more' as InteractiveAction },
       { name: t('prompts.main.choice.exit'), value: 'exit' as InteractiveAction }
     ];
 
-    const { action } = await inquirer.prompt<{ action: InteractiveAction }>([
-      {
-        type: 'list',
-        name: 'action',
-        message: t('prompts.main.action'),
-        choices
-      }
-    ]);
+    const action = await themedSelect<InteractiveAction>({
+      message: t('prompts.main.action'),
+      choices
+    });
 
     if (action === 'exit') {
       exitRequested = true;
@@ -1317,20 +1334,16 @@ async function runFullMenu(daysBehind?: number): Promise<void> {
 }
 
 async function runMoreOptions(): Promise<void> {
-  const { action } = await inquirer.prompt<{ action: InteractiveAction }>([
-    {
-      type: 'list',
-      name: 'action',
-      message: t('prompts.more.action'),
-      choices: [
-        { name: t('prompts.main.choice.manageAgents'), value: 'agents' as InteractiveAction },
-        { name: t('prompts.main.choice.rescaffold'), value: 'scaffold' as InteractiveAction },
-        { name: t('prompts.main.choice.mcpInstall'), value: 'mcpInstall' as InteractiveAction },
-        { name: t('prompts.main.choice.settings'), value: 'settings' as InteractiveAction },
-        { name: t('prompts.more.choice.back'), value: 'exit' as InteractiveAction },
-      ],
-    },
-  ]);
+  const action = await themedSelect<InteractiveAction>({
+    message: t('prompts.more.action'),
+    choices: [
+      { name: t('prompts.main.choice.manageAgents'), value: 'agents' as InteractiveAction },
+      { name: t('prompts.main.choice.rescaffold'), value: 'scaffold' as InteractiveAction },
+      { name: t('prompts.main.choice.mcpInstall'), value: 'mcpInstall' as InteractiveAction },
+      { name: t('prompts.main.choice.settings'), value: 'settings' as InteractiveAction },
+      { name: t('prompts.more.choice.back'), value: 'exit' as InteractiveAction },
+    ],
+  });
 
   if (action === 'exit') return;
 
@@ -1479,6 +1492,10 @@ async function runInteractiveLlmFill(): Promise<void> {
   // Get LLM config (auto-detected or prompt for API key)
   const llmConfig = await promptLLMConfig(t, { defaultModel: DEFAULT_MODEL, skipIfConfigured: true });
 
+  if (!llmConfig) {
+    return;
+  }
+
   // Build summary
   const summary: ConfigSummary = {
     operation: 'fill',
@@ -1584,6 +1601,10 @@ async function runInteractivePlan(): Promise<void> {
 
   // Fill: use auto-detected LLM config
   const llmConfig = await promptLLMConfig(t, { defaultModel: DEFAULT_MODEL, skipIfConfigured: true });
+  if (!llmConfig) {
+    return;
+  }
+
 
   const configSummary: ConfigSummary = {
     operation: 'plan',

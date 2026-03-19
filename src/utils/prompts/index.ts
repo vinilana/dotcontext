@@ -1,6 +1,7 @@
-import inquirer from 'inquirer';
 import type { TranslateFn } from '../i18n';
 import type { InteractiveMode, AnalysisOptions } from './types';
+import { themedSelect, themedConfirm, themedCheckbox, Separator } from '../themedPrompt';
+import { colors } from '../theme';
 
 // Re-export types
 export * from './types';
@@ -14,75 +15,67 @@ export { displayConfigSummary } from './configSummary';
  * Prompts user to choose between quick and advanced mode
  */
 export async function promptInteractiveMode(t: TranslateFn): Promise<InteractiveMode> {
-  const { mode } = await inquirer.prompt<{ mode: InteractiveMode }>([
-    {
-      type: 'list',
-      name: 'mode',
-      message: t('prompts.mode.select'),
-      choices: [
-        { name: t('prompts.mode.quick'), value: 'quick' },
-        { name: t('prompts.mode.advanced'), value: 'advanced' }
-      ],
-      default: 'quick'
-    }
-  ]);
-  return mode;
+  return themedSelect<InteractiveMode>({
+    message: t('prompts.mode.select'),
+    choices: [
+      { name: t('prompts.mode.quick'), value: 'quick' },
+      { name: t('prompts.mode.advanced'), value: 'advanced' }
+    ],
+    default: 'quick'
+  });
 }
 
 /**
  * Prompts for analysis options (semantic, languages, LSP)
+ *
+ * Returns null if the user chooses to go back/cancel.
  */
 export async function promptAnalysisOptions(
   t: TranslateFn,
   defaults: { languages?: string[]; useLsp?: boolean } = {}
-): Promise<AnalysisOptions> {
-  const { useSemantic } = await inquirer.prompt<{ useSemantic: boolean }>([
-    {
-      type: 'confirm',
-      name: 'useSemantic',
-      message: t('prompts.fill.semantic'),
-      default: true
-    }
-  ]);
+): Promise<AnalysisOptions | null> {
+  // Use a select instead of confirm so we can offer a back option
+  const semanticChoice = await themedSelect<'yes' | 'no' | '__back__'>({
+    message: t('prompts.fill.semantic'),
+    choices: [
+      { name: 'Yes', value: 'yes' },
+      { name: 'No', value: 'no' },
+      new Separator(),
+      { name: colors.secondary(t('prompts.analysis.back')), value: '__back__' }
+    ],
+    default: 'yes'
+  });
 
+  if (semanticChoice === '__back__') {
+    return null;
+  }
+
+  const useSemantic = semanticChoice === 'yes';
   let languages: string[] | undefined;
   let useLsp = false;
 
   if (useSemantic) {
     const defaultLanguages = defaults.languages || ['typescript', 'javascript', 'python'];
-    const { selectedLanguages } = await inquirer.prompt<{ selectedLanguages: string[] }>([
-      {
-        type: 'checkbox',
-        name: 'selectedLanguages',
-        message: t('prompts.fill.languages'),
-        choices: [
-          { name: 'TypeScript', value: 'typescript', checked: defaultLanguages.includes('typescript') },
-          { name: 'JavaScript', value: 'javascript', checked: defaultLanguages.includes('javascript') },
-          { name: 'Python', value: 'python', checked: defaultLanguages.includes('python') }
-        ]
-      }
-    ]);
+    const selectedLanguages = await themedCheckbox<string>({
+      message: t('prompts.fill.languages'),
+      choices: [
+        { name: 'TypeScript', value: 'typescript', checked: defaultLanguages.includes('typescript') },
+        { name: 'JavaScript', value: 'javascript', checked: defaultLanguages.includes('javascript') },
+        { name: 'Python', value: 'python', checked: defaultLanguages.includes('python') }
+      ]
+    });
     languages = selectedLanguages.length > 0 ? selectedLanguages : undefined;
 
-    const { enableLsp } = await inquirer.prompt<{ enableLsp: boolean }>([
-      {
-        type: 'confirm',
-        name: 'enableLsp',
-        message: t('prompts.fill.useLsp'),
-        default: defaults.useLsp ?? false
-      }
-    ]);
-    useLsp = enableLsp;
+    useLsp = await themedConfirm({
+      message: t('prompts.fill.useLsp'),
+      default: defaults.useLsp ?? false
+    });
   }
 
-  const { verbose } = await inquirer.prompt<{ verbose: boolean }>([
-    {
-      type: 'confirm',
-      name: 'verbose',
-      message: t('prompts.common.verbose'),
-      default: false
-    }
-  ]);
+  const verbose = await themedConfirm({
+    message: t('prompts.common.verbose'),
+    default: false
+  });
 
   return {
     semantic: useSemantic,
@@ -96,28 +89,18 @@ export async function promptAnalysisOptions(
  * Prompts for confirmation before proceeding
  */
 export async function promptConfirmProceed(t: TranslateFn): Promise<boolean> {
-  const { proceed } = await inquirer.prompt<{ proceed: boolean }>([
-    {
-      type: 'confirm',
-      name: 'proceed',
-      message: t('prompts.summary.proceed'),
-      default: true
-    }
-  ]);
-  return proceed;
+  return themedConfirm({
+    message: t('prompts.summary.proceed'),
+    default: true
+  });
 }
 
 /**
  * Prompts user to load environment variables from .env file
  */
 export async function promptLoadEnv(t: TranslateFn): Promise<boolean> {
-  const { loadEnv } = await inquirer.prompt<{ loadEnv: boolean }>([
-    {
-      type: 'confirm',
-      name: 'loadEnv',
-      message: t('prompts.env.loadEnv'),
-      default: false
-    }
-  ]);
-  return loadEnv;
+  return themedConfirm({
+    message: t('prompts.env.loadEnv'),
+    default: false
+  });
 }

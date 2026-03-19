@@ -200,6 +200,7 @@ const englishMessages = {
   'agent.type.playbook': 'Playbook Agent',
   'agent.type.plan': 'Plan Agent',
   'agent.type.fill': 'Fill Agent',
+  'agent.type.skill': 'Skill Agent',
   'commands.sync.description': 'Sync agent playbooks to AI tool directories (.claude, .github, etc.)',
   'commands.sync.options.source': 'Source agents directory',
   'commands.sync.options.target': 'Target directories to sync to',
@@ -211,10 +212,12 @@ const englishMessages = {
   'prompts.main.choice.syncAgents': 'Sync agents to AI tools',
   'prompts.main.choice.create': 'Create documentation for this project',
   'prompts.main.choice.moreOptions': 'More options...',
+  'prompts.main.choice.viewPending': 'View pending files',
   'prompts.main.choice.updateDocs': 'Update documentation',
   'prompts.main.choice.updateDocsBehind': 'Update documentation ({daysBehind} days behind)',
   'prompts.main.choice.rescaffold': 'Re-scaffold (overwrite)',
   'prompts.main.unfilledPrompt': '{count} files need to be filled. What would you like to do?',
+  'prompts.main.pendingFilesHeader': 'Files pending content:',
   'prompts.setup.confirmContinue': 'This will create and fill documentation. Continue?',
   'spinner.setup.creatingStructure': 'Creating documentation structure...',
   'spinner.setup.fillingDocs': 'Filling documentation with AI...',
@@ -524,10 +527,25 @@ const englishMessages = {
   'status.outdated': '⚠ Context outdated ({days} days) - run Update Docs',
   'status.new': 'No context found',
   'status.unfilled': 'Context scaffolded, {count} files need content',
+  'status.detected.project': 'Detected: {languages} project',
+  'status.detected.provider': '{provider} provider configured',
   // Hit Enter / Press Enter
   'prompts.pressEnter': 'Press Enter to continue...',
   // Environment variable loading
-  'prompts.env.loadEnv': 'Load environment variables from .env file?'
+  'prompts.env.loadEnv': 'Load environment variables from .env file?',
+  // Config summary labels
+  'configSummary.config': 'Config:',
+  'configSummary.options': 'Options:',
+  'configSummary.repo': 'repo',
+  'configSummary.provider': 'provider',
+  'configSummary.yes': 'Yes',
+  'configSummary.no': 'No',
+  // API key validation
+  'warnings.apiKey.empty': 'API key is empty. LLM calls will likely fail.',
+  'warnings.apiKey.formatMismatch': 'API key does not start with expected prefix "{prefix}" for {provider}. It may still work if correct.',
+  // Back/cancel options
+  'prompts.analysis.back': 'Back (cancel analysis options)',
+  'prompts.llm.back': 'Back (cancel LLM configuration)'
 } as const;
 
 export type TranslationKey = keyof typeof englishMessages;
@@ -731,6 +749,7 @@ const portugueseMessages: TranslationDictionary = {
   'agent.type.playbook': 'Agente de Playbook',
   'agent.type.plan': 'Agente de Plano',
   'agent.type.fill': 'Agente de Preenchimento',
+  'agent.type.skill': 'Agente de Skill',
   'commands.sync.description': 'Sincronizar playbooks de agentes com diretórios de ferramentas IA (.claude, .github, etc.)',
   'commands.sync.options.source': 'Diretório de origem dos agentes',
   'commands.sync.options.target': 'Diretórios de destino para sincronizar',
@@ -742,10 +761,12 @@ const portugueseMessages: TranslationDictionary = {
   'prompts.main.choice.syncAgents': 'Sincronizar agentes com ferramentas IA',
   'prompts.main.choice.create': 'Criar documentação para este projeto',
   'prompts.main.choice.moreOptions': 'Mais opções...',
+  'prompts.main.choice.viewPending': 'Ver arquivos pendentes',
   'prompts.main.choice.updateDocs': 'Atualizar documentação',
   'prompts.main.choice.updateDocsBehind': 'Atualizar documentação ({daysBehind} dias atrás)',
   'prompts.main.choice.rescaffold': 'Refazer scaffold (sobrescrever)',
   'prompts.main.unfilledPrompt': '{count} arquivos precisam ser preenchidos. O que você gostaria de fazer?',
+  'prompts.main.pendingFilesHeader': 'Arquivos pendentes de conteúdo:',
   'prompts.setup.confirmContinue': 'Isso criará e preencherá a documentação. Continuar?',
   'spinner.setup.creatingStructure': 'Criando estrutura de documentação...',
   'spinner.setup.fillingDocs': 'Preenchendo documentação com IA...',
@@ -1055,10 +1076,25 @@ const portugueseMessages: TranslationDictionary = {
   'status.outdated': '⚠ Contexto desatualizado ({days} dias) - execute Atualizar Docs',
   'status.new': 'Nenhum contexto encontrado',
   'status.unfilled': 'Contexto scaffolded, {count} arquivos precisam de conteúdo',
+  'status.detected.project': 'Detectado: projeto {languages}',
+  'status.detected.provider': 'provedor {provider} configurado',
   // Hit Enter / Press Enter
   'prompts.pressEnter': 'Pressione Enter para continuar...',
   // Environment variable loading
-  'prompts.env.loadEnv': 'Carregar variáveis de ambiente do arquivo .env?'
+  'prompts.env.loadEnv': 'Carregar variáveis de ambiente do arquivo .env?',
+  // Config summary labels
+  'configSummary.config': 'Configuração:',
+  'configSummary.options': 'Opções:',
+  'configSummary.repo': 'repo',
+  'configSummary.provider': 'provedor',
+  'configSummary.yes': 'Sim',
+  'configSummary.no': 'Não',
+  // API key validation
+  'warnings.apiKey.empty': 'A chave de API está vazia. Chamadas ao LLM provavelmente falharão.',
+  'warnings.apiKey.formatMismatch': 'A chave de API não começa com o prefixo esperado "{prefix}" para {provider}. Pode funcionar se estiver correta.',
+  // Back/cancel options
+  'prompts.analysis.back': 'Voltar (cancelar opções de análise)',
+  'prompts.llm.back': 'Voltar (cancelar configuração do LLM)'
 };
 
 const dictionaries: Record<Locale, TranslationDictionary> = {

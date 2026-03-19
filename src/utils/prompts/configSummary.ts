@@ -9,14 +9,14 @@ export function displayConfigSummary(summary: ConfigSummary, _t: TranslateFn): v
   // Line 1: operation | repo | provider (model)
   const parts: string[] = [];
   parts.push(summary.operation);
-  if (summary.repoPath) parts.push(`repo: ${summary.repoPath}`);
+  if (summary.repoPath) parts.push(`${_t('configSummary.repo')}: ${summary.repoPath}`);
   if (summary.provider) {
     const providerInfo = summary.model
       ? `${summary.provider} (${summary.model})`
       : summary.provider;
-    parts.push(`provider: ${providerInfo}`);
+    parts.push(`${_t('configSummary.provider')}: ${providerInfo}`);
   }
-  console.log(`  ${colors.secondary('Config:')} ${parts.join(' | ')}`);
+  console.log(`  ${colors.secondary(_t('configSummary.config'))} ${parts.join(' | ')}`);
 
   // Line 2: options (if any)
   if (summary.options && Object.keys(summary.options).length > 0) {
@@ -24,12 +24,12 @@ export function displayConfigSummary(summary: ConfigSummary, _t: TranslateFn): v
     for (const [key, value] of Object.entries(summary.options)) {
       const displayValue =
         typeof value === 'boolean'
-          ? value ? 'Yes' : 'No'
+          ? value ? _t('configSummary.yes') : _t('configSummary.no')
           : Array.isArray(value)
             ? value.join(', ')
             : String(value);
       optParts.push(`${key}=${displayValue}`);
     }
-    console.log(`  ${colors.secondary('Options:')} ${optParts.join(', ')}`);
+    console.log(`  ${colors.secondary(_t('configSummary.options'))} ${optParts.join(', ')}`);
   }
 }
