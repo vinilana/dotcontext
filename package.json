@@ -1,6 +1,6 @@
 {
   "name": "@ai-coders/context",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "CLI tool for generating codebase documentation and AI agent prompts",
   "main": "dist/index.js",
   "bin": {

@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0]
+
+### Added
+
+- **Themed Inquirer Prompts**: Applied custom theme to all interactive prompts via new `themedPrompt.ts` wrappers (`themedSelect`, `themedConfirm`, `themedInput`, `themedPassword`, `themedCheckbox`), replacing raw inquirer calls with consistently styled interactions using the project's two-tone color scheme.
+
+- **"View Pending Files" Option**: When the CLI detects unfilled scaffold files, users can now see which specific files need content before deciding to fill them.
+
+- **Smart Defaults Transparency**: The interactive flow now displays detected project information on startup (e.g., "Detected: TypeScript project, openrouter provider configured") instead of silently using auto-detected values.
+
+- **API Key Format Validation**: Lightweight format checks warn users when an API key doesn't match the expected prefix for a provider (e.g., `sk-` for OpenAI, `sk-ant-` for Anthropic). Non-blocking warnings only.
+
+- **"Back" Navigation in Prompt Flows**: Added escape options in `promptAnalysisOptions()` and `promptLLMConfig()` so users can return to the previous menu instead of being forced through multi-step flows.
+
+- **Comprehensive .context Content**: Rewrote all scaffolding files with project-specific content:
+  - 4 documentation guides (project-overview, development-workflow, testing-strategy, tooling)
+  - 7 agent playbooks with codebase-specific workflows and file references
+  - 10 skill files (repurposed api-design to MCP Tool Design)
+  - 3 QA guides (getting-started, project-structure, error-handling)
+  - 1 development plan (simplify-interactive-cli)
+
+- **Skills System**: Full skill scaffolding exported to `.claude/skills/`, `.gemini/skills/`, `.codex/skills/`
+
+- **Multi-tool Context Export**: Context now syncs to Claude Code, Cursor, GitHub Copilot, Codex, Windsurf, and Gemini
+
+### Fixed
+
+- **`needsFill()` false positives**: Fixed bug where `needsFill()` matched `status: unfilled` in document body content (e.g., code examples in agent playbooks) instead of only checking the YAML frontmatter block. The function now parses only the frontmatter between `---` delimiters.
+
+- **`configSummary` i18n**: `displayConfigSummary()` now uses the `_t()` translation function instead of hardcoded English labels ("Config:", "Options:", "Yes", "No").
+
+- **Missing i18n key**: Added `agent.type.skill` translation key (en + pt-BR) that was referenced but undefined.
+
+### Removed
+
+- **Irrelevant QA docs**: Removed `api-endpoints.md` (no REST API), `deployment.md` (npm package, not deployed service), and `testing.md` (redundant with `testing-strategy.md`).
+
 ## [0.7.1]
 
 ### Included Pull Requests
