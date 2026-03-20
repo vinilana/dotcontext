@@ -26,6 +26,10 @@ const englishMessages = {
   'ui.generationSummary.timeElapsed': 'Time',
   'ui.generationSummary.nextStep': 'Next step: customize the generated templates to match your project.',
   'ui.error.title': 'Error',
+  'ui.splash.modelLabel': 'model',
+  'ui.splash.directoryLabel': 'directory',
+  'ui.splash.modelDefault': 'default',
+  'ui.splash.modelConfigured': '{provider} configured',
   'ui.prevc.title': 'PREVC Workflow - Spec-Driven Development for AI Agents',
   'ui.prevc.subtitle': 'A universal 5-step process that improves AI output quality',
   'ui.prevc.specDriven': 'Spec-driven, not autopilot. Define what you want, then let AI execute.',
@@ -330,6 +334,9 @@ const englishMessages = {
   'commands.start.options.template': 'Workflow template: hotfix, feature, mvp, or auto',
   'commands.start.options.skipFill': 'Skip AI-assisted documentation filling',
   'commands.start.options.skipWorkflow': 'Skip workflow initialization',
+  'commands.previewSplash.description': 'Render the interactive splash screen preview',
+  'commands.previewSplash.options.title': 'Override the splash title',
+  'commands.previewSplash.options.directory': 'Directory to display in the splash',
   'spinner.start.detectingStack': 'Detecting technology stack...',
   'spinner.start.stackDetected': 'Stack detected: {stack}',
   'spinner.start.initializing': 'Initializing project context...',
@@ -575,6 +582,10 @@ const portugueseMessages: TranslationDictionary = {
   'ui.generationSummary.timeElapsed': 'Tempo',
   'ui.generationSummary.nextStep': 'Próximo passo: personalize os templates gerados para o seu projeto.',
   'ui.error.title': 'Erro',
+  'ui.splash.modelLabel': 'modelo',
+  'ui.splash.directoryLabel': 'diretorio',
+  'ui.splash.modelDefault': 'padrao',
+  'ui.splash.modelConfigured': '{provider} configurado',
   'ui.prevc.title': 'PREVC Workflow - Desenvolvimento Orientado a Specs para Agentes IA',
   'ui.prevc.subtitle': 'Um processo universal de 5 etapas que melhora a qualidade do output da IA',
   'ui.prevc.specDriven': 'Orientado a specs, não em piloto automático. Defina o que você quer, depois deixe a IA executar.',
@@ -879,6 +890,9 @@ const portugueseMessages: TranslationDictionary = {
   'commands.start.options.template': 'Template de workflow: hotfix, feature, mvp ou auto',
   'commands.start.options.skipFill': 'Pular preenchimento de documentação com IA',
   'commands.start.options.skipWorkflow': 'Pular inicialização do workflow',
+  'commands.previewSplash.description': 'Renderizar uma previa da splash screen interativa',
+  'commands.previewSplash.options.title': 'Sobrescrever o titulo da splash',
+  'commands.previewSplash.options.directory': 'Diretorio exibido na splash',
   'spinner.start.detectingStack': 'Detectando stack de tecnologia...',
   'spinner.start.stackDetected': 'Stack detectada: {stack}',
   'spinner.start.initializing': 'Inicializando contexto do projeto...',
@@ -1117,17 +1131,27 @@ export function createTranslator(locale: Locale): TranslateFn {
 }
 
 export function normalizeLocale(locale: string): Locale {
-  return SUPPORTED_LOCALES.find(candidate => candidate.toLowerCase() === locale.toLowerCase()) || DEFAULT_LOCALE;
+  return resolveLocaleCandidate(locale) || DEFAULT_LOCALE;
 }
 
-export function detectLocale(argv: string[], envLocale?: string | null): Locale {
-  const candidateFromArgs = extractLocaleFromArgs(argv);
-  if (candidateFromArgs) {
-    return normalizeLocale(candidateFromArgs);
+export function detectLocale(
+  argv: string[],
+  envLocale?: string | null,
+  systemLocaleCandidates: Array<string | null | undefined> = []
+): Locale {
+  const candidates = [
+    extractLocaleFromArgs(argv),
+    envLocale,
+    ...systemLocaleCandidates
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = resolveLocaleCandidate(candidate);
+    if (resolved) {
+      return resolved;
+    }
   }
-  if (envLocale) {
-    return normalizeLocale(envLocale);
-  }
+
   return DEFAULT_LOCALE;
 }
 
@@ -1159,4 +1183,35 @@ function fillTemplate(template: string, params?: TranslateParams): string {
 
 export function isSupportedLocale(locale: string): boolean {
   return SUPPORTED_LOCALES.some(candidate => candidate.toLowerCase() === locale.toLowerCase());
+}
+
+function resolveLocaleCandidate(locale?: string | null): Locale | undefined {
+  if (!locale) {
+    return undefined;
+  }
+
+  const trimmed = locale.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const directMatch = SUPPORTED_LOCALES.find(candidate => candidate.toLowerCase() === trimmed.toLowerCase());
+  if (directMatch) {
+    return directMatch;
+  }
+
+  const normalized = trimmed.replace(/_/g, '-').split('.')[0].toLowerCase();
+  if (normalized === 'c' || normalized === 'posix') {
+    return undefined;
+  }
+
+  if (normalized === 'pt' || normalized.startsWith('pt-')) {
+    return 'pt-BR';
+  }
+
+  if (normalized === 'en' || normalized.startsWith('en-')) {
+    return 'en';
+  }
+
+  return undefined;
 }

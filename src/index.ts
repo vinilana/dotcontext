@@ -6,6 +6,11 @@ import * as dotenv from 'dotenv';
 import inquirer from 'inquirer';
 
 import { colors, typography } from './utils/theme';
+import {
+  formatSplashDirectory,
+  packageNameToDisplayName,
+  renderSplashScreen
+} from './utils/splashScreen';
 import { themedSelect, themedConfirm, Separator } from './utils/themedPrompt';
 import { PlanGenerator } from './generators/plans/planGenerator';
 import { CLIInterface } from './utils/cliUI';
@@ -58,10 +63,14 @@ const isInteractiveMode = rawArgs.every(arg =>
 // Load dotenv immediately for command-line mode (not MCP, not interactive)
 // For interactive mode, we'll ask the user first
 if (!isMcpCommand && !isInteractiveMode) {
-  dotenv.config();
+  dotenv.config({ quiet: true });
 }
 
-const initialLocale = detectLocale(rawArgs, process.env.AI_CONTEXT_LANG);
+const initialLocale = detectLocale(rawArgs, process.env.AI_CONTEXT_LANG, [
+  process.env.LC_ALL,
+  process.env.LC_MESSAGES,
+  process.env.LANG
+]);
 let currentLocale: Locale = initialLocale;
 let translateFn = createTranslator(initialLocale);
 const t: TranslateFn = (key, params) => translateFn(key, params);
@@ -591,6 +600,21 @@ program
     }
   });
 
+program
+  .command('preview-splash')
+  .description(t('commands.previewSplash.description'))
+  .option('--title <title>', t('commands.previewSplash.options.title'))
+  .option('--directory <path>', t('commands.previewSplash.options.directory'), process.cwd())
+  .option('--model <model>', t('commands.fill.options.model'))
+  .action(async (options: any) => {
+    try {
+      await renderStartupSplash(options.directory, options.title, options.model);
+    } catch (error) {
+      ui.displayError(t('errors.cli.executionFailed'), error as Error);
+      process.exit(1);
+    }
+  });
+
 // Export Rules Command
 program
   .command('export-rules')
@@ -1064,14 +1088,12 @@ async function selectLocale(showWelcome: boolean): Promise<void> {
   }
 }
 
-type InteractiveAction = 'scaffold' | 'fill' | 'plan' | 'syncAgents' | 'update' | 'workflow' | 'skills' | 'changeLanguage' | 'exit' | 'quickSync' | 'reverseSync' | 'agents' | 'settings' | 'mcpInstall' | 'more';
-type StateAction = 'create' | 'enhance' | 'fill' | 'menu' | 'exit' | 'scaffold' | 'viewPending';
+type InteractiveAction = 'scaffold' | 'fill' | 'plan' | 'syncAgents' | 'update' | 'workflow' | 'skills' | 'changeLanguage' | 'exit' | 'quickSync' | 'reverseSync' | 'agents' | 'settings' | 'mcpInstall' | 'viewPending';
+type StateAction = 'create' | 'enhance' | 'fill' | 'exit' | 'scaffold' | 'viewPending';
 
 async function runInteractive(): Promise<void> {
-  await selectLocale(false); // Don't show welcome yet
-
   // Auto-load .env if it exists (no-op if absent)
-  dotenv.config();
+  dotenv.config({ quiet: true });
 
   const projectPath = process.cwd();
   const detector = new StateDetector({ projectPath });
@@ -1080,9 +1102,24 @@ async function runInteractive(): Promise<void> {
   // Detect smart defaults for display
   const defaults = await detectSmartDefaults(projectPath);
 
-  // Display compact header
   console.log('');
-  console.log(`${colors.primaryBold(`${PACKAGE_NAME}`)} ${colors.secondary(`v${VERSION}`)}`);
+  console.log(renderSplashScreen({
+    title: packageNameToDisplayName(PACKAGE_NAME),
+    version: VERSION,
+    lines: [
+      {
+        label: t('ui.splash.modelLabel'),
+        value: defaults.model || DEFAULT_MODEL,
+        note: defaults.provider && defaults.apiKeyConfigured
+          ? t('ui.splash.modelConfigured', { provider: defaults.provider })
+          : t('ui.splash.modelDefault')
+      },
+      {
+        label: t('ui.splash.directoryLabel'),
+        value: formatSplashDirectory(projectPath)
+      }
+    ]
+  }));
 
   // Show what was detected from environment/project
   const detectedParts: string[] = [];
@@ -1149,46 +1186,16 @@ async function runInteractive(): Promise<void> {
     } else if (action === 'scaffold') {
       await runMcpInstall();
     }
-    return;
-  }
 
-  if (result.state === 'unfilled') {
-    let action: StateAction | undefined;
-    while (action !== 'exit') {
-      action = await themedSelect<StateAction>({
-        message: t('prompts.main.unfilledPrompt', { count: result.details.unfilledFiles }),
-        choices: [
-          { name: t('prompts.main.choice.fill'), value: 'fill' },
-          { name: t('prompts.main.choice.viewPending'), value: 'viewPending' },
-          { name: t('prompts.main.choice.moreOptions'), value: 'menu' },
-          { name: t('prompts.main.choice.exit'), value: 'exit' }
-        ]
-      });
-
-      if (action === 'fill') {
-        await runInteractiveLlmFill();
-        return;
-      } else if (action === 'viewPending') {
-        const { getUnfilledFiles } = await import('./utils/frontMatter');
-        const unfilled = await getUnfilledFiles(result.contextDir);
-        const contextDir = result.contextDir;
-        console.log();
-        console.log(typography.subheader(t('prompts.main.pendingFilesHeader')));
-        for (const file of unfilled) {
-          const relative = path.relative(contextDir, file);
-          console.log(`  ${colors.secondary('•')} ${colors.primary(relative)}`);
-        }
-        console.log();
-      } else if (action === 'menu') {
-        await runFullMenu();
-        return;
-      }
+    const postOnboardingState = await detector.detect();
+    if (postOnboardingState.state !== 'new') {
+      await runFullMenu();
     }
     return;
   }
 
-  // For 'ready' or 'outdated' states, go directly to full menu
-  await runFullMenu(result.state === 'outdated' ? result.details.daysBehind : undefined);
+  // For any project that has completed onboarding, always show the full menu.
+  await runFullMenu();
 }
 
 async function runQuickSetup(projectPath: string): Promise<void> {
@@ -1280,28 +1287,54 @@ async function runEnhanceWithAI(projectPath: string): Promise<void> {
   }
 }
 
-async function runFullMenu(daysBehind?: number): Promise<void> {
+async function runFullMenu(): Promise<void> {
   let exitRequested = false;
   while (!exitRequested) {
-    const updateLabel = daysBehind
-      ? t('prompts.main.choice.updateDocsBehind', { daysBehind })
-      : t('prompts.main.choice.updateDocs');
+    const detector = new StateDetector({ projectPath: process.cwd() });
+    const state = await detector.detect();
+    const isUnfilled = state.state === 'unfilled';
+    const fillLabel = isUnfilled
+      ? t('prompts.main.choice.fill')
+      : state.state === 'outdated'
+        ? t('prompts.main.choice.updateDocsBehind', { daysBehind: state.details.daysBehind || 0 })
+        : t('prompts.main.choice.updateDocs');
 
-    // Reduced primary menu - less frequent options moved to "More..."
-    const choices = [
-      { name: t('prompts.main.choice.quickSync'), value: 'quickSync' as InteractiveAction },
-      { name: t('prompts.main.choice.reverseSync'), value: 'reverseSync' as InteractiveAction },
-      { name: t('prompts.main.choice.startWorkflow'), value: 'workflow' as InteractiveAction },
-      { name: t('prompts.main.choice.createPlan'), value: 'plan' as InteractiveAction },
-      { name: updateLabel, value: 'fill' as InteractiveAction },
-      { name: t('prompts.main.choice.manageSkills'), value: 'skills' as InteractiveAction },
-      new Separator(),
-      { name: t('prompts.main.choice.moreOptions'), value: 'more' as InteractiveAction },
-      { name: t('prompts.main.choice.exit'), value: 'exit' as InteractiveAction }
-    ];
+    const choices = isUnfilled
+      ? [
+        { name: fillLabel, value: 'fill' as InteractiveAction },
+        { name: t('prompts.main.choice.viewPending'), value: 'viewPending' as InteractiveAction },
+        new Separator(),
+        { name: t('prompts.main.choice.quickSync'), value: 'quickSync' as InteractiveAction },
+        { name: t('prompts.main.choice.reverseSync'), value: 'reverseSync' as InteractiveAction },
+        { name: t('prompts.main.choice.startWorkflow'), value: 'workflow' as InteractiveAction },
+        { name: t('prompts.main.choice.createPlan'), value: 'plan' as InteractiveAction },
+        { name: t('prompts.main.choice.manageSkills'), value: 'skills' as InteractiveAction },
+        new Separator(),
+        { name: t('prompts.main.choice.manageAgents'), value: 'agents' as InteractiveAction },
+        { name: t('prompts.main.choice.rescaffold'), value: 'scaffold' as InteractiveAction },
+        { name: t('prompts.main.choice.mcpInstall'), value: 'mcpInstall' as InteractiveAction },
+        { name: t('prompts.main.choice.settings'), value: 'settings' as InteractiveAction },
+        { name: t('prompts.main.choice.exit'), value: 'exit' as InteractiveAction }
+      ]
+      : [
+        { name: t('prompts.main.choice.quickSync'), value: 'quickSync' as InteractiveAction },
+        { name: t('prompts.main.choice.reverseSync'), value: 'reverseSync' as InteractiveAction },
+        { name: t('prompts.main.choice.startWorkflow'), value: 'workflow' as InteractiveAction },
+        { name: t('prompts.main.choice.createPlan'), value: 'plan' as InteractiveAction },
+        { name: fillLabel, value: 'fill' as InteractiveAction },
+        { name: t('prompts.main.choice.manageSkills'), value: 'skills' as InteractiveAction },
+        new Separator(),
+        { name: t('prompts.main.choice.manageAgents'), value: 'agents' as InteractiveAction },
+        { name: t('prompts.main.choice.rescaffold'), value: 'scaffold' as InteractiveAction },
+        { name: t('prompts.main.choice.mcpInstall'), value: 'mcpInstall' as InteractiveAction },
+        { name: t('prompts.main.choice.settings'), value: 'settings' as InteractiveAction },
+        { name: t('prompts.main.choice.exit'), value: 'exit' as InteractiveAction }
+      ];
 
     const action = await themedSelect<InteractiveAction>({
-      message: t('prompts.main.action'),
+      message: isUnfilled
+        ? t('prompts.main.unfilledPrompt', { count: state.details.unfilledFiles })
+        : t('prompts.main.action'),
       choices
     });
 
@@ -1310,8 +1343,8 @@ async function runFullMenu(daysBehind?: number): Promise<void> {
       break;
     }
 
-    if (action === 'more') {
-      await runMoreOptions();
+    if (action === 'viewPending') {
+      await displayPendingFiles(state.contextDir);
       continue;
     }
 
@@ -1327,35 +1360,31 @@ async function runFullMenu(daysBehind?: number): Promise<void> {
       await runInteractiveWorkflow();
     } else if (action === 'skills') {
       await runInteractiveSkills();
+    } else if (action === 'agents') {
+      await runManageAgents();
+    } else if (action === 'scaffold') {
+      await runInteractiveScaffold();
+    } else if (action === 'mcpInstall') {
+      await runMcpInstall();
+    } else if (action === 'settings') {
+      await runSettings();
     }
   }
 
   ui.displaySuccess(t('success.interactive.goodbye'));
 }
 
-async function runMoreOptions(): Promise<void> {
-  const action = await themedSelect<InteractiveAction>({
-    message: t('prompts.more.action'),
-    choices: [
-      { name: t('prompts.main.choice.manageAgents'), value: 'agents' as InteractiveAction },
-      { name: t('prompts.main.choice.rescaffold'), value: 'scaffold' as InteractiveAction },
-      { name: t('prompts.main.choice.mcpInstall'), value: 'mcpInstall' as InteractiveAction },
-      { name: t('prompts.main.choice.settings'), value: 'settings' as InteractiveAction },
-      { name: t('prompts.more.choice.back'), value: 'exit' as InteractiveAction },
-    ],
-  });
+async function displayPendingFiles(contextDir: string): Promise<void> {
+  const { getUnfilledFiles } = await import('./utils/frontMatter');
+  const unfilled = await getUnfilledFiles(contextDir);
 
-  if (action === 'exit') return;
-
-  if (action === 'agents') {
-    await runManageAgents();
-  } else if (action === 'scaffold') {
-    await runInteractiveScaffold();
-  } else if (action === 'mcpInstall') {
-    await runMcpInstall();
-  } else if (action === 'settings') {
-    await runSettings();
+  console.log();
+  console.log(typography.subheader(t('prompts.main.pendingFilesHeader')));
+  for (const file of unfilled) {
+    const relative = path.relative(contextDir, file);
+    console.log(`  ${colors.secondary('•')} ${colors.primary(relative)}`);
   }
+  console.log();
 }
 
 async function runMcpInstall(): Promise<void> {
@@ -2519,6 +2548,34 @@ This agent should be invoked when working on tasks related to ${finalRole}.
 async function runSettings(): Promise<void> {
   // Directly show language selection (the only setting currently)
   await selectLocale(true);
+}
+
+async function renderStartupSplash(
+  directory: string,
+  titleOverride?: string,
+  modelOverride?: string
+): Promise<void> {
+  const defaults = await detectSmartDefaults(directory);
+
+  console.log('');
+  console.log(renderSplashScreen({
+    title: titleOverride || packageNameToDisplayName(PACKAGE_NAME),
+    version: VERSION,
+    lines: [
+      {
+        label: t('ui.splash.modelLabel'),
+        value: modelOverride || defaults.model || DEFAULT_MODEL,
+        note: defaults.provider && defaults.apiKeyConfigured
+          ? t('ui.splash.modelConfigured', { provider: defaults.provider })
+          : t('ui.splash.modelDefault')
+      },
+      {
+        label: t('ui.splash.directoryLabel'),
+        value: formatSplashDirectory(directory)
+      }
+    ]
+  }));
+  console.log('');
 }
 
 function filterOutLocaleArgs(args: string[]): string[] {
