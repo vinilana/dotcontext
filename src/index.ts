@@ -640,7 +640,7 @@ workflowCommand
     }
   });
 
-async function selectLocale(showWelcome: boolean): Promise<void> {
+async function selectLocale(): Promise<void> {
   const locale = await themedSelect<Locale>({
     message: t('prompts.language.select'),
     default: currentLocale,
@@ -653,11 +653,6 @@ async function selectLocale(showWelcome: boolean): Promise<void> {
   const normalizedLocale = normalizeLocale(locale);
   currentLocale = normalizedLocale;
   translateFn = createTranslator(normalizedLocale);
-
-  if (showWelcome) {
-    ui.displayWelcome(VERSION);
-    ui.displayPrevcExplanation();
-  }
 }
 
 type InteractiveAction = 'syncAgents' | 'update' | 'changeLanguage' | 'exit' | 'quickSync' | 'reverseSync' | 'settings' | 'mcpInstall' | 'viewPending';
@@ -1526,7 +1521,7 @@ async function listAgents(projectPath: string): Promise<void> {
 
 async function runSettings(): Promise<void> {
   // Directly show language selection (the only setting currently)
-  await selectLocale(true);
+  await selectLocale();
 }
 
 async function renderStartupSplash(
