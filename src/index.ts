@@ -113,6 +113,30 @@ function scheduleVersionCheck(force: boolean = false): Promise<void> {
   return versionCheckPromise;
 }
 
+function buildMcpToolChoices(
+  supportedTools: Array<{ id: string; displayName: string }>,
+  detectedTools: string[],
+): Array<{ name: string; value: string }> {
+  const detectedSet = new Set(detectedTools);
+  const orderedTools = [
+    ...supportedTools.filter(tool => detectedSet.has(tool.id)),
+    ...supportedTools.filter(tool => !detectedSet.has(tool.id)),
+  ];
+
+  return [
+    {
+      name: t('commands.mcpInstall.allDetected'),
+      value: 'all',
+    },
+    ...orderedTools.map(tool => ({
+      name: detectedSet.has(tool.id)
+        ? `${tool.displayName} (${t('labels.detected')})`
+        : tool.displayName,
+      value: tool.id,
+    })),
+  ];
+}
+
 program.hook('preAction', () => {
   void scheduleVersionCheck();
 });
@@ -269,18 +293,7 @@ program
       if (!tool && process.stdin.isTTY) {
         const supportedTools = mcpInstallService.getSupportedTools();
         const detectedTools = await mcpInstallService.detectInstalledTools();
-
-        const choices = supportedTools.map(tool => ({
-          name: detectedTools.includes(tool.id)
-            ? `${tool.displayName} (${t('labels.detected')})`
-            : tool.displayName,
-          value: tool.id,
-        }));
-
-        choices.unshift({
-          name: t('commands.mcpInstall.allDetected'),
-          value: 'all',
-        });
+        const choices = buildMcpToolChoices(supportedTools, detectedTools);
 
         const { selectedTool } = await inquirer.prompt([
           {
@@ -825,18 +838,7 @@ async function runMcpInstall(): Promise<void> {
   const mcpInstallService = new MCPInstallService({ ui, t, version: VERSION });
   const supportedTools = mcpInstallService.getSupportedTools();
   const detectedTools = await mcpInstallService.detectInstalledTools();
-
-  const mcpChoices = supportedTools.map(tool => ({
-    name: detectedTools.includes(tool.id)
-      ? `${tool.displayName} (${t('labels.detected')})`
-      : tool.displayName,
-    value: tool.id,
-  }));
-
-  mcpChoices.unshift({
-    name: t('commands.mcpInstall.allDetected'),
-    value: 'all',
-  });
+  const mcpChoices = buildMcpToolChoices(supportedTools, detectedTools);
 
   const { selectedTool } = await inquirer.prompt([{
     type: 'list',
