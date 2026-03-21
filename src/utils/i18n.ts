@@ -1003,7 +1003,7 @@ const portugueseMessages: TranslationDictionary = {
   'info.skill.skipped': 'Puladas (já existem)',
   'info.skill.path': 'Caminho',
   // Quick Sync translations
-  'prompts.main.choice.quickSync': 'Quick Sync',
+  'prompts.main.choice.quickSync': 'Sincronização Rápida',
   'prompts.quickSync.selectComponents': 'Selecione os componentes para sincronizar:',
   'prompts.quickSync.components.agents': 'Agents',
   'prompts.quickSync.components.skills': 'Skills',
@@ -1020,7 +1020,7 @@ const portugueseMessages: TranslationDictionary = {
   'prompts.quickSync.updateDocs': 'Atualizar docs também?',
   'success.quickSync.complete': 'Sincronização completa',
   // Reverse Sync translations
-  'prompts.main.choice.reverseSync': 'Reverse Sync (importar de ferramentas IA)',
+  'prompts.main.choice.reverseSync': 'Sincronização Reversa (importar de ferramentas de IA)',
   'prompts.reverseSync.detecting': 'Detectando configurações de ferramentas IA...',
   'prompts.reverseSync.detected': 'Ferramentas IA Detectadas:',
   'prompts.reverseSync.noFilesFound': 'Nenhum arquivo de configuração de ferramentas IA encontrado',
