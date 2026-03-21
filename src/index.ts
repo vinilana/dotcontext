@@ -660,8 +660,8 @@ async function selectLocale(showWelcome: boolean): Promise<void> {
   }
 }
 
-type InteractiveAction = 'syncAgents' | 'update' | 'workflow' | 'skills' | 'changeLanguage' | 'exit' | 'quickSync' | 'reverseSync' | 'agents' | 'settings' | 'mcpInstall' | 'viewPending';
-type StateAction = 'exit' | 'mcpInstall' | 'reverseSync' | 'workflow' | 'settings';
+type InteractiveAction = 'syncAgents' | 'update' | 'changeLanguage' | 'exit' | 'quickSync' | 'reverseSync' | 'settings' | 'mcpInstall' | 'viewPending';
+type StateAction = 'exit' | 'mcpInstall' | 'reverseSync' | 'settings';
 
 async function runInteractive(): Promise<void> {
   // Auto-load .env if it exists (no-op if absent)
@@ -733,7 +733,6 @@ async function runInteractive(): Promise<void> {
       choices: [
         { name: t('prompts.main.choice.mcpInstall'), value: 'mcpInstall' },
         { name: t('prompts.main.choice.reverseSync'), value: 'reverseSync' },
-        { name: t('prompts.main.choice.startWorkflow'), value: 'workflow' },
         { name: t('prompts.main.choice.settings'), value: 'settings' },
         { name: t('prompts.main.choice.exit'), value: 'exit' }
       ]
@@ -743,8 +742,6 @@ async function runInteractive(): Promise<void> {
       await runMcpInstall();
     } else if (action === 'reverseSync') {
       await runReverseSync();
-    } else if (action === 'workflow') {
-      await runInteractiveWorkflow();
     } else if (action === 'settings') {
       await runSettings();
     }
@@ -774,21 +771,13 @@ async function runFullMenu(): Promise<void> {
         new Separator(),
         { name: t('prompts.main.choice.quickSync'), value: 'quickSync' as InteractiveAction },
         { name: t('prompts.main.choice.reverseSync'), value: 'reverseSync' as InteractiveAction },
-        { name: t('prompts.main.choice.startWorkflow'), value: 'workflow' as InteractiveAction },
-        { name: t('prompts.main.choice.manageSkills'), value: 'skills' as InteractiveAction },
-        new Separator(),
-        { name: t('prompts.main.choice.manageAgents'), value: 'agents' as InteractiveAction },
         { name: t('prompts.main.choice.settings'), value: 'settings' as InteractiveAction },
         { name: t('prompts.main.choice.exit'), value: 'exit' as InteractiveAction }
       ]
       : [
         { name: t('prompts.main.choice.quickSync'), value: 'quickSync' as InteractiveAction },
         { name: t('prompts.main.choice.reverseSync'), value: 'reverseSync' as InteractiveAction },
-        { name: t('prompts.main.choice.startWorkflow'), value: 'workflow' as InteractiveAction },
-        { name: t('prompts.main.choice.manageSkills'), value: 'skills' as InteractiveAction },
         { name: t('prompts.main.choice.mcpInstall'), value: 'mcpInstall' as InteractiveAction },
-        new Separator(),
-        { name: t('prompts.main.choice.manageAgents'), value: 'agents' as InteractiveAction },
         { name: t('prompts.main.choice.settings'), value: 'settings' as InteractiveAction },
         { name: t('prompts.main.choice.exit'), value: 'exit' as InteractiveAction }
       ];
@@ -814,12 +803,6 @@ async function runFullMenu(): Promise<void> {
       await runQuickSync();
     } else if (action === 'reverseSync') {
       await runReverseSync();
-    } else if (action === 'workflow') {
-      await runInteractiveWorkflow();
-    } else if (action === 'skills') {
-      await runInteractiveSkills();
-    } else if (action === 'agents') {
-      await runManageAgents();
     } else if (action === 'mcpInstall') {
       await runMcpInstall();
     } else if (action === 'settings') {
