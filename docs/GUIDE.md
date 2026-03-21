@@ -21,6 +21,8 @@ A comprehensive guide on how to use `@ai-coders/context` for AI-assisted softwar
 
 `@ai-coders/context` is a context engineering tool that helps AI coding assistants understand your codebase better. It creates structured documentation, generates agent playbooks, and provides a workflow system for organized development.
 
+> Note: standalone CLI generation is no longer supported. Use MCP-enabled AI tools to create, fill, or refresh context, plans, agents, and skills.
+
 ### Key Capabilities
 
 | Capability | Description |
@@ -38,10 +40,10 @@ A comprehensive guide on how to use `@ai-coders/context` for AI-assisted softwar
 
 | Scenario | Command |
 |----------|---------|
-| Starting a new project | `npx @ai-coders/context init .` |
-| Onboarding AI to your codebase | `npx @ai-coders/context fill .` |
-| Documentation is outdated | `npx @ai-coders/context update` |
-| Planning a new feature | `npx @ai-coders/context plan feature-name` |
+| Starting a new project | `npx @ai-coders/context mcp:install` then initialize through your AI tool |
+| Onboarding AI to your codebase | Configure MCP and initialize context in your AI tool |
+| Documentation is outdated | Refresh via MCP in your AI tool |
+| Planning a new feature | Use MCP plan tools in your AI tool |
 | Starting structured development | `npx @ai-coders/context workflow init` |
 | Need AI assistance in IDE | Configure MCP server |
 
@@ -49,8 +51,8 @@ A comprehensive guide on how to use `@ai-coders/context` for AI-assisted softwar
 
 ```
 Need AI to understand my code?
-├── Yes → Run `init` + `fill`
-└── No  → Skip
+├── Yes → Configure MCP and initialize through your AI tool
+└── No  → Use workflow, sync, and import commands only
 
 Starting new feature/project?
 ├── Simple task → Use QUICK scale
@@ -77,13 +79,12 @@ This launches the interactive wizard that guides you through all options.
 ### Quick Start (Automation)
 
 ```bash
-# 1. Initialize context structure
-npx @ai-coders/context init .
+# 1. Connect your AI tool through MCP
+npx @ai-coders/context mcp:install
 
-# 2. Fill with AI-generated content
-npx @ai-coders/context fill .
+# 2. Ask your AI tool to initialize context
 
-# 3. Start a workflow (optional)
+# 3. Start a workflow when needed (optional)
 npx @ai-coders/context workflow init "my-feature"
 ```
 
@@ -111,44 +112,30 @@ your-project/
 
 ## Core Features
 
-### 1. Context Initialization
+### 1. MCP-Based Context Initialization
 
-Creates the `.context/` structure with templates:
+Create the `.context/` structure through MCP-connected AI tools, not through standalone CLI commands.
 
-```bash
-npx @ai-coders/context init .
-```
-
-**Options:**
-- `--docs` - Only create documentation templates
-- `--agents` - Only create agent playbooks
-- `--both` - Create both (default)
-
-### 2. Content Generation
-
-Fills templates with AI-analyzed content:
+Recommended flow:
 
 ```bash
-npx @ai-coders/context fill .
+npx @ai-coders/context mcp:install
 ```
 
-**Requires:** API key from OpenRouter, OpenAI, Anthropic, or Google.
+Then ask your AI tool to initialize, fill, or refresh the generated context.
 
-### 3. Update Detection
+### 2. Workflow and Utility CLI
 
-Checks for outdated documentation:
+The standalone CLI remains useful for:
 
-```bash
-npx @ai-coders/context update
-```
+- PREVC workflow tracking
+- sync/export operations
+- reverse sync and imports
+- MCP setup and server startup
 
-### 4. Plan Creation
+### 3. Plan Creation
 
-Creates structured work plans:
-
-```bash
-npx @ai-coders/context plan "authentication-system"
-```
+Plan scaffolding is also MCP-based now. Use the MCP plan/context tools from your AI assistant when you need a new plan.
 
 Creates `.context/plans/authentication-system.md` with:
 - Objectives
@@ -255,10 +242,10 @@ Plans can be linked to the PREVC workflow for structured execution.
 ### Linking Plans to Workflow
 
 ```bash
-# Create a plan
-npx @ai-coders/context plan "authentication-system"
+# Create a plan through MCP in your AI tool
 
-# The plan is automatically linked when workflow starts
+# Then start or continue workflow tracking from the CLI
+npx @ai-coders/context workflow init "authentication-system"
 ```
 
 ### Plan Frontmatter
@@ -409,49 +396,14 @@ Skills are on-demand expertise modules that AI agents can activate when needed. 
 ### Skill Commands
 
 ```bash
-# Initialize skills (creates .context/skills/)
-npx @ai-coders/context skill init
-
-# Fill skills with project-specific content using AI
-npx @ai-coders/context skill fill
-
 # List all available skills
 npx @ai-coders/context skill list
 
 # Export skills to AI tools (.claude/skills/, .gemini/skills/, .codex/skills/)
 npx @ai-coders/context skill export
-
-# Create a custom skill
-npx @ai-coders/context skill create my-skill
 ```
 
-### Skill Fill Options
-
-The `skill fill` command personalizes skills with project-specific content:
-
-```bash
-# Fill all skills
-npx @ai-coders/context skill fill .
-
-# Fill specific skills only
-npx @ai-coders/context skill fill . --skills commit-message pr-review
-
-# Use a specific provider/model
-npx @ai-coders/context skill fill . --provider anthropic --model claude-sonnet-4-20250514
-
-# Enable LSP for deeper semantic analysis
-npx @ai-coders/context skill fill . --use-lsp
-
-# Limit number of skills to fill
-npx @ai-coders/context skill fill . --limit 3
-```
-
-### How Skill Fill Works
-
-1. **Discovers scaffolded skills** from `.context/skills/`
-2. **Loads context** from docs (`.context/docs/`) and agents (`.context/agents/`)
-3. **Performs semantic analysis** of your codebase
-4. **Generates personalized content** with project-specific examples and references
+To scaffold, personalize, or refresh skills, use the MCP `scaffoldSkills` and `fillSkills` tools from your connected AI assistant. The standalone CLI only supports skill discovery/export utilities now.
 
 ### Skill Structure
 
@@ -669,7 +621,7 @@ For developing/testing locally:
 Always initialize context before asking AI for help:
 
 ```bash
-npx @ai-coders/context init . && npx @ai-coders/context fill .
+npx @ai-coders/context mcp:install
 ```
 
 ### 2. Choose the Right Scale
@@ -684,19 +636,11 @@ npx @ai-coders/context init . && npx @ai-coders/context fill .
 
 ### 3. Keep Documentation Updated
 
-Run periodically:
-
-```bash
-npx @ai-coders/context update
-```
+Refresh documentation through your MCP-connected AI tool when the context becomes outdated.
 
 ### 4. Use Plans for Complex Work
 
-Before starting complex features:
-
-```bash
-npx @ai-coders/context plan "feature-name"
-```
+Before starting complex features, use the MCP plan tools from your AI assistant.
 
 ### 5. Follow Phase Outputs
 
@@ -727,8 +671,8 @@ Match tasks to appropriate agents:
 
 | Issue | Solution |
 |-------|----------|
-| "No API key found" | Set `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY` |
-| "Context folder not found" | Run `npx @ai-coders/context init .` |
+| "CLI init/plan/fill command not found" | Context creation and generation moved to MCP-enabled AI tools. Run `npx @ai-coders/context mcp:install` |
+| "Context folder not found" | Initialize or import context through MCP or `reverse-sync` |
 | "Workflow not initialized" | Run `npx @ai-coders/context workflow init "name"` |
 | MCP tools not appearing | Restart your IDE after configuring MCP |
 
@@ -745,17 +689,8 @@ Match tasks to appropriate agents:
 # Interactive mode
 npx @ai-coders/context
 
-# Initialize
-npx @ai-coders/context init .
-
-# Fill with AI
-npx @ai-coders/context fill .
-
-# Update outdated docs
-npx @ai-coders/context update
-
-# Create plan
-npx @ai-coders/context plan "feature-name"
+# Install MCP for AI-assisted generation
+npx @ai-coders/context mcp:install
 
 # Workflow management
 npx @ai-coders/context workflow init "name"
@@ -763,14 +698,11 @@ npx @ai-coders/context workflow status
 npx @ai-coders/context workflow advance
 
 # Skills management
-npx @ai-coders/context skill init
-npx @ai-coders/context skill fill
 npx @ai-coders/context skill list
 npx @ai-coders/context skill export
 
-# Quick sync to AI tools
-npx @ai-coders/context quick-sync
-npx @ai-coders/context quick-sync --components agents --targets claude
+# Import existing context from AI tools
+npx @ai-coders/context reverse-sync
 
 # Start MCP server
 npx @ai-coders/context mcp

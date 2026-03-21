@@ -60,25 +60,22 @@ npm start
 
 The CLI is built with Commander. Run `ai-context --help` to see all commands. Key commands include:
 
-- **`ai-context init`** -- Scaffold a `.context/` directory with documentation templates
-- **`ai-context fill`** -- AI-powered filling of documentation templates
-- **`ai-context update`** -- Update existing context documentation
-- **`ai-context plan`** -- Generate implementation plans
 - **`ai-context sync-agents`** -- Synchronize agent playbooks
-- **`ai-context start`** -- Interactive guided mode
+- **`ai-context reverse-sync`** -- Import rules, agents, and skills from AI tool directories
 - **`ai-context mcp`** -- Start in MCP (Model Context Protocol) server mode
 - **`ai-context mcp:install [tool]`** -- Install MCP configuration for AI tools
-- **`ai-context serve`** -- Start the passthrough JSON protocol server
 - **`ai-context export-rules`** -- Export rules for AI coding tools
 - **`ai-context report`** -- Generate context reports
 - **`ai-context workflow init|status|advance`** -- Manage PREVC workflow phases
 
 ## Interactive mode
 
-Running `ai-context` with no command arguments enters interactive mode, which guides you through language selection, environment configuration, and command selection using Inquirer prompts.
+Running `ai-context` with no command arguments enters interactive mode, which guides you through project state, workflow, sync, imports, and MCP setup using Inquirer prompts.
 
 ## Environment variables
 
 - `AI_CONTEXT_LANG` -- Override the UI locale (`en` or `pt-BR`)
-- Provider API keys (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_KEY`) are needed for AI-powered features like `fill` and `plan`
 - A `.env` file in the project root is loaded automatically via `dotenv`
+
+The standalone CLI no longer creates or fills context directly.
+For context creation, plan scaffolding, AI-generated filling, or refresh, use MCP-enabled AI tools after running `ai-context mcp:install`.

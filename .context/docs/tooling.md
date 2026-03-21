@@ -53,7 +53,7 @@ A typical development cycle:
 
 ```bash
 # 1. Start development (auto-reloads not built-in; re-run as needed)
-npm run dev -- init
+npm run dev -- --help
 
 # 2. Run tests after changes
 npm test
@@ -139,11 +139,11 @@ Test files (`**/*.test.ts`) are excluded from the build output but included in t
 
 2. **Target specific tests.** Instead of running the full suite, use `npx jest <file>` or `npx jest --watch` to focus on what you are changing.
 
-3. **Leverage the `--help` flag.** Every CLI command supports `--help` for discoverability: `npm run dev -- fill --help`.
+3. **Leverage the `--help` flag.** Every CLI command supports `--help` for discoverability: `npm run dev -- workflow --help`.
 
-4. **Use environment variables for AI features.** Set `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GOOGLE_GENERATIVE_AI_API_KEY` in a `.env` file to enable AI-powered fill and auto-fill without passing keys on every invocation.
+4. **Use MCP for context creation and AI generation.** Standalone CLI generation is no longer supported. Install MCP with `npx @ai-coders/context mcp:install` and use your AI tool to create, fill, or refresh context.
 
-5. **Read the generated context.** After running `ai-context init` and `ai-context fill`, browse `.context/docs/` and `.context/agents/` to understand what the tool produces -- this helps when working on generators and templates.
+5. **Read the generated context.** After initializing context through MCP, browse `.context/docs/` and `.context/agents/` to understand what the tool produces -- this helps when working on generators and templates.
 
 6. **Check `codebase-map.json` for navigation.** The file at `.context/docs/codebase-map.json` provides a structural overview of the entire codebase, useful for orienting yourself in unfamiliar areas.
 

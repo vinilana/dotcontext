@@ -151,19 +151,17 @@ What this achieves.
 - Documentation itself is written in English
 - The project supports `en` and `pt-BR` locales
 
-## Generating Documentation with AI
+## Generating Documentation via MCP
 
-The `fill` service (`src/services/fill/fillService.ts`) uses AI agents to generate documentation content:
+Standalone CLI AI generation is not supported. Documentation completion flows through MCP:
 
-- `DocumentationAgent` -- Fills `.context/docs/` files using semantic analysis context
-- `PlaybookAgent` -- Fills `.context/agents/` playbooks with project-specific guidance
+- `context({ action: 'fillSingle', filePath: '/path/to/doc.md' })` -- returns semantic context and scaffold structure for one file
+- `context({ action: 'fill', target: 'docs' })` -- returns batched guidance for multiple scaffold files
+- `src/services/autoFill/autoFillService.ts` -- provides static starter content during scaffold generation
 
-Trigger via CLI: `npx tsx src/index.ts fill <repoPath>`
-Trigger via MCP: `context({ action: 'fillSingle', filePath: '/path/to/doc.md' })`
-
-The fill process:
-1. Resolves LLM config from environment or CLI flags
-2. Loads the scaffold prompt from `src/utils/promptLoader.ts`
-3. Builds semantic context via `SemanticContextBuilder`
-4. Sends context + scaffold to the AI agent
-5. Writes the filled content back, updating `status: filled` in frontmatter
+The MCP fill process:
+1. Generates scaffolding through `context({ action: 'init' })`
+2. Builds semantic context via `SemanticContextBuilder`
+3. Returns scaffold structure and instructions to the connected AI tool
+4. Lets the MCP client generate and write the final content
+5. Updates the frontmatter to `status: filled`

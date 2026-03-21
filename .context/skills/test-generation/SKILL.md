@@ -34,7 +34,7 @@ Generate and maintain tests for the `@ai-coders/context` project using Jest with
 npm test
 
 # Run specific test file
-npx jest src/services/fill/fillService.test.ts
+npx jest src/services/mcp/mcpServer.test.ts
 
 # Run tests matching a pattern
 npx jest --testPathPattern="mcp"
@@ -47,7 +47,7 @@ npx jest --coverage
 
 ### Service Tests
 
-Services are the most common test target. Follow the pattern in `fillService.test.ts`:
+Services are the most common test target. Follow the pattern in current service and MCP tests:
 
 ```typescript
 import * as os from 'os';
@@ -56,17 +56,6 @@ import * as fs from 'fs-extra';
 import { MyService } from './myService';
 import type { CLIInterface } from '../../utils/cliUI';
 import type { TranslateFn } from '../../utils/i18n';
-
-// Mock external dependencies
-jest.mock('../ai/agents/documentationAgent', () => ({
-  DocumentationAgent: jest.fn().mockImplementation(() => ({
-    generateDocumentation: jest.fn().mockResolvedValue({
-      text: '# Content',
-      toolsUsed: [],
-      steps: 1
-    })
-  }))
-}));
 
 // Create temp directory for isolation
 let tempDir: string;
@@ -100,8 +89,7 @@ Key patterns:
 - **Temp directories**: Always use `fs.mkdtemp()` and clean up in `afterEach`
 - **Mock CLIInterface**: Provide a mock with `jest.fn()` for each method
 - **Mock TranslateFn**: Simple passthrough `(key) => key`
-- **Mock AI agents**: Use `jest.mock()` at module level with factory function
-- **Mock llmConfig**: Mock `resolveLlmConfig` to return test credentials
+- **Mock tool or gateway boundaries**: Use `jest.mock()` at module level for filesystem, prompt loaders, or MCP helpers
 
 ### MCP Gateway Handler Tests
 
@@ -222,8 +210,7 @@ describe('GateChecker', () => {
 
 | Dependency | Mock Strategy | Example |
 |-----------|--------------|---------|
-| AI agents (DocumentationAgent, PlaybookAgent) | `jest.mock()` at module level | `fillService.test.ts` |
-| LLM config resolution | `jest.mock('../shared/llmConfig')` | Return test credentials |
+| MCP tools / gateway helpers | `jest.mock()` at module level | MCP service tests |
 | File system (for isolation) | Use `fs.mkdtemp()` temp dirs | All service tests |
 | Prompt loader | `jest.mock('../../utils/promptLoader')` | Return test prompt |
 | CLI interface | Manual mock object | `createMockUI()` helper |
@@ -243,11 +230,10 @@ describe('GateChecker', () => {
 
 ## Integration Tests
 
-For end-to-end testing of CLI commands, see `src/runInit.integration.test.ts`:
+For end-to-end testing of current interfaces, see `src/cli.test.ts` and `src/services/mcp/mcpServer.test.ts`:
 
 ```typescript
-// Integration tests use real file system but mock AI providers
-// They verify the full command pipeline from CLI args to file output
+// Integration tests verify current CLI help surfaces and MCP tool registration
 ```
 
 Integration tests are slower and may require:

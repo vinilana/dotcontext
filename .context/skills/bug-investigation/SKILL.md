@@ -15,7 +15,7 @@ Systematic approach to investigating and fixing bugs in the `@ai-coders/context`
 
 ## When to Use
 
-- A CLI command (`init`, `fill`, `sync`, `serve`, etc.) produces incorrect output or crashes
+- A CLI command (`workflow`, `sync`, `mcp`, etc.) produces incorrect output or crashes
 - An MCP tool returns an error or unexpected response
 - Semantic analysis (tree-sitter / LSP) fails on certain codebases
 - Scaffold generation produces malformed frontmatter or missing content
@@ -29,7 +29,7 @@ Systematic approach to investigating and fixing bugs in the `@ai-coders/context`
 | CLI commands | `src/index.ts`, `src/services/*/index.ts` | Commander option parsing, missing args |
 | MCP server | `src/services/mcp/mcpServer.ts`, `src/services/mcp/gateway/*.ts` | repoPath resolution, Zod validation failures |
 | Scaffold generation | `src/generators/*/`, `src/types/scaffoldFrontmatter.ts` | Frontmatter parsing, file path resolution |
-| AI fill | `src/services/fill/fillService.ts`, `src/services/ai/agents/` | LLM provider errors, token limits, prompt issues |
+| Scaffold fill via MCP | `src/services/ai/tools/fillScaffoldingTool.ts`, `src/services/mcp/gateway/context.ts` | Missing files, stale context, oversized responses |
 | Semantic analysis | `src/services/semantic/codebaseAnalyzer.ts`, `src/services/semantic/treeSitter/` | tree-sitter optional dep missing, parse failures |
 | Workflow | `src/workflow/`, `src/services/workflow/workflowService.ts` | Phase transition logic, gate checking |
 | i18n | `src/utils/i18n.ts` | Missing translation keys, locale detection |
@@ -43,10 +43,10 @@ Run the CLI in dev mode to reproduce:
 
 ```bash
 # Direct execution via tsx
-npx tsx src/index.ts init /path/to/repo --verbose
+npx tsx src/index.ts workflow --help
 
-# Or for MCP-related bugs, check stderr output
-npx tsx src/index.ts serve --verbose 2>mcp-debug.log
+# For MCP-related bugs, capture stderr output
+npx tsx src/index.ts mcp --verbose 2>mcp-debug.log
 ```
 
 For MCP tool bugs, test the gateway handler directly in a script or test file rather than through the full MCP transport.
@@ -73,7 +73,7 @@ MCP tool (mcpServer.ts registerGatewayTools)
 - **Optional dependencies**: `tree-sitter` and `tree-sitter-typescript` are in `optionalDependencies`. Code must handle their absence gracefully. Check `src/services/semantic/treeSitter/treeSitterLayer.ts`.
 - **repoPath resolution**: The MCP server has a 4-level priority: explicit param > cached path > initial path > `process.cwd()`. Bugs often arise from incorrect path resolution. See `getRepoPath()` in `mcpServer.ts`.
 - **Frontmatter parsing**: Two formats exist (v1 simple, v2 scaffold). Check `src/utils/frontMatter.ts` and `isScaffoldFrontmatter()`.
-- **AI provider configuration**: Multiple providers (Anthropic, OpenAI, Google) via ai-sdk. Config resolution is in `src/services/shared/llmConfig.ts`.
+- **Provider/default detection**: Local model defaults are derived from `src/services/ai/providerFactory.ts` and `src/utils/prompts/smartDefaults.ts`. MCP-hosted generation usually relies on the connected tool's model.
 - **File path handling**: Always use `path.resolve()` or `path.join()`. Watch for relative vs. absolute path confusion, especially in `contextBuilder.ts`.
 
 ### 4. Use Existing Tests as Reference
@@ -85,7 +85,7 @@ Run the relevant test suite to see what is expected:
 npm test
 
 # Run specific test file
-npx jest src/services/fill/fillService.test.ts
+npx jest src/services/mcp/mcpServer.test.ts
 
 # Run tests matching a pattern
 npx jest --testPathPattern="mcp"
@@ -93,7 +93,7 @@ npx jest --testPathPattern="mcp"
 
 Key test files:
 - `src/services/mcp/mcpServer.test.ts` -- MCP server instantiation
-- `src/services/fill/fillService.test.ts` -- Fill service with mocked AI agents
+- `src/services/mcp/mcpServer.test.ts` -- MCP tool registration and dispatch
 - `src/services/semantic/codebaseAnalyzer.test.ts` -- Semantic analysis
 - `src/utils/frontMatter.test.ts` -- Frontmatter parsing
 - `src/utils/contentSanitizer.test.ts` -- Content sanitization
@@ -137,8 +137,8 @@ After identifying root cause:
 - Verify scale-dependent phase skipping (QUICK skips P and R)
 - Check `src/workflow/prevcConfig.ts` for scale definitions
 
-### AI Fill Produces Empty or Placeholder Content
-- Verify LLM config resolution in `src/services/shared/llmConfig.ts`
-- Check prompt loading via `src/utils/promptLoader.ts`
-- Confirm the agent (DocumentationAgent/PlaybookAgent) receives proper context
-- Check token limits and model availability
+### MCP Scaffold Fill Produces Empty or Placeholder Guidance
+- Verify `fillSingleFileTool` can read the scaffold and build semantic context
+- Check scaffold structure registration via `getScaffoldStructure()`
+- Confirm `SemanticContextBuilder` is returning project-specific content
+- Check response size and cached-context invalidation behavior

@@ -51,7 +51,7 @@ Derive scope from the primary area of change:
 |-------|---------------|
 | `mcp` | `src/services/mcp/` -- MCP server, gateway tools |
 | `cli` | `src/index.ts` -- CLI commands, commander setup |
-| `fill` | `src/services/fill/` -- AI fill service |
+| `context` | `src/services/ai/tools/`, `src/services/init/` -- MCP scaffold and semantic-context flows |
 | `init` | `src/services/init/` -- Scaffold initialization |
 | `sync` | `src/services/sync/`, `src/services/export/`, `src/services/import/` |
 | `semantic` | `src/services/semantic/` -- Tree-sitter, LSP, codebase analysis |
@@ -59,7 +59,7 @@ Derive scope from the primary area of change:
 | `generators` | `src/generators/` -- Doc, agent, plan, skill generators |
 | `skills` | `src/workflow/skills/`, `.context/skills/` |
 | `agents` | `src/generators/agents/`, `.context/agents/` |
-| `plans` | `src/services/plan/`, `.context/plans/` |
+| `plans` | `src/generators/plans/`, `src/services/mcp/gateway/plan.ts`, `.context/plans/` |
 | `i18n` | `src/utils/i18n.ts` -- Translations |
 | `utils` | `src/utils/` -- Frontmatter, git, CLI UI |
 | `ai` | `src/services/ai/` -- AI SDK, providers, tools |
@@ -150,7 +150,7 @@ git commit -m "chore(deps): upgrade @modelcontextprotocol/sdk to 1.25.2"
 git commit -m "docs(skills): fill bug-investigation skill with project-specific content"
 
 # Test addition
-git commit -m "test(fill): add integration test for fillSingle with mocked AI agent"
+git commit -m "test(context): cover fillSingle guidance for generated scaffolds"
 
 # Multi-scope refactor
 git commit -m "refactor: extract gateway handlers into individual modules"

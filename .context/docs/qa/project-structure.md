@@ -49,29 +49,21 @@ Each service is a self-contained module with its own directory:
 
 | Service | Purpose |
 | --- | --- |
-| `ai/` | LLM provider abstraction (OpenAI, Anthropic, Google) |
-| `autoFill/` | Automatic content filling logic |
-| `customAgents/` | Custom agent management |
+| `ai/` | MCP-facing AI tool definitions, schemas, and provider helpers |
+| `autoFill/` | Static content filling from semantic analysis |
 | `export/` | Rule export for AI coding tools (Cursor, Windsurf, etc.) |
-| `fill/` | AI-driven documentation filling |
 | `import/` | Import rules and agents from external sources |
-| `init/` | Project initialization and scaffolding |
+| `init/` | Project scaffolding used by MCP context tools |
 | `mcp/` | MCP (Model Context Protocol) server for AI tool integration |
-| `passthrough/` | JSON-over-stdin/stdout protocol for external agent communication |
-| `plan/` | Implementation plan generation |
 | `qa/` | Q&A document generation |
 | `quickSync/` | Quick context synchronization |
 | `report/` | Context report generation |
 | `reverseSync/` | Reverse synchronization (merge external changes back) |
 | `semantic/` | Semantic code analysis (optional tree-sitter) |
-| `serve/` | HTTP serve mode |
 | `shared/` | Shared types, context root resolution, common utilities |
 | `stack/` | Technology stack detection |
-| `start/` | Interactive guided start flow |
 | `state/` | Project state detection |
 | `sync/` | Agent synchronization |
-| `tools/` | Tool definitions |
-| `update/` | Update existing documentation |
 | `workflow/` | Workflow service layer |
 
 ### Generators (`src/generators/`)
@@ -104,4 +96,4 @@ Each service is a self-contained module with its own directory:
 - **Dependency injection**: Services receive their dependencies (`ui`, `t`, `version`) via constructor options conforming to `BaseDependencies` or `AIDependencies` from `src/services/shared/types.ts`.
 - **Service isolation**: Each feature lives in its own service directory with an index barrel export.
 - **i18n throughout**: All user-facing strings go through the `TranslateFn` (`t`) function.
-- **Zod validation**: Request schemas (especially in passthrough protocol) use Zod for runtime validation.
+- **Zod validation**: MCP tool schemas and gateway parameters use Zod for runtime validation.

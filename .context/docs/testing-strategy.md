@@ -32,7 +32,7 @@ Integration tests exercise larger slices of functionality, including CLI command
 **Examples:**
 
 - `src/cli.test.ts` -- CLI command registration and execution
-- `src/runInit.integration.test.ts` -- end-to-end init scaffolding flow
+- `src/services/mcp/mcpServer.test.ts` -- MCP server registration and gateway behavior
 
 ## Framework & Configuration
 
@@ -137,4 +137,4 @@ The project uses `baseUrl: "./src"` and path aliases in `tsconfig.json`. If Jest
 
 **Integration test failures**
 
-Integration tests like `runInit.integration.test.ts` may create temporary files or directories. Ensure your working directory is clean and that no stale `.context` artifacts interfere with test expectations.
+Integration tests that exercise MCP or workflow flows may create temporary files or directories. Ensure your working directory is clean and that no stale `.context` artifacts interfere with test expectations.

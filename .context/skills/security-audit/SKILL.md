@@ -28,10 +28,10 @@ The `@ai-coders/context` tool has a specific threat surface:
 
 | Asset | Risk | Location |
 |-------|------|----------|
-| AI provider API keys | Exposure via logs, config files, or scaffold output | `src/services/shared/llmConfig.ts`, env vars |
+| AI provider API keys | Exposure via logs, config files, or provider helpers | `src/services/ai/providerFactory.ts`, env vars |
 | File system access | Path traversal, reading outside repo boundaries | `src/services/mcp/gateway/explore.ts`, `readFileTool.ts` |
 | MCP server stdio | Command injection via tool parameters | `src/services/mcp/mcpServer.ts` |
-| Generated scaffold content | Inclusion of secrets in `.context/` output | `src/services/fill/`, `src/generators/` |
+| Generated scaffold content | Inclusion of secrets in `.context/` output | `src/services/ai/tools/`, `src/services/autoFill/`, `src/generators/` |
 | User repository content | Unintended exposure via exported context | `src/services/export/`, `src/services/sync/` |
 | Dependencies | Supply chain vulnerabilities | `package.json` |
 
@@ -40,7 +40,7 @@ The `@ai-coders/context` tool has a specific threat surface:
 ### API Key Handling
 
 - [ ] API keys are read from environment variables or CLI flags, never hardcoded
-- [ ] Keys are resolved in `src/services/shared/llmConfig.ts` via `resolveLlmConfig()`
+- [ ] Provider env access goes through `src/services/ai/providerFactory.ts` helpers
 - [ ] Keys are never logged, even in verbose mode
 - [ ] Keys are never written to scaffold files or `.context/` output
 - [ ] Content sanitization (`src/utils/contentSanitizer.ts`) strips potential secrets from generated content
@@ -110,7 +110,7 @@ The `contentSanitizer.ts` utility filters generated content:
 1. Run `npm audit` and address any high/critical findings
 2. Review all files in `src/services/mcp/gateway/` for input validation
 3. Check `src/utils/contentSanitizer.ts` for completeness of sanitization patterns
-4. Review `src/services/shared/llmConfig.ts` for key handling
+4. Review `src/services/ai/providerFactory.ts` and any prompt/default helpers for key handling
 5. Verify `.gitignore` includes `.env`, `*.pem`, `credentials*`
 6. Check that scaffold output in `.context/` does not contain repo-external paths
 7. Review `src/services/ai/tools/` for file access boundaries

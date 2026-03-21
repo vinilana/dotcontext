@@ -47,6 +47,10 @@ Export to any tool.
 > **Usando GitHub Copilot, Cursor, Claude ou outra ferramenta de IA?**
 > Execute `npx @ai-coders/context mcp:install` — sem necessidade de API key!
 
+> **Note / Nota**
+> Standalone CLI generation is no longer supported. Use MCP-enabled AI tools to create, fill, or refresh context.
+> A geração na CLI standalone não é mais suportada. Use ferramentas com MCP para criar, preencher ou atualizar o contexto.
+
 ## Getting Started / Como Começar
 
 ### Path 1: MCP (Recommended / Recomendado) — no API key
@@ -69,19 +73,19 @@ Export to any tool.
 
 **Sem necessidade de API key.** Sua ferramenta de IA fornece o LLM.
 
-### Path 2: Standalone CLI — requires API key / requer API key
+### Path 2: Standalone CLI — workflow, sync, imports, and MCP setup
 
 #### English
 
-1. Create a `.env` file with your provider API key (see [Supported Providers](#supported-providers))
-2. Run `npx @ai-coders/context`
-3. Select "Use the interactive CLI" when prompted
+1. Run `npx @ai-coders/context`
+2. Use the interactive CLI for workflow, sync, reverse sync, and MCP setup
+3. When you need context creation or AI-generated content, use your MCP-connected AI tool
 
 #### Português
 
-1. Crie um arquivo `.env` com sua API key do provedor (veja [Provedores Suportados](#supported-providers))
-2. Execute `npx @ai-coders/context`
-3. Selecione "Usar a CLI interativa" quando solicitado
+1. Execute `npx @ai-coders/context`
+2. Use a CLI interativa para workflow, sincronização, reverse sync e configuração MCP
+3. Quando precisar criar contexto ou gerar conteúdo com IA, use sua ferramenta conectada via MCP
 
 ## MCP Server Setup
 
@@ -428,18 +432,8 @@ The system automatically detects project scale and adjusts the workflow:
 ### Requirements
 
 - Node.js 20+
-- API key from a supported provider (for AI features in standalone CLI mode)
 
-**If you are using through MCP you don't need to set up an API key from a supported provider, your AI agent will use its own LLM.**
-
-### Supported Providers
-
-| Provider | Environment Variable |
-|----------|---------------------|
-| OpenRouter | `OPENROUTER_API_KEY` |
-| OpenAI | `OPENAI_API_KEY` |
-| Anthropic | `ANTHROPIC_API_KEY` |
-| Google | `GOOGLE_API_KEY` |
+**Context creation, AI generation, and refresh are MCP-only.** Use `npx @ai-coders/context mcp:install` and let your AI tool use its own LLM.
 
 ### Available MCP Tools
 
@@ -493,12 +487,11 @@ Skills are task-specific procedures that AI agents activate when needed:
 | `security-audit` | Security review checklist | R, V |
 
 ```bash
-npx @ai-coders/context skill init           # Initialize skills
-npx @ai-coders/context skill fill           # Fill skills with AI (project-specific content)
-npx @ai-coders/context skill list           # List available skills
-npx @ai-coders/context skill export         # Export to AI tools
-npx @ai-coders/context skill create my-skill # Create custom skill
+npx @ai-coders/context skill list   # List available skills
+npx @ai-coders/context skill export # Export to AI tools
 ```
+
+Use MCP tools from your AI assistant to scaffold, fill, or refresh skills and other context files.
 
 ### Agent Types
 

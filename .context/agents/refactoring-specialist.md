@@ -17,22 +17,21 @@ Identify code smells, architectural inconsistencies, and improvement opportuniti
 ## Key Files to Understand
 
 - `src/index.ts` -- CLI entry point. Currently houses all command registration and service instantiation inline. A primary refactoring candidate for command registration extraction.
-- `src/services/fill/fillService.ts` -- The most imported service (15+ dependents). Its broad interface and mixed responsibilities (file discovery, LLM orchestration, content writing) make it a candidate for decomposition.
+- `src/services/mcp/gateway/context.ts` -- Consolidates multiple scaffold and semantic-context actions behind one gateway. It is a high-impact refactoring surface because multiple MCP flows converge here.
 - `src/generators/agents/agentGenerator.ts` -- Second most imported (13 dependents). Contains the `AGENT_PHASES` mapping, agent generation logic, and semantic context integration. Consider extracting the phase mapping to the workflow module.
-- `src/services/shared/` -- Shared utilities directory with 8+ modules (`pathHelpers.ts`, `llmConfig.ts`, `globPatterns.ts`, `contentTypeRegistry.ts`, `contextRootResolver.ts`, `uiHelpers.ts`, `toolRegistry.ts`). Some services duplicate logic that could be centralized here.
+- `src/services/shared/` -- Shared utilities directory with path helpers, glob patterns, content type registry, context root resolution, UI helpers, and tool registry. Some services duplicate logic that could be centralized here.
 - `src/generators/shared/` -- Shared generator code including `scaffoldStructures.ts`, `generatorUtils.ts`, `contextGenerator.ts`, and the `structures/` registry. The structures system is well-designed but some generators bypass it.
 - `src/workflow/` -- PREVC workflow module with phases, roles, gates, orchestration, scaling, status management, and skills. Internal cohesion is good but the API surface to external consumers could be cleaner.
 - `src/services/ai/providerFactory.ts` -- AI provider abstraction. Four providers (openrouter, openai, anthropic, google) with similar setup patterns that could benefit from a strategy pattern.
 - `src/utils/frontMatter.ts` -- Handles both v1 and v2 frontmatter formats. The dual-format support adds complexity; consider a unified parser with format auto-detection.
 - `src/types.ts` -- Global types file. Some interfaces here are only used by specific services and could be co-located.
-- `src/services/init/initService.ts`, `src/services/sync/syncService.ts`, `src/services/plan/planService.ts` -- Top services that demonstrate the standard service pattern. Use these as reference implementations.
+- `src/services/init/initService.ts`, `src/services/sync/syncService.ts`, `src/services/workflow/workflowService.ts` -- Strong reference implementations for the current service pattern.
 
 ## Workflow Steps
 
 1. **Audit the dependency graph**: Identify high fan-in (many importers) and high fan-out (many imports) modules. Key metrics:
-   - `FillService`: 15 files import it -- consider whether all need the full interface or just a subset
+   - `handleContext` and `fillScaffoldingTool`: high fan-in around MCP scaffolding flows
    - `AgentGenerator`: 13 importers -- the `AGENT_PHASES` constant could live in `src/workflow/` instead
-   - `PlanService`: 11 importers
    - `InitService`: 9 importers
 
 2. **Identify pattern violations**: The standard service pattern is:
@@ -42,7 +41,7 @@ Identify code smells, architectural inconsistencies, and improvement opportuniti
 3. **Find duplicated logic**: Common duplication areas:
    - Frontmatter reading/writing across services (should all use `src/utils/frontMatter.ts`)
    - Glob pattern assembly (should all use `src/services/shared/globPatterns.ts`)
-   - LLM config resolution (should all use `src/services/shared/llmConfig.ts` and `resolveLlmConfig()`)
+   - Provider/default-model detection (should consistently use `src/services/ai/providerFactory.ts` and `src/utils/prompts/smartDefaults.ts`)
    - File discovery patterns (scanning `.context/` subdirectories)
 
 4. **Plan the refactoring**: For each identified improvement:
@@ -55,7 +54,7 @@ Identify code smells, architectural inconsistencies, and improvement opportuniti
    - Run `npm test` to verify behavior
    - Verify barrel exports in `index.ts` files are updated
 
-6. **Update scaffolds and structures**: If refactoring changes public APIs of services or generators, update the corresponding scaffold structures in `src/generators/shared/structures/` and templates so future `ai-context init` runs produce correct scaffolds.
+6. **Update scaffolds and structures**: If refactoring changes public APIs of services or generators, update the corresponding scaffold structures in `src/generators/shared/structures/` and templates so future MCP `context({ action: "init" })` runs produce correct scaffolds.
 
 ## Best Practices
 

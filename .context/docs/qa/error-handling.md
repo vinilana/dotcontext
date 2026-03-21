@@ -6,14 +6,15 @@ generatedAt: 2026-03-18T21:32:54.231Z
 relevantFiles:
   - src/workflow/errors.ts
   - src/services/shared/types.ts
-  - src/services/passthrough/protocol.ts
+  - src/services/mcp/gateway/response.ts
+  - src/services/mcp/mcpServer.ts
 ---
 
 # How are errors handled?
 
 ## Overview
 
-Error handling in this project follows three patterns depending on the context: workflow errors (custom error classes), operation result errors (structured result objects), and protocol errors (JSON error responses).
+Error handling in this project follows three patterns depending on the context: workflow errors (custom error classes), operation result errors (structured result objects), and MCP tool errors (structured responses returned through the MCP server).
 
 ## 1. Workflow errors (`src/workflow/errors.ts`)
 
@@ -46,35 +47,30 @@ interface OperationError {
 
 The `addError()` helper increments `filesFailed` and appends an `OperationError` entry. Multiple results can be merged with `mergeResults()`. This pattern allows batch operations to continue processing after individual file failures and report all errors at the end.
 
-## 3. Passthrough protocol errors (`src/services/passthrough/protocol.ts`)
+## 3. MCP tool errors (`src/services/mcp/gateway/response.ts`)
 
-The JSON-over-stdin/stdout passthrough protocol returns structured error responses with typed error codes:
+MCP gateway handlers return structured error payloads through shared response helpers:
 
 ```typescript
-interface ErrorResponse {
-  id: string;
-  success: false;
-  error: {
-    code: string;    // One of ErrorCodes
-    message: string;
-    details?: unknown;
-  };
+interface MCPToolResponse {
+  content: Array<{
+    type: 'text';
+    text: string;
+  }>;
+  isError?: boolean;
 }
 ```
 
-Defined error codes:
+The error helper serializes responses like:
 
-| Code | Meaning |
-| --- | --- |
-| `PARSE_ERROR` | Malformed JSON input |
-| `INVALID_REQUEST` | Request fails Zod schema validation |
-| `METHOD_NOT_FOUND` | Unknown method in request |
-| `TOOL_NOT_FOUND` | Requested tool does not exist |
-| `AGENT_NOT_FOUND` | Requested agent does not exist |
-| `EXECUTION_ERROR` | Runtime error during tool/agent execution |
-| `VALIDATION_ERROR` | Parameter validation failure |
+```json
+{
+  "success": false,
+  "error": "Human-readable message"
+}
+```
 
-The `createErrorResponse()` factory function produces correctly shaped error responses.
+`createErrorResponse()` sets `isError: true` and wraps the JSON payload in MCP-compatible text content. At the server boundary, `src/services/mcp/mcpServer.ts` validates tool input with Zod and catches handler failures before returning them to the client.
 
 ## 4. CLI-level error handling
 
@@ -84,5 +80,5 @@ At the CLI level (`src/index.ts`), errors from services are caught and displayed
 
 - **Do not throw for expected batch failures** -- Use `OperationResult` to accumulate errors when processing multiple files.
 - **Throw custom error classes for workflow violations** -- Callers can use `instanceof` to handle specific workflow error types.
-- **Return structured error responses in protocol mode** -- Never throw across the JSON protocol boundary; always respond with an `ErrorResponse`.
+- **Return structured error responses in MCP mode** -- Gateway handlers should use the shared response helpers instead of leaking raw exceptions to the client.
 - **Include actionable hints** -- `WorkflowGateError` includes a `hint` field to guide users toward resolution.

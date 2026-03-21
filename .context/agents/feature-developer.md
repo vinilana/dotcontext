@@ -21,12 +21,12 @@ Implement new features in the ai-coders-context CLI tool, including new CLI comm
 - `src/services/` -- Service layer. Each service lives in its own subdirectory with `index.ts` barrel export, a main service class, a `types.ts` for interfaces, and optionally a `presets.ts` for default configurations.
 - `src/generators/` -- Content generators for `documentation`, `agents`, `plans`, and `skills`. Each generator creates scaffold files in `.context/`.
 - `src/workflow/` -- PREVC workflow system: phases (`P`lanning, `R`eview, `E`xecution, `V`alidation, `C`onfirmation), roles, gates, orchestration, scaling, and status management.
-- `src/services/ai/` -- AI integration layer: `providerFactory.ts` (creates LLM providers), `agents/` (DocumentationAgent, PlaybookAgent), `tools/` (code analysis tools for agentic exploration), `schemas/` (Zod schemas for structured output).
+- `src/services/ai/` -- AI integration layer: `providerFactory.ts` (provider helpers), `tools/` (code analysis and scaffold tools), `schemas/` (Zod schemas for structured output), and MCP-facing utilities.
 - `src/services/mcp/` -- Model Context Protocol server implementation using `@modelcontextprotocol/sdk`.
 - `src/utils/i18n.ts` -- i18n with `en` and `pt-BR` locales. The `TranslateFn` type and `createTranslator()` factory.
 - `src/utils/cliUI.ts` -- `CLIInterface` class for all terminal output (spinners, progress bars, status messages, PREVC diagrams).
 - `src/utils/theme.ts` -- Centralized chalk-based color scheme (`colors`, `symbols`, `typography`).
-- `src/services/shared/` -- Cross-cutting utilities: path helpers, glob patterns, content type registry, context root resolution, LLM config resolution, tool registry.
+- `src/services/shared/` -- Cross-cutting utilities: path helpers, glob patterns, content type registry, context root resolution, and tool registry.
 
 ## Workflow Steps
 
@@ -46,7 +46,7 @@ Implement new features in the ai-coders-context CLI tool, including new CLI comm
 
 5. **Integrate with generators** (if producing `.context/` files): Use the scaffold structure system in `src/generators/shared/structures/`. Define a `ScaffoldStructure`, register it, and use `createAgentFrontmatter()` or equivalent from `src/types/scaffoldFrontmatter.ts` for proper v2 frontmatter.
 
-6. **Add AI capabilities** (if LLM-powered): Use `LLMClientFactory` from `src/services/llmClientFactory.ts` to create clients. For agentic workflows, create an agent class in `src/services/ai/agents/` following the `DocumentationAgent` pattern: constructor takes `LLMConfig`, uses `createProvider()`, and calls `generateText()` or `generateObject()` from the Vercel AI SDK.
+6. **Add AI capabilities** (if MCP-facing): Extend `src/services/ai/tools/` and `src/services/mcp/gateway/` rather than adding standalone CLI agent classes. Reuse `providerFactory.ts` helpers only where the MCP server itself needs provider-aware behavior; content generation should flow through the connected MCP client.
 
 7. **Write tests**: Create `<feature>Service.test.ts` or a `__tests__/` directory. Mock `CLIInterface` and `TranslateFn`. Use `jest.mock()` for fs-extra and external dependencies.
 

@@ -8,7 +8,6 @@ export * from './types';
 
 // Re-export modules
 export { detectSmartDefaults, getConfiguredProviders, hasAnyProviderConfigured } from './smartDefaults';
-export { promptLLMConfig } from './llmPrompts';
 export { displayConfigSummary } from './configSummary';
 
 /**

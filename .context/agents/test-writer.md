@@ -29,18 +29,18 @@ Write and maintain unit and integration tests for the ai-coders-context project 
 - `src/services/semantic/codebaseAnalyzer.test.ts` -- Tests tree-sitter integration with actual parsing. Demonstrates handling optional native dependencies in tests.
 - `src/services/shared/__tests__/contextRootResolver.test.ts` -- Service test in `__tests__/` directory structure.
 - `src/cli.test.ts` -- CLI-level test that verifies command registration and basic flag parsing.
-- `src/runInit.integration.test.ts` -- Integration test for the init command flow. Tests the full pipeline from CLI flags to file output.
+- `src/services/mcp/mcpServer.test.ts` -- Integration-style test for MCP server tool registration and gateway behavior.
 
 ## Workflow Steps
 
 1. **Identify untested code**: Run `npm test -- --coverage` to generate a coverage report. Look at `coverage/lcov-report/index.html` for visual coverage gaps. Priority areas with low coverage:
    - Service `run()` methods (complex orchestration logic)
-   - AI agent classes (require mocking LLM calls)
+   - MCP gateway handlers and scaffold tools
    - Workflow orchestration and status management
    - CLI command handlers in `src/index.ts`
 
 2. **Choose test location**: Use one of two patterns:
-   - Co-located: `src/services/fill/fillService.test.ts` (next to the source file)
+   - Co-located: `src/services/mcp/mcpInstallService.test.ts` (next to the source file)
    - Directory: `src/services/shared/__tests__/contextRootResolver.test.ts` (in `__tests__/` subdirectory)
 
    Both patterns are matched by Jest config. Prefer co-located for single-file tests and `__tests__/` for multi-file test suites.
@@ -57,7 +57,6 @@ Write and maintain unit and integration tests for the ai-coders-context project 
      displayError: jest.fn(),
      displayInfo: jest.fn(),
      displayWarning: jest.fn(),
-     createAgentCallbacks: jest.fn().mockReturnValue({}),
    } as unknown as CLIInterface;
    ```
 
@@ -114,7 +113,7 @@ Write and maintain unit and integration tests for the ai-coders-context project 
 ## Common Pitfalls
 
 - **Forgetting `await` in tests**: Many service methods are async. Forgetting `await` on the method call causes the test to pass before assertions are evaluated. Always `await` async operations and use `expect(...).resolves` or `expect(...).rejects` for promise assertions.
-- **File system state leakage**: Tests that write to actual files (integration tests like `runInit.integration.test.ts`) must clean up in `afterEach()` or `afterAll()`. Use `os.tmpdir()` and unique directory names.
+- **File system state leakage**: Tests that write to actual files or temp directories must clean up in `afterEach()` or `afterAll()`. Use `os.tmpdir()` and unique directory names.
 - **Mocking module-level constants**: Some modules export constants at the module level (e.g., `AGENT_TYPES`, `PREVC_PHASE_ORDER`). These cannot be mocked with `jest.mock()` easily. Import them directly and test code that uses them.
 - **Snapshot fragility**: Avoid snapshot tests for generated markdown content -- they break on any formatting change. Instead, assert on structural properties (frontmatter fields present, section headings exist, file count correct).
 - **Testing LLM output**: Never test actual LLM responses in unit tests. Mock the AI SDK and test that the correct prompts and parameters are passed. Integration tests with real LLM calls should be separate and marked with a custom Jest tag or environment variable check.

@@ -26,13 +26,11 @@ describe('splashScreen', () => {
       title: 'AI Coders CLI',
       version: '0.8.0',
       lines: [
-        { label: 'model', value: 'gpt-5.4', note: 'default' },
         { label: 'directory', value: '~/workspace/ai-coders-context' },
       ],
     }));
 
     expect(output).toContain('AI Coders CLI');
-    expect(output).toContain('model:');
     expect(output).toContain('directory:');
     expect(output).toContain('~/workspace/ai-coders-context');
     expect(output).toContain('╭');

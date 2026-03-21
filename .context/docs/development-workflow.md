@@ -82,18 +82,16 @@ npm install
 
 1. Create a branch from `main` following the naming conventions above.
 2. Make changes in `src/`.
-3. Test interactively with `npm run dev -- <command>` (e.g., `npm run dev -- init`).
+3. Test interactively with `npm run dev -- <command>` (e.g., `npm run dev -- workflow --help`).
 4. Run `npm test` to verify nothing is broken.
 5. Run `npm run build` to confirm the TypeScript compiles cleanly.
 6. Commit, push, and open a pull request against `main`.
 
 ### Environment variables
 
-For AI-powered features (fill, auto-fill), set one or more provider API keys:
+The CLI supports locale overrides via `AI_CONTEXT_LANG` (`en` or `pt-BR`).
 
-- `ANTHROPIC_API_KEY` -- for Anthropic/Claude
-- `OPENAI_API_KEY` -- for OpenAI
-- `GOOGLE_GENERATIVE_AI_API_KEY` -- for Google AI
+For AI-generated filling or refresh, install MCP with `npx @ai-coders/context mcp:install` and use your connected AI tool instead of standalone CLI commands.
 
 Use a `.env` file in the project root (loaded via dotenv). Do not commit `.env` files.
 

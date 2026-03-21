@@ -1,7 +1,7 @@
 {
   "name": "@ai-coders/context",
   "version": "0.8.0",
-  "description": "CLI tool for generating codebase documentation and AI agent prompts",
+  "description": "MCP-first toolkit for AI context workflow, sync, imports, and orchestration",
   "main": "dist/index.js",
   "bin": {
     "ai-context": "dist/index.js"
@@ -16,7 +16,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "jest",

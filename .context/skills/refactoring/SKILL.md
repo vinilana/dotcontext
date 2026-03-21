@@ -122,7 +122,7 @@ type ContextParams =
 Common duplication spots in this project:
 
 - **Path resolution**: Multiple services resolve `repoPath` + `outputDir`. Extract to `src/services/shared/`.
-- **Frontmatter parsing**: Used in generators, fill service, and MCP tools. Centralized in `src/utils/frontMatter.ts`.
+- **Frontmatter parsing**: Used in generators, scaffold tools, and MCP flows. Centralized in `src/utils/frontMatter.ts`.
 - **File listing with glob**: Used in semantic analysis, generators, and export. Check `src/services/shared/` for existing utilities.
 - **Error response creation**: MCP handlers should all use `createErrorResponse()` from `response.ts`.
 
