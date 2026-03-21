@@ -32,7 +32,6 @@ export class SyncService {
 
     await this.validateSource(options.sourcePath);
 
-    this.ui.displayWelcome(this.version);
     this.displayConfig(options);
 
     const agentFiles = await this.discoverAgentFiles(options.sourcePath);

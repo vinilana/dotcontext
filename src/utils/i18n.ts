@@ -4,8 +4,6 @@ export const SUPPORTED_LOCALES: Locale[] = ['en', 'pt-BR'];
 export const DEFAULT_LOCALE: Locale = 'en';
 
 const englishMessages = {
-  'cli.name': 'AI Coders Context by aicoders.academy',
-  'cli.tagline': 'Manage MCP integration, workflow, sync, and context imports for your repository',
   'cli.description': 'Manage MCP integration, workflow, sync, and context imports for your repository',
   'global.options.lang': 'Language for CLI output (en or pt-BR)',
   'ui.version': 'Version {version}',
@@ -27,9 +25,6 @@ const englishMessages = {
   'ui.generationSummary.nextStep': 'Next step: customize the generated templates to match your project.',
   'ui.error.title': 'Error',
   'ui.splash.directoryLabel': 'directory',
-  'ui.prevc.title': 'PREVC Workflow - Spec-Driven Development for AI Agents',
-  'ui.prevc.subtitle': 'A universal 5-step process that improves AI output quality',
-  'ui.prevc.specDriven': 'Spec-driven, not autopilot. Define what you want, then let AI execute.',
   'info.prompt.title': 'System Prompt',
   'info.prompt.usingCustom': 'Using prompt from {path}.',
   'info.prompt.usingPackage': 'Using packaged prompt at {path}.',
@@ -558,8 +553,6 @@ export type TranslationKey = keyof typeof englishMessages;
 type TranslationDictionary = Record<TranslationKey, string>;
 
 const portugueseMessages: TranslationDictionary = {
-  'cli.name': 'AI Coders Context by aicoders.academy',
-  'cli.tagline': 'Gerencie integração MCP, workflow, sincronização e importação de contexto para o seu repositório',
   'cli.description': 'Gerencie integração MCP, workflow, sincronização e importação de contexto para o seu repositório',
   'global.options.lang': 'Idioma para a saída do CLI (en ou pt-BR)',
   'ui.version': 'Versão {version}',
@@ -581,9 +574,6 @@ const portugueseMessages: TranslationDictionary = {
   'ui.generationSummary.nextStep': 'Próximo passo: personalize os templates gerados para o seu projeto.',
   'ui.error.title': 'Erro',
   'ui.splash.directoryLabel': 'diretorio',
-  'ui.prevc.title': 'PREVC Workflow - Desenvolvimento Orientado a Specs para Agentes IA',
-  'ui.prevc.subtitle': 'Um processo universal de 5 etapas que melhora a qualidade do output da IA',
-  'ui.prevc.specDriven': 'Orientado a specs, não em piloto automático. Defina o que você quer, depois deixe a IA executar.',
   'info.prompt.title': 'Prompt do sistema',
   'info.prompt.usingCustom': 'Usando prompt em {path}.',
   'info.prompt.usingPackage': 'Usando prompt empacotado em {path}.',

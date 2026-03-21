@@ -91,7 +91,6 @@ export class InitService {
     await this.ensurePaths(options);
     await this.confirmOverwriteIfNeeded(options);
 
-    this.ui.displayWelcome(this.version);
     this.ui.displayProjectInfo(options.repoPath, options.outputDir, resolvedType);
 
     const fileMapper = this.fileMapperFactory(options.exclude);
