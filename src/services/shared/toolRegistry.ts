@@ -237,6 +237,19 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     description: 'Codex CLI skills directory',
   },
 
+  // Agent Skills (Cross-Client) - agentskills.io interoperability standard
+  {
+    id: 'agents',
+    displayName: 'Agent Skills (Cross-Client)',
+    directoryPrefix: '.agents',
+    capabilities: { rules: false, agents: false, skills: true },
+    paths: {
+      skillsExport: '.agents/skills',
+      skillsImport: ['**/.agents/skills/*/SKILL.md', '**/.agents/skills/**/*.md'],
+    },
+    description: 'Cross-client agent skills directory (agentskills.io)',
+  },
+
   // Aider
   {
     id: 'aider',

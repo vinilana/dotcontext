@@ -21,6 +21,14 @@ interface AgentContext {
   semantics?: SemanticContext;
 }
 
+/** Skill info that agents can reference */
+interface AvailableSkill {
+  slug: string;
+  name: string;
+  description: string;
+  phases: string[];
+}
+
 interface AgentGenerationConfig {
   selectedAgents?: string[];
   semantic?: boolean;
@@ -30,7 +38,22 @@ interface AgentGenerationConfig {
   includeContentStubs?: boolean;
   /** Fill scaffolds with semantic data (no LLM required) */
   autoFill?: boolean;
+  /** Available skills that agents can reference */
+  availableSkills?: AvailableSkill[];
 }
+
+/**
+ * Mapping of agent types to relevant skill slugs
+ */
+const AGENT_SKILL_MAP: Partial<Record<AgentType, string[]>> = {
+  'code-reviewer': ['code-review', 'security-audit'],
+  'bug-fixer': ['bug-investigation'],
+  'feature-developer': ['feature-breakdown', 'commit-message'],
+  'refactoring-specialist': ['refactoring'],
+  'test-writer': ['test-generation'],
+  'documentation-writer': ['documentation', 'commit-message'],
+  'security-auditor': ['security-audit'],
+};
 
 /**
  * Agent to PREVC phase mapping
@@ -161,6 +184,14 @@ export class AgentGenerator {
         }
       }
 
+      // Append available skills section if skills are provided
+      if (normalizedConfig.availableSkills && normalizedConfig.availableSkills.length > 0) {
+        const skillsSection = this.renderSkillsSection(agentType, normalizedConfig.availableSkills);
+        if (skillsSection) {
+          content += skillsSection;
+        }
+      }
+
       const filePath = path.join(agentsDir, `${agentType}.md`);
       await GeneratorUtils.writeFileWithLogging(filePath, content, verbose, `Created ${agentType}.md`);
       created += 1;
@@ -173,6 +204,27 @@ export class AgentGenerator {
     created += 1;
 
     return created;
+  }
+
+  /**
+   * Render an "Available Skills" markdown section for an agent, filtered to relevant skills.
+   */
+  private renderSkillsSection(agentType: AgentType, availableSkills: AvailableSkill[]): string | null {
+    const relevantSlugs = AGENT_SKILL_MAP[agentType];
+    if (!relevantSlugs || relevantSlugs.length === 0) {
+      return null;
+    }
+
+    const matchedSkills = availableSkills.filter(s => relevantSlugs.includes(s.slug));
+    if (matchedSkills.length === 0) {
+      return null;
+    }
+
+    const rows = matchedSkills.map(
+      s => `| [${s.slug}](./../skills/${s.slug}/SKILL.md) | ${s.description} |`
+    );
+
+    return `\n## Available Skills\n\nThe following skills provide detailed procedures for specific tasks. Activate them when needed:\n\n| Skill | Description |\n|-------|-------------|\n${rows.join('\n')}\n`;
   }
 
   private getRelevantSymbolsForAgent(agentType: AgentType, semantics?: SemanticContext): KeySymbolInfo[] {
