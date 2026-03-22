@@ -44,10 +44,10 @@ Export to any tool.
 **Write once. Use anywhere. No boilerplate.**
 
 > **Using GitHub Copilot, Cursor, Claude, or another AI tool?**
-> Just run `npx @dotcontext/cli mcp:install` — no API key needed!
+> Just run `npx dotcontext mcp:install` — no API key needed!
 >
 > **Usando GitHub Copilot, Cursor, Claude ou outra ferramenta de IA?**
-> Execute `npx @dotcontext/cli mcp:install` — sem necessidade de API key!
+> Execute `npx dotcontext mcp:install` — sem necessidade de API key!
 
 > **Note / Nota**
 > Standalone CLI generation is no longer supported. Use MCP-enabled AI tools to create, fill, or refresh context.
@@ -59,7 +59,7 @@ Export to any tool.
 
 #### English
 
-1. Run `npx @dotcontext/cli mcp:install`
+1. Run `npx dotcontext mcp:install`
 2. Prompt your AI agent: `init the context`
 3. Then: `plan [YOUR TASK] using dotcontext`
 4. After planned: `start the workflow`
@@ -68,7 +68,7 @@ Export to any tool.
 
 #### Português
 
-1. Execute `npx @dotcontext/cli mcp:install`
+1. Execute `npx dotcontext mcp:install`
 2. Diga ao seu agente de IA: `init the context`
 3. Depois: `plan [SUA TAREFA] using dotcontext`
 4. Após o planejamento: `start the workflow`
@@ -79,13 +79,13 @@ Export to any tool.
 
 #### English
 
-1. Run `npx @dotcontext/cli`
+1. Run `npx dotcontext`
 2. Use the interactive CLI for workflow, sync, reverse sync, and MCP setup
 3. When you need context creation or AI-generated content, use your MCP-connected AI tool
 
 #### Português
 
-1. Execute `npx @dotcontext/cli`
+1. Execute `npx dotcontext`
 2. Use a CLI interativa para workflow, sincronização, reverse sync e configuração MCP
 3. Quando precisar criar contexto ou gerar conteúdo com IA, use sua ferramenta conectada via MCP
 
@@ -98,7 +98,7 @@ This package includes an MCP (Model Context Protocol) server that provides AI co
 Use the MCP Install command to automatically configure the MCP server:
 
 ```bash
-npx @dotcontext/cli mcp:install
+npx dotcontext mcp:install
 ```
 
 This interactive command:
@@ -156,7 +156,7 @@ After saving the `mcp.json` file:
 Add the MCP server using the Claude CLI:
 
 ```bash
-claude mcp add dotcontext -- npx @dotcontext/cli mcp
+claude mcp add dotcontext -- npx dotcontext mcp
 ```
 
 Or configure manually in `~/.claude.json`:
@@ -435,7 +435,7 @@ The system automatically detects project scale and adjusts the workflow:
 
 - Node.js 20+
 
-**Context creation, AI generation, and refresh are MCP-only.** Use `npx @dotcontext/cli mcp:install` and let your AI tool use its own LLM.
+**Context creation, AI generation, and refresh are MCP-only.** Use `npx dotcontext mcp:install` and let your AI tool use its own LLM.
 
 ### Available MCP Tools
 
@@ -489,8 +489,8 @@ Skills are task-specific procedures that AI agents activate when needed:
 | `security-audit` | Security review checklist | R, V |
 
 ```bash
-npx @dotcontext/cli skill list   # List available skills
-npx @dotcontext/cli skill export # Export to AI tools
+npx dotcontext skill list   # List available skills
+npx dotcontext skill export # Export to AI tools
 ```
 
 Use MCP tools from your AI assistant to scaffold, fill, or refresh skills and other context files.
@@ -528,7 +528,7 @@ The previous name `@ai-coders/context` caused frequent confusion with **Context7
 | Before | After |
 |--------|-------|
 | `npm install @ai-coders/context` | `npm install @dotcontext/cli` |
-| `npx @ai-coders/context` | `npx @dotcontext/cli` |
+| `npx @ai-coders/context` | `npx dotcontext` |
 | CLI command: `ai-context` | CLI command: `dotcontext` |
 | MCP server name: `"ai-context"` | MCP server name: `"dotcontext"` |
 | Env var: `AI_CONTEXT_LANG` | Env var: `DOTCONTEXT_LANG` |
@@ -551,7 +551,7 @@ The previous name `@ai-coders/context` caused frequent confusion with **Context7
 
 2. **Update MCP configurations** -- re-run the installer:
    ```bash
-   npx @dotcontext/cli mcp:install
+   npx dotcontext mcp:install
    ```
    Or manually replace `"ai-context"` with `"dotcontext"` and `"@ai-coders/context"` with `"@dotcontext/cli"` in your MCP JSON configs.
 

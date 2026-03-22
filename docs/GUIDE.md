@@ -14,7 +14,7 @@ The fastest path for most users is:
 
 ```bash
 # 1. Install the MCP server into your AI tool
-npx @dotcontext/cli mcp:install
+npx dotcontext mcp:install
 
 # 2. In your AI tool, ask it to initialize context
 # Example prompts:
@@ -23,7 +23,7 @@ npx @dotcontext/cli mcp:install
 #   start the workflow
 
 # 3. For non-trivial work, track execution from the CLI
-npx @dotcontext/cli workflow init "feature-name"
+npx dotcontext workflow init "feature-name"
 ```
 
 If you are using the MCP path, you usually do not need an API key. Your AI tool provides the model.
@@ -44,7 +44,7 @@ Older docs and examples may still refer to flows that are no longer the primary 
 
 - Standalone CLI generation is no longer the recommended path for creating or filling context.
 - Use MCP-connected AI tools for context init, plan scaffolding, and AI-generated content.
-- There is no top-level `quick-sync` command, but interactive quick sync is still available from `npx @dotcontext/cli`.
+- There is no top-level `quick-sync` command, but interactive quick sync is still available from `npx dotcontext`.
 
 If you are looking for `init`, `fill`, `plan`, `update`, or `analyze` as direct CLI commands, that is expected. Those responsibilities moved into MCP workflows.
 
@@ -53,7 +53,7 @@ If you are looking for `init`, `fill`, `plan`, `update`, or `analyze` as direct 
 ### 1. Install MCP
 
 ```bash
-npx @dotcontext/cli mcp:install
+npx dotcontext mcp:install
 ```
 
 This configures the `dotcontext` MCP server for supported AI tools. Use `--dry-run` to preview changes or `--local` to install in the current project instead of your home directory.
@@ -77,9 +77,9 @@ Typical prompts:
 For work that needs structure, use the workflow commands:
 
 ```bash
-npx @dotcontext/cli workflow init "feature-name"
-npx @dotcontext/cli workflow status
-npx @dotcontext/cli workflow advance
+npx dotcontext workflow init "feature-name"
+npx dotcontext workflow status
+npx dotcontext workflow advance
 ```
 
 The workflow uses PREVC:
@@ -95,8 +95,8 @@ The workflow uses PREVC:
 For larger tasks, the workflow can also record handoffs and collaboration:
 
 ```bash
-npx @dotcontext/cli workflow handoff feature-developer code-reviewer
-npx @dotcontext/cli workflow collaborate "API contract review"
+npx dotcontext workflow handoff feature-developer code-reviewer
+npx dotcontext workflow collaborate "API contract review"
 ```
 
 ### 4. Sync or Import Context As Needed
@@ -106,26 +106,26 @@ Use the CLI when you need to move rules or agents between `.context/` and tool-s
 Export rules:
 
 ```bash
-npx @dotcontext/cli export-rules --preset cursor
+npx dotcontext export-rules --preset cursor
 ```
 
 Export agents:
 
 ```bash
-npx @dotcontext/cli sync-agents --preset claude
+npx dotcontext sync-agents --preset claude
 ```
 
 Import rules or agents from existing tool configs:
 
 ```bash
-npx @dotcontext/cli import-rules
-npx @dotcontext/cli import-agents
+npx dotcontext import-rules
+npx dotcontext import-agents
 ```
 
 Reverse-sync everything back into `.context/`:
 
 ```bash
-npx @dotcontext/cli reverse-sync --dry-run
+npx dotcontext reverse-sync --dry-run
 ```
 
 ### 4a. Interactive Quick Sync
@@ -133,7 +133,7 @@ npx @dotcontext/cli reverse-sync --dry-run
 If you want a guided export flow instead of calling individual commands, use the interactive CLI:
 
 ```bash
-npx @dotcontext/cli
+npx dotcontext
 ```
 
 The quick sync flow can export docs, agents, and skills together. It is part of the interactive experience, not a separate `quick-sync` command.
@@ -143,7 +143,7 @@ The quick sync flow can export docs, agents, and skills together. It is part of 
 Generate a workflow report when you want a quick status snapshot:
 
 ```bash
-npx @dotcontext/cli report
+npx dotcontext report
 ```
 
 You can also export the report as Markdown or JSON.
@@ -169,18 +169,18 @@ These are the main commands currently exposed by the CLI:
 
 | Command | Purpose |
 | --- | --- |
-| `npx @dotcontext/cli` | Launch the interactive CLI, including quick sync |
-| `npx @dotcontext/cli mcp:install` | Install MCP configuration for supported AI tools |
-| `npx @dotcontext/cli mcp` | Start the MCP server manually |
-| `npx @dotcontext/cli workflow ...` | Manage PREVC workflow state |
-| `npx @dotcontext/cli skill list` | List available skills |
-| `npx @dotcontext/cli skill export` | Export skills to AI tool directories |
-| `npx @dotcontext/cli sync-agents` | Export agent playbooks to AI tools |
-| `npx @dotcontext/cli export-rules` | Export `.context/docs` rules to AI tools |
-| `npx @dotcontext/cli import-rules` | Import rules into `.context/docs` |
-| `npx @dotcontext/cli import-agents` | Import agents into `.context/agents` |
-| `npx @dotcontext/cli reverse-sync` | Import rules, agents, and skills into `.context/` |
-| `npx @dotcontext/cli report` | Generate workflow progress reports |
+| `npx dotcontext` | Launch the interactive CLI, including quick sync |
+| `npx dotcontext mcp:install` | Install MCP configuration for supported AI tools |
+| `npx dotcontext mcp` | Start the MCP server manually |
+| `npx dotcontext workflow ...` | Manage PREVC workflow state |
+| `npx dotcontext skill list` | List available skills |
+| `npx dotcontext skill export` | Export skills to AI tool directories |
+| `npx dotcontext sync-agents` | Export agent playbooks to AI tools |
+| `npx dotcontext export-rules` | Export `.context/docs` rules to AI tools |
+| `npx dotcontext import-rules` | Import rules into `.context/docs` |
+| `npx dotcontext import-agents` | Import agents into `.context/agents` |
+| `npx dotcontext reverse-sync` | Import rules, agents, and skills into `.context/` |
+| `npx dotcontext report` | Generate workflow progress reports |
 
 ## MCP Reference
 
@@ -206,8 +206,8 @@ For AI-agent use, provide `repoPath` on the first context-heavy MCP call so dotc
 The current standalone skill commands are intentionally narrow:
 
 ```bash
-npx @dotcontext/cli skill list
-npx @dotcontext/cli skill export
+npx dotcontext skill list
+npx dotcontext skill export
 ```
 
 Use the MCP `skill` tool when you want skill scaffolding or AI-assisted fill behavior. The CLI remains focused on discovery and export.
@@ -227,7 +227,7 @@ Install MCP and ask your AI tool to initialize context first. If you already hav
 Initialize the workflow after `.context/` exists:
 
 ```bash
-npx @dotcontext/cli workflow init "feature-name"
+npx dotcontext workflow init "feature-name"
 ```
 
 ### "I only need exports/imports"
@@ -243,15 +243,15 @@ You do not need the full PREVC workflow for that. Use the sync and import comman
 ## Quick Reference
 
 ```bash
-npx @dotcontext/cli
-npx @dotcontext/cli mcp:install
-npx @dotcontext/cli workflow init "feature-name"
-npx @dotcontext/cli workflow status
-npx @dotcontext/cli workflow advance
-npx @dotcontext/cli skill list
-npx @dotcontext/cli skill export
-npx @dotcontext/cli sync-agents --preset claude
-npx @dotcontext/cli export-rules --preset cursor
-npx @dotcontext/cli reverse-sync --dry-run
-npx @dotcontext/cli report
+npx dotcontext
+npx dotcontext mcp:install
+npx dotcontext workflow init "feature-name"
+npx dotcontext workflow status
+npx dotcontext workflow advance
+npx dotcontext skill list
+npx dotcontext skill export
+npx dotcontext sync-agents --preset claude
+npx dotcontext export-rules --preset cursor
+npx dotcontext reverse-sync --dry-run
+npx dotcontext report
 ```

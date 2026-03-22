@@ -18,14 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     directly references the `.context/` directory convention that is the
     core of this tool.
   - Migration: Replace `ai-context` with `dotcontext` in your shell aliases
-    and MCP configurations. Re-run `npx @dotcontext/cli mcp:install` to
+    and MCP configurations. Re-run `npx dotcontext mcp:install` to
     update all tool integrations.
 
 - **BREAKING: Standalone CLI no longer generates context or plans**
   - Context creation, filling, and refresh are now MCP-only — your AI tool provides the LLM
   - Plan initialization and management moved to MCP tools (`context` and `plan` gateways)
   - The standalone CLI is now focused on workflow management, sync, reverse sync, imports, and MCP setup
-  - Migration: Run `npx @dotcontext/cli mcp:install` and use your MCP-connected AI tool for context and plan operations
+  - Migration: Run `npx dotcontext mcp:install` and use your MCP-connected AI tool for context and plan operations
 
 ### Added
 
