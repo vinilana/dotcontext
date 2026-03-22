@@ -1,121 +1,111 @@
 # MCP Tools Reference
 
-## Simplified Tool Structure
+dotcontext now exposes a compact-first MCP contract. The default path is optimized for repeated workflow execution, while verbose and legacy payloads remain available when a client needs more teaching text or backward-compatible structure.
 
-The MCP tools follow a simple, explicit pattern:
+## Server Profiles
 
-1. **Scaffolding**: `context({ action: "init" })`
-2. **Content**: `context({ action: "fillSingle", filePath })`
-3. **Workflow**: `workflow-init({ name: "feature-name" })`
+Select the server surface with `DOTCONTEXT_MCP_PROFILE`.
 
-## Available Tools (9 total)
+| Profile | Tools | Use case |
+| --- | --- | --- |
+| `standalone` | `explore`, `context`, workflow tools, `sync`, `plan`, `agent`, `skill` | Broad discovery and onboarding |
+| `planning` | `standalone` minus `sync` | Planning and context generation |
+| `execution` | `explore`, workflow tools, `plan` | Tight PREVC execution loops |
 
-### Gateway Tools (5)
+Aliases:
 
-| Tool | Description |
-|------|-------------|
-| `explore` | File and code exploration (read, list, analyze, search, getStructure) |
-| `context` | Context scaffolding and semantic context (check, init, fill, fillSingle, listToFill, getMap, buildSemantic, scaffoldPlan) |
-| `sync` | Import/export synchronization with AI tools |
-| `plan` | Plan management and execution tracking |
-| `agent` | Agent orchestration and discovery |
-| `skill` | Skill management for on-demand expertise |
+- `codex` -> `execution`
+- `claude-code` -> `execution`
 
-### Dedicated Workflow Tools (4)
+Example:
 
-| Tool | Description |
-|------|-------------|
-| `workflow-init` | Initialize a PREVC workflow (creates `.context/workflow/`) |
-| `workflow-status` | Get current workflow status |
-| `workflow-advance` | Advance to next phase |
-| `workflow-manage` | Manage handoffs, collaboration, documents, gates |
-
-## Tool Decision Tree
-
-### Step 1: Create Scaffolding
-
-```
-Does .context/ folder exist?
-├─ No → Use context({ action: "init" })
-│   ├─ Creates .context/docs/ templates
-│   ├─ Creates .context/agents/ playbooks
-│   ├─ Creates .context/skills/ definitions
-│   └─ Returns list of files needing content
-└─ Yes → Skip to Step 2
+```bash
+DOTCONTEXT_MCP_PROFILE=execution npx dotcontext mcp
 ```
 
-### Step 2: Fill Content (Optional but Recommended)
+## Compact vs Verbose
 
+Default behavior is compact:
+
+- JSON is serialized without pretty-print indentation
+- Workflow handlers return state-first payloads with `bundleId`, `revision`, and the next action
+- Planning helpers keep inline content optional instead of returning full plan bodies by default
+
+Verbose/help behavior is opt-in:
+
+- `verbose`
+- `includeGuidance`
+- `includeLegacy`
+- `includeOrchestration` where supported
+- `includeContent` for planning/context payloads
+
+## Workflow Surface
+
+| Tool | Compact default | Opt-in expansions |
+| --- | --- | --- |
+| `workflow-init` | `currentPhase`, `settings`, `startWith`, `bundleId`, `revision` | `verbose`, `includeGuidance`, `includeLegacy` |
+| `workflow-status` | compact phase summary, active agents, gate summary, `bundleId`, `revision` | `verbose`, `includeGuidance`, `includeLegacy`, `includeOrchestration` |
+| `workflow-status` polling | `revision` + `notModified: true` when unchanged | `includeOrchestration` if a client wants the phase bundle |
+| `workflow-advance` | next phase state, `startWith`, `bundleId`, `revision` | `verbose`, `includeGuidance`, `includeLegacy` |
+| `workflow-manage` | state deltas and revisions | `verbose`, `includeGuidance`, `includeLegacy` |
+
+## Planning Surface
+
+`context` still supports scaffolding and planning, but planning-heavy payloads are leaner by default.
+
+Key flags:
+
+- `verbose`
+- `includeGuidance`
+- `includeContent`
+
+Current planning behavior:
+
+- `getMap` defaults to `section: "architecture"` and treats `section: "all"` as explicit opt-in
+- `scaffoldPlan` is compact by default
+- `fillSingle` and `fill` use narrower context types for plans and batch fills
+- Planning responses expose reusable `contextResource` references instead of forcing inline blobs
+
+## Help Resources
+
+Long guidance now lives in resources instead of riding in every workflow response.
+
+Available resource topics:
+
+- `workflow://guide/overview`
+- `workflow://guide/profiles`
+- `workflow://guide/workflow-init`
+- `workflow://guide/workflow-status`
+- `workflow://guide/workflow-advance`
+- `workflow://guide/workflow-manage`
+
+Related codebase context resources:
+
+- `context://codebase/documentation`
+- `context://codebase/playbook`
+- `context://codebase/plan`
+- `context://codebase/compact`
+
+## Recommended Defaults
+
+- Use `standalone` when the client is still discovering dotcontext or needs the full tool catalog.
+- Use `planning` when the session is primarily about context generation and plan authoring.
+- Use `execution` for Codex, Claude Code, or any loop that repeatedly calls `workflow-status`, `plan`, and `workflow-advance`.
+
+## Benchmarking
+
+Run the benchmark harness with:
+
+```bash
+npm run build
+node scripts/benchmark-mcp-efficiency.js
 ```
-Do the template files have content?
-├─ No → For each file:
-│   └─ Use context({ action: "fillSingle", filePath: "path" })
-│       ├─ Returns semantic context from codebase
-│       ├─ Returns scaffold structure with guidance
-│       └─ AI generates content based on context
-└─ Yes → Skip to Step 3
-```
 
-### Step 3: Initialize Workflow
+Current snapshot:
 
-```
-Do you need structured development?
-├─ Yes → Use workflow-init({ name: "feature-name" })
-│   ├─ Creates .context/workflow/ folder
-│   ├─ Initializes phase tracking
-│   └─ Configures gates based on scale
-└─ No → Start coding directly
-```
+| Scenario | Compact est. tokens | Compatibility est. tokens | Non-MCP fixture | Reduction |
+| --- | ---: | ---: | ---: | ---: |
+| Planning flow | 311 | 3508 | 523 | -91.1% vs compatibility / -40.5% vs non-MCP |
+| Workflow loop | 366 | 3464 | 441 | -89.4% vs compatibility / -17.0% vs non-MCP |
 
-## Tool Relationships
-
-```
-Simplified Flow:
-  context({ action: "init" })
-    └─ Returns: pendingFiles[]
-       └─ For each file:
-          └─ context({ action: "fillSingle", filePath })
-             └─ Write enhanced content
-                └─ workflow-init({ name: "feature" })
-                   └─ Start development
-```
-
-## Key Points
-
-- **No all-in-one tool**: Each step is explicit
-- **Composable**: Mix and match based on needs
-- **workflow-init creates folder**: No manual folder creation needed
-- **Skip workflow for trivial changes**: Typos, simple edits don't need workflow
-- **context init does NOT create workflow folder**: Use workflow-init for that
-
-## What Each Tool Creates
-
-| Tool | Creates |
-|------|---------|
-| `context({ action: "init" })` | `.context/docs/`, `.context/agents/`, `.context/skills/` |
-| `workflow-init({ name })` | `.context/workflow/` |
-
-## Removed Tools
-
-The following tools have been removed in favor of the simplified pattern:
-
-- `project-setup` - Use `context({ action: "init" })` + `workflow-init` instead
-- `project-report` - Use `context({ action: "getMap" })` for codebase info
-
-## Migration Guide
-
-If you were using `project-setup`, here's how to migrate:
-
-**Before (all-in-one):**
-```
-project-setup({ featureName: "my-feature", template: "feature" })
-```
-
-**After (explicit steps):**
-```
-1. context({ action: "init" })              // Create scaffolding
-2. context({ action: "fillSingle", ... })   // Fill each file
-3. workflow-init({ name: "my-feature" })    // Start workflow
-```
-
-This gives you more control and makes each step's purpose clear.
+Full benchmark notes, fixture definitions, and raw payload examples live in [docs/benchmarks/mcp-token-efficiency/README.md](../../../docs/benchmarks/mcp-token-efficiency/README.md). The cached polling path is captured in [docs/benchmarks/mcp-token-efficiency/notModified-workflow-status.json](../../../docs/benchmarks/mcp-token-efficiency/notModified-workflow-status.json).

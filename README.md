@@ -109,6 +109,40 @@ This interactive command:
 - Includes dry-run mode to preview changes
 - Works with Claude Code, Cursor, Windsurf, Codex, Continue.dev, and more
 
+### Compact Profiles
+
+dotcontext now ships a compact-first MCP contract. Workflow handlers return machine-first state by default, while onboarding/tutorial payloads stay available through explicit flags such as `verbose`, `includeGuidance`, `includeLegacy`, and `includeOrchestration`.
+
+Server profile selection is controlled by `DOTCONTEXT_MCP_PROFILE`:
+
+| Profile | Tool surface | Best for |
+| --- | --- | --- |
+| `standalone` | Full surface | Discovery, onboarding, mixed sessions |
+| `planning` | Planning surface without `sync` | Spec and plan generation |
+| `execution` | Lean PREVC loop | Tight workflow execution |
+
+Aliases `codex` and `claude-code` map to `execution`.
+
+```bash
+DOTCONTEXT_MCP_PROFILE=execution npx dotcontext mcp
+```
+
+Current compact surfaces:
+
+- `workflow-init`, `workflow-advance`, and `workflow-manage` support `verbose`, `includeGuidance`, and `includeLegacy`
+- `workflow-status` also supports `revision`, `notModified`, and `includeOrchestration`
+- `context` supports `verbose`, `includeGuidance`, and `includeContent` for inline planning payloads
+- Help resources are available at `workflow://guide/{topic}` for `overview`, `profiles`, `workflow-init`, `workflow-status`, `workflow-advance`, and `workflow-manage`
+
+Current benchmark snapshot from `node scripts/benchmark-mcp-efficiency.js` after `npm run build`:
+
+| Scenario | Compact est. tokens | Compatibility est. tokens | Non-MCP fixture | Compact delta |
+| --- | ---: | ---: | ---: | ---: |
+| Planning | 311 | 3508 | 523 | -91.1% vs compatibility / -40.5% vs non-MCP |
+| Workflow loop | 366 | 3464 | 441 | -89.4% vs compatibility / -17.0% vs non-MCP |
+
+Benchmark artifacts and raw payload examples live in [docs/benchmarks/mcp-token-efficiency/README.md](./docs/benchmarks/mcp-token-efficiency/README.md). A narrative summary lives in [docs/mcp-token-efficiency.md](./docs/mcp-token-efficiency.md).
+
 ### Manual Configuration
 
 Alternatively, manually configure for your preferred tool.
@@ -257,6 +291,9 @@ Add to your Codex CLI config (`~/.codex/config.toml`):
 [mcp_servers.dotcontext]
 command = "npx"
 args = ["--yes", "@dotcontext/cli@latest", "mcp"]
+
+[mcp_servers.dotcontext.env]
+DOTCONTEXT_MCP_PROFILE = "execution"
 ```
 
 ### Google Antigravity
