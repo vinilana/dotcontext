@@ -83,7 +83,7 @@ describe('CodebaseAnalyzer', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await createTempOutput('ai-context-analyzer-');
+    tempDir = await createTempOutput('dotcontext-analyzer-');
     jest.clearAllMocks();
   });
 

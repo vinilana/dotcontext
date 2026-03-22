@@ -256,7 +256,7 @@ export class SkillExportService {
    * Generate SKILL.md content with frontmatter
    */
   private generateSkillContent(skill: Skill): string {
-    return wrapWithFrontmatter(skill.metadata, skill.content);
+    return wrapWithFrontmatter(skill.metadata, skill.content, skill.slug);
   }
 
   /**

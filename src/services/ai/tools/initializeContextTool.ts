@@ -16,6 +16,7 @@ import {
 } from '../../stack';
 import { UPDATE_SCAFFOLD_PROMPT_FALLBACK } from '../../../prompts/defaults';
 import { QAService } from '../../qa';
+import { createSkillRegistry } from '../../../workflow/skills';
 
 export const initializeContextTool = tool({
   description: `Initialize .context scaffolding and create template files.
@@ -115,18 +116,7 @@ The AI agent MUST then fill each generated file using the provided context and i
         );
       }
 
-      // Generate agent scaffolding
-      if (scaffoldAgents) {
-        const agentGenerator = new AgentGenerator();
-        agentsGenerated = await agentGenerator.generateAgentPrompts(
-          repoStructure,
-          outputDir,
-          { semantic, filteredAgents },
-          false // verbose
-        );
-      }
-
-      // Generate skills scaffolding
+      // Generate skills scaffolding (before agents so agents can reference skills)
       let skillsGenerated = 0;
       if (generateSkills) {
         try {
@@ -139,6 +129,34 @@ The AI agent MUST then fill each generated file using the provided context and i
         } catch {
           // Skills generation is optional, continue if it fails
         }
+      }
+
+      // After skills are generated, collect skill info for agents
+      let availableSkills: { slug: string; name: string; description: string; phases: string[] }[] = [];
+      if (generateSkills && skillsGenerated > 0) {
+        try {
+          const skillRegistry = createSkillRegistry(resolvedRepoPath);
+          const discovered = await skillRegistry.discoverAll();
+          availableSkills = discovered.all.map(s => ({
+            slug: s.slug,
+            name: s.metadata.name,
+            description: s.metadata.description,
+            phases: s.metadata.phases || [],
+          }));
+        } catch {
+          // Skills info is optional for agents
+        }
+      }
+
+      // Generate agent scaffolding
+      if (scaffoldAgents) {
+        const agentGenerator = new AgentGenerator();
+        agentsGenerated = await agentGenerator.generateAgentPrompts(
+          repoStructure,
+          outputDir,
+          { semantic, filteredAgents, availableSkills },
+          false // verbose
+        );
       }
 
       // Generate Q&A files

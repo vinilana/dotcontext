@@ -74,8 +74,8 @@ export function createProvider(config: LLMConfig): ProviderResult {
           apiKey,
           baseURL: baseUrl || 'https://openrouter.ai/api/v1',
           headers: {
-            'HTTP-Referer': 'https://ai-coders-context',
-            'X-Title': 'AI Coders Context'
+            'HTTP-Referer': 'https://dotcontext.io',
+            'X-Title': 'Dotcontext'
           }
         }),
         modelId: model || DEFAULT_MODELS.openrouter

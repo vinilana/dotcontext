@@ -2,10 +2,13 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { glob } from 'glob';
 import { FileInfo, RepoStructure, TopLevelDirectoryStats } from '../types';
+import { GitIgnoreManager } from './gitignoreManager';
 
 export class FileMapper {
   private excludePatterns: string[] = [
-    'node_modules/**',
+    'node_modules',
+    '**/node_modules',
+    '**/node_modules/**',
     '.git/**',
     'dist/**',
     'build/**',
@@ -15,16 +18,34 @@ export class FileMapper {
     '**/.DS_Store'
   ];
 
+  private readonly gitIgnoreManager: GitIgnoreManager;
+
   constructor(customExcludes: string[] = []) {
     this.excludePatterns = [...this.excludePatterns, ...customExcludes];
+    this.gitIgnoreManager = new GitIgnoreManager({ extraPatterns: customExcludes });
+  }
+
+  private async loadGitignorePatterns(repoPath: string): Promise<string[]> {
+    const gitignorePath = path.join(repoPath, '.gitignore');
+    if (!await fs.pathExists(gitignorePath)) {
+      return [];
+    }
+    const content = await fs.readFile(gitignorePath, 'utf-8');
+    return content
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && !line.startsWith('#'));
   }
 
   async mapRepository(repoPath: string, includePatterns?: string[]): Promise<RepoStructure> {
     const absolutePath = path.resolve(repoPath);
-    
+
     if (!await fs.pathExists(absolutePath)) {
       throw new Error(`Repository path does not exist: ${absolutePath}`);
     }
+
+    const gitignorePatterns = await this.loadGitignorePatterns(absolutePath);
+    const ignorePatterns = [...this.excludePatterns, ...gitignorePatterns];
 
     const patterns = includePatterns || ['**/*'];
     const allFiles: string[] = [];
@@ -32,14 +53,17 @@ export class FileMapper {
     for (const pattern of patterns) {
       const files = await glob(pattern, {
         cwd: absolutePath,
-        ignore: this.excludePatterns,
+        ignore: ignorePatterns,
         dot: false,
         absolute: false
       });
       allFiles.push(...files);
     }
 
-    const uniqueFiles = [...new Set(allFiles)];
+    // Apply .gitignore filtering on top of glob excludes
+    const filteredFiles = this.gitIgnoreManager.filterPaths(allFiles);
+
+    const uniqueFiles = [...new Set(filteredFiles)];
     const fileInfos: FileInfo[] = [];
     const directories: FileInfo[] = [];
     let totalSize = 0;

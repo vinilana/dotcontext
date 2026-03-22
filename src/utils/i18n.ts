@@ -4,9 +4,7 @@ export const SUPPORTED_LOCALES: Locale[] = ['en', 'pt-BR'];
 export const DEFAULT_LOCALE: Locale = 'en';
 
 const englishMessages = {
-  'cli.name': 'AI Coders Context by aicoders.academy',
-  'cli.tagline': 'Scaffold documentation and agent playbooks with or without LLM assistance',
-  'cli.description': 'Scaffold documentation and agent playbooks for your repository',
+  'cli.description': 'Manage MCP integration, workflow, sync, and context imports for your repository',
   'global.options.lang': 'Language for CLI output (en or pt-BR)',
   'ui.version': 'Version {version}',
   'ui.projectConfiguration.title': 'Project Configuration',
@@ -26,13 +24,11 @@ const englishMessages = {
   'ui.generationSummary.timeElapsed': 'Time',
   'ui.generationSummary.nextStep': 'Next step: customize the generated templates to match your project.',
   'ui.error.title': 'Error',
-  'ui.prevc.title': 'PREVC Workflow - Spec-Driven Development for AI Agents',
-  'ui.prevc.subtitle': 'A universal 5-step process that improves AI output quality',
-  'ui.prevc.specDriven': 'Spec-driven, not autopilot. Define what you want, then let AI execute.',
+  'ui.splash.directoryLabel': 'directory',
   'info.prompt.title': 'System Prompt',
   'info.prompt.usingCustom': 'Using prompt from {path}.',
   'info.prompt.usingPackage': 'Using packaged prompt at {path}.',
-  'info.prompt.usingBundled': 'Using built-in prompt bundled with ai-context.',
+  'info.prompt.usingBundled': 'Using built-in prompt bundled with dotcontext.',
   'info.update.available.title': 'Update available',
   'info.update.available.detail': 'A newer version {latest} is available (current {current}). Update with {command}.',
   'commands.init.description': 'Generate docs and agent scaffolding for a repository',
@@ -64,12 +60,12 @@ const englishMessages = {
   'prompts.fill.useLsp': 'Use LSP for deeper type analysis? (slower but more accurate)',
   'commands.plan.description': 'Create a development plan that links documentation and agent playbooks',
   'commands.plan.arguments.planName': 'Name of the plan (used to create the file slug)',
-  'commands.plan.options.output': 'Scaffold directory containing docs/ and agents/',
+  'commands.plan.options.output': 'Output directory for generated plan files',
   'commands.plan.options.title': 'Custom title for the plan document',
   'commands.plan.options.summary': 'Seed summary for the plan header',
   'commands.plan.options.force': 'Overwrite the plan if it already exists (scaffold mode)',
   'commands.plan.options.fill': 'Use an LLM to fill or update the plan instead of scaffolding',
-  'commands.plan.options.repo': 'Repository root to summarize for additional context',
+  'commands.plan.options.repo': 'Repository root for semantic context',
   'commands.plan.options.apiKey': 'API key for the LLM provider',
   'commands.plan.options.model': 'LLM model to use',
   'commands.plan.options.provider': 'LLM provider (openrouter, openai, anthropic, google)',
@@ -87,6 +83,7 @@ const englishMessages = {
   'errors.init.invalidType': 'Invalid scaffold type "{value}". Expected one of: {allowed}',
   'errors.common.repoMissing': 'Repository path does not exist: {path}',
   'warnings.scaffold.noneSelected': 'No documentation or agent playbooks selected. Nothing to scaffold.',
+  'warnings.agents.missingDirectory': 'No agents directory found. Initialize or import context through MCP first.',
   'steps.init.analyze': 'Analyzing repository structure',
   'steps.init.docs': 'Scaffolding documentation',
   'steps.init.agents': 'Scaffolding agent playbooks',
@@ -103,11 +100,11 @@ const englishMessages = {
   'spinner.plan.creationFailed': 'Failed to create plan template',
   'success.scaffold.ready': 'Scaffold ready in {path}',
   'success.plan.createdAt': 'Plan created at {path}',
-  'errors.fill.missingDocsScaffold': 'Documentation scaffold not found. Run `ai-context init` first.',
-  'errors.fill.missingAgentsScaffold': 'Agent scaffold not found. Run `ai-context init` first.',
-  'errors.fill.missingScaffold': 'No scaffold found. Run `ai-context init` first to create docs and/or agents.',
+  'errors.fill.missingDocsScaffold': 'Documentation scaffold not found. Run `dotcontext init` first.',
+  'errors.fill.missingAgentsScaffold': 'Agent scaffold not found. Run `dotcontext init` first.',
+  'errors.fill.missingScaffold': 'No scaffold found. Run `dotcontext init` first to create docs and/or agents.',
   'steps.fill.analyze': 'Analyzing repository structure',
-  'warnings.fill.noTargets': 'No Markdown files found in .context/docs or .context/agents. Run "ai-context init" before filling.',
+  'warnings.fill.noTargets': 'No Markdown files found in .context/docs or .context/agents. Run "dotcontext init" before filling.',
   'steps.fill.processFiles': 'Updating {count} files with {model}',
   'spinner.fill.processing': 'Processing {path}...',
   'spinner.fill.noContent': 'No content received for {path}',
@@ -122,7 +119,7 @@ const englishMessages = {
   'messages.plan.regenerated': 'Regenerated {path} before LLM fill.',
   'messages.plan.created': 'Created {path} before LLM fill.',
   'info.plan.scaffolded.title': 'Plan scaffolded',
-  'errors.plan.missingPlansDir': 'Plans directory not found. Run `ai-context plan <name>` to create one.',
+  'errors.plan.missingPlansDir': 'Plans directory not found. Run `dotcontext plan <name>` to create one.',
   'errors.plan.notFound': 'Plan not found. Expected {expected}.',
   'steps.plan.summary': 'Summarizing repository state',
   'spinner.planFill.analyzingRepo': 'Analyzing repository...',
@@ -135,8 +132,9 @@ const englishMessages = {
   'spinner.planFill.failed': 'Failed to fill plan',
   'steps.plan.summaryResults': 'Summarizing LLM usage',
   'success.plan.filled': 'Plan fill complete. Review the updates and commit when ready.',
-  'errors.commands.analyzeRemoved': 'The analyze command has been removed in the scaffolding-only version of ai-context.',
-  'errors.commands.updateRemoved': 'The update command is no longer supported. Re-run `ai-context init` to refresh scaffolds.',
+  'errors.commands.analyzeRemoved': 'The analyze command has been removed in the scaffolding-only version of dotcontext.',
+  'errors.commands.fillRemoved': 'The fill command is now available only through MCP-enabled AI tools.',
+  'errors.commands.updateRemoved': 'The update command is no longer supported. Re-run `dotcontext init` to refresh scaffolds.',
   'errors.commands.previewRemoved': 'Preview mode has been retired. Use the generated docs and agent templates directly.',
   'errors.commands.guidelinesRemoved': 'Guidelines generation relied on LLMs and is no longer available.',
   'errors.cli.executionFailed': 'CLI execution failed',
@@ -192,7 +190,7 @@ const englishMessages = {
   'errors.fill.apiKeyMissing': '{provider} API key is required. Set one of {envVars} or use --api-key.',
   'info.interactive.returning.title': 'Main menu',
   'info.interactive.returning.detail': 'Returning to the interactive menu. Pick another action or choose Exit.',
-  'success.interactive.goodbye': 'Goodbye! Thanks for using ai-context.',
+  'success.interactive.goodbye': 'Goodbye! Thanks for using dotcontext.',
   'agent.starting': 'Starting',
   'agent.complete': 'Complete',
   'agent.steps': 'steps',
@@ -200,6 +198,7 @@ const englishMessages = {
   'agent.type.playbook': 'Playbook Agent',
   'agent.type.plan': 'Plan Agent',
   'agent.type.fill': 'Fill Agent',
+  'agent.type.skill': 'Skill Agent',
   'commands.sync.description': 'Sync agent playbooks to AI tool directories (.claude, .github, etc.)',
   'commands.sync.options.source': 'Source agents directory',
   'commands.sync.options.target': 'Target directories to sync to',
@@ -211,16 +210,18 @@ const englishMessages = {
   'prompts.main.choice.syncAgents': 'Sync agents to AI tools',
   'prompts.main.choice.create': 'Create documentation for this project',
   'prompts.main.choice.moreOptions': 'More options...',
+  'prompts.main.choice.viewPending': 'View pending files',
   'prompts.main.choice.updateDocs': 'Update documentation',
   'prompts.main.choice.updateDocsBehind': 'Update documentation ({daysBehind} days behind)',
   'prompts.main.choice.rescaffold': 'Re-scaffold (overwrite)',
-  'prompts.main.unfilledPrompt': '{count} files need to be filled. What would you like to do?',
+  'prompts.main.unfilledPrompt': '{count} files still need content. What would you like to do?',
+  'prompts.main.pendingFilesHeader': 'Files pending content:',
   'prompts.setup.confirmContinue': 'This will create and fill documentation. Continue?',
   'spinner.setup.creatingStructure': 'Creating documentation structure...',
   'spinner.setup.fillingDocs': 'Filling documentation with AI...',
   'info.setup.incomplete.title': 'Setup incomplete',
-  'info.setup.incomplete.detail': 'Run `npx @ai-coders/context fill .` to fill documentation later.',
-  'info.setup.enhanceWithAI': 'Run `ai-context fill .` to enhance documentation with AI.',
+  'info.setup.incomplete.detail': 'Use MCP in your AI tool to fill or refresh documentation later.',
+  'info.setup.enhanceWithAI': 'Use MCP in your AI tool to fill or refresh context files.',
   'success.setup.docsCreated': 'Documentation created!',
   'success.setup.scaffoldCreated': 'Scaffolds created with codebase context!',
   'info.setup.reviewFiles': 'Review the files in .context/ and commit them.',
@@ -322,11 +323,14 @@ const englishMessages = {
   'prompts.workflow.action.viewStatus': 'View completed workflow status',
   'prompts.workflow.confirmNewWorkflow': 'This will replace the current workflow. Continue?',
   // Start command translations
-  'commands.start.description': 'Smart start: initialize, fill, and start workflow in one command',
+  'commands.start.description': 'Smart start: initialize context and start workflow in one command',
   'commands.start.arguments.featureName': 'Optional feature name to start a workflow',
   'commands.start.options.template': 'Workflow template: hotfix, feature, mvp, or auto',
   'commands.start.options.skipFill': 'Skip AI-assisted documentation filling',
   'commands.start.options.skipWorkflow': 'Skip workflow initialization',
+  'commands.previewSplash.description': 'Render the interactive splash screen preview',
+  'commands.previewSplash.options.title': 'Override the splash title',
+  'commands.previewSplash.options.directory': 'Directory to display in the splash',
   'spinner.start.detectingStack': 'Detecting technology stack...',
   'spinner.start.stackDetected': 'Stack detected: {stack}',
   'spinner.start.initializing': 'Initializing project context...',
@@ -334,7 +338,7 @@ const englishMessages = {
   'spinner.start.initFailed': 'Failed to initialize context',
   'spinner.start.filling': 'Filling documentation with AI...',
   'spinner.start.filled': 'Documentation filled',
-  'spinner.start.fillFailed': 'Documentation filling skipped (no API key)',
+  'spinner.start.fillFailed': 'Documentation refresh is now handled through MCP-enabled AI tools',
   'errors.start.workflowFailed': 'Failed to start workflow',
   'success.start.complete': 'Project ready! {details}',
   // MCP Install command translations
@@ -483,7 +487,8 @@ const englishMessages = {
   // Manage submenus
   'prompts.main.choice.manageSkills': 'Manage Skills',
   'prompts.main.choice.manageAgents': 'Manage Agents',
-  'prompts.main.choice.settings': 'Settings',
+  'prompts.main.choice.settings': 'Settings (language)',
+  'prompts.main.choice.mcpInstall': 'Install/Configure MCP',
   'prompts.main.choice.startWorkflow': 'Start Workflow',
   'prompts.main.choice.createPlan': 'Create Plan',
   'prompts.main.choice.quickSetup': 'Quick Setup (creates context from codebase)',
@@ -505,15 +510,42 @@ const englishMessages = {
   'prompts.settings.action': 'Settings:',
   'prompts.settings.choice.language': 'Change language',
   'prompts.settings.choice.back': 'Back',
+  // Mode selection (interactive entry)
+  'prompts.modeSelect.select': 'How would you like to use @dotcontext/cli?',
+  'prompts.modeSelect.choice.mcp': 'Set up MCP for my AI tool (recommended — no API key needed)',
+  'prompts.modeSelect.choice.cli': 'Use the interactive CLI for workflow, sync, imports, and MCP setup',
+  'prompts.modeSelect.choice.exit': 'Exit',
+  // More options submenu
+  'prompts.more.action': 'More options:',
+  'prompts.more.choice.back': 'Back',
+  // Quick Sync mode
+  'prompts.quickSync.mode': 'Sync all (agents, skills, docs) to common targets?',
+  'prompts.quickSync.mode.syncAll': 'Yes, sync all',
+  'prompts.quickSync.mode.customize': 'Customize targets...',
+  'prompts.quickSync.mode.cancel': 'Cancel',
   // Compact status
-  'status.compact': 'Docs: {docs} | Agents: {agents} synced | Skills: {skills} active',
-  'status.outdated': 'Docs: {docs} ({days}d old) | Agents: {agents} | Skills: {skills}',
-  'status.new': 'No context found.',
-  'status.unfilled': 'Context: {count} files need filling',
+  'status.compact': '✓ Context ready ({docs} docs, {agents} agents, {skills} skills)',
+  'status.outdated': '⚠ Context outdated ({days} days) - refresh via MCP',
+  'status.new': 'No context found. Use MCP or reverse sync.',
+  'status.unfilled': 'Context found, {count} files still need content',
+  'status.detected.project': 'Detected: {languages} project',
   // Hit Enter / Press Enter
   'prompts.pressEnter': 'Press Enter to continue...',
   // Environment variable loading
-  'prompts.env.loadEnv': 'Load environment variables from .env file?'
+  'prompts.env.loadEnv': 'Load environment variables from .env file?',
+  // Config summary labels
+  'configSummary.config': 'Config:',
+  'configSummary.options': 'Options:',
+  'configSummary.repo': 'repo',
+  'configSummary.provider': 'provider',
+  'configSummary.yes': 'Yes',
+  'configSummary.no': 'No',
+  // API key validation
+  'warnings.apiKey.empty': 'API key is empty. LLM calls will likely fail.',
+  'warnings.apiKey.formatMismatch': 'API key does not start with expected prefix "{prefix}" for {provider}. It may still work if correct.',
+  // Back/cancel options
+  'prompts.analysis.back': 'Back (cancel analysis options)',
+  'prompts.llm.back': 'Back (cancel LLM configuration)'
 } as const;
 
 export type TranslationKey = keyof typeof englishMessages;
@@ -521,9 +553,7 @@ export type TranslationKey = keyof typeof englishMessages;
 type TranslationDictionary = Record<TranslationKey, string>;
 
 const portugueseMessages: TranslationDictionary = {
-  'cli.name': 'AI Coders Context by aicoders.academy',
-  'cli.tagline': 'Gere documentação e playbooks de agentes com ou sem assistência de IA',
-  'cli.description': 'Crie bases de documentação e playbooks de agentes para o seu repositório',
+  'cli.description': 'Gerencie integração MCP, workflow, sincronização e importação de contexto para o seu repositório',
   'global.options.lang': 'Idioma para a saída do CLI (en ou pt-BR)',
   'ui.version': 'Versão {version}',
   'ui.projectConfiguration.title': 'Configuração do Projeto',
@@ -543,13 +573,11 @@ const portugueseMessages: TranslationDictionary = {
   'ui.generationSummary.timeElapsed': 'Tempo',
   'ui.generationSummary.nextStep': 'Próximo passo: personalize os templates gerados para o seu projeto.',
   'ui.error.title': 'Erro',
-  'ui.prevc.title': 'PREVC Workflow - Desenvolvimento Orientado a Specs para Agentes IA',
-  'ui.prevc.subtitle': 'Um processo universal de 5 etapas que melhora a qualidade do output da IA',
-  'ui.prevc.specDriven': 'Orientado a specs, não em piloto automático. Defina o que você quer, depois deixe a IA executar.',
+  'ui.splash.directoryLabel': 'diretorio',
   'info.prompt.title': 'Prompt do sistema',
   'info.prompt.usingCustom': 'Usando prompt em {path}.',
   'info.prompt.usingPackage': 'Usando prompt empacotado em {path}.',
-  'info.prompt.usingBundled': 'Usando prompt padrão incluído no ai-context.',
+  'info.prompt.usingBundled': 'Usando prompt padrão incluído no dotcontext.',
   'info.update.available.title': 'Atualização disponível',
   'info.update.available.detail': 'Uma nova versão {latest} está disponível (atual {current}). Atualize com {command}.',
   'commands.init.description': 'Gerar bases de documentação e agentes para um repositório',
@@ -581,12 +609,12 @@ const portugueseMessages: TranslationDictionary = {
   'prompts.fill.useLsp': 'Usar LSP para análise de tipos mais profunda? (mais lento mas mais preciso)',
   'commands.plan.description': 'Criar um plano de desenvolvimento que conecta docs e playbooks de agentes',
   'commands.plan.arguments.planName': 'Nome do plano (usado como slug do arquivo)',
-  'commands.plan.options.output': 'Diretório com docs/ e agents/ gerados pela base',
+  'commands.plan.options.output': 'Diretório de saída para os arquivos de plano gerados',
   'commands.plan.options.title': 'Título personalizado para o plano',
   'commands.plan.options.summary': 'Resumo inicial para o cabeçalho do plano',
   'commands.plan.options.force': 'Sobrescreve o plano se ele já existir (modo base)',
   'commands.plan.options.fill': 'Usa um assistente de IA para preencher ou atualizar o plano em vez de apenas gerar',
-  'commands.plan.options.repo': 'Raiz do repositório para sumarização adicional',
+  'commands.plan.options.repo': 'Raiz do repositório para contexto semântico',
   'commands.plan.options.apiKey': 'Chave de API para o provedor de LLM',
   'commands.plan.options.model': 'Modelo de LLM a ser utilizado',
   'commands.plan.options.provider': 'Provedor de LLM (openrouter, openai, anthropic, google)',
@@ -604,6 +632,7 @@ const portugueseMessages: TranslationDictionary = {
   'errors.init.invalidType': 'Tipo de base "{value}" inválido. Use um dos seguintes: {allowed}',
   'errors.common.repoMissing': 'O caminho do repositório não existe: {path}',
   'warnings.scaffold.noneSelected': 'Nenhuma documentação ou playbook selecionado. Nada a gerar.',
+  'warnings.agents.missingDirectory': 'Nenhum diretório de agents encontrado. Inicialize ou importe o contexto via MCP primeiro.',
   'steps.init.analyze': 'Analisando a estrutura do repositório',
   'steps.init.docs': 'Gerando bases de documentação',
   'steps.init.agents': 'Gerando playbooks de agentes',
@@ -620,11 +649,11 @@ const portugueseMessages: TranslationDictionary = {
   'spinner.plan.creationFailed': 'Falha ao criar o template do plano',
   'success.scaffold.ready': 'Base disponível em {path}',
   'success.plan.createdAt': 'Plano criado em {path}',
-  'errors.fill.missingDocsScaffold': 'Scaffold de documentação não encontrado. Execute `ai-context init` primeiro.',
-  'errors.fill.missingAgentsScaffold': 'Scaffold de agentes não encontrado. Execute `ai-context init` primeiro.',
-  'errors.fill.missingScaffold': 'Nenhum scaffold encontrado. Execute `ai-context init` primeiro para criar docs e/ou agents.',
+  'errors.fill.missingDocsScaffold': 'Scaffold de documentação não encontrado. Execute `dotcontext init` primeiro.',
+  'errors.fill.missingAgentsScaffold': 'Scaffold de agentes não encontrado. Execute `dotcontext init` primeiro.',
+  'errors.fill.missingScaffold': 'Nenhum scaffold encontrado. Execute `dotcontext init` primeiro para criar docs e/ou agents.',
   'steps.fill.analyze': 'Analisando a estrutura do repositório',
-  'warnings.fill.noTargets': 'Nenhum arquivo Markdown foi encontrado em .context/docs ou .context/agents. Execute "ai-context init" antes de preencher.',
+  'warnings.fill.noTargets': 'Nenhum arquivo Markdown foi encontrado em .context/docs ou .context/agents. Execute "dotcontext init" antes de preencher.',
   'steps.fill.processFiles': 'Atualizando {count} arquivos com {model}',
   'spinner.fill.processing': 'Processando {path}...',
   'spinner.fill.noContent': 'Nenhum conteúdo recebido para {path}',
@@ -639,7 +668,7 @@ const portugueseMessages: TranslationDictionary = {
   'messages.plan.regenerated': 'Regerado {path} antes do preenchimento com assistente de IA.',
   'messages.plan.created': 'Criado {path} antes do preenchimento com assistente de IA.',
   'info.plan.scaffolded.title': 'Plano criado',
-  'errors.plan.missingPlansDir': 'Diretório de planos não encontrado. Execute `ai-context plan <nome>` para criar um.',
+  'errors.plan.missingPlansDir': 'Diretório de planos não encontrado. Execute `dotcontext plan <nome>` para criar um.',
   'errors.plan.notFound': 'Plano não encontrado. Esperado {expected}.',
   'steps.plan.summary': 'Resumindo estado do repositório',
   'spinner.planFill.analyzingRepo': 'Analisando repositório...',
@@ -652,8 +681,9 @@ const portugueseMessages: TranslationDictionary = {
   'spinner.planFill.failed': 'Falha ao preencher o plano',
   'steps.plan.summaryResults': 'Resumindo o uso do assistente de IA',
   'success.plan.filled': 'Preenchimento do plano concluído. Revise as atualizações e faça o commit quando estiver pronto.',
-  'errors.commands.analyzeRemoved': 'O comando analyze foi removido na versão focada em bases do ai-context.',
-  'errors.commands.updateRemoved': 'O comando update não é mais suportado. Execute `ai-context init` novamente para atualizar as bases.',
+  'errors.commands.analyzeRemoved': 'O comando analyze foi removido na versão focada em bases do dotcontext.',
+  'errors.commands.fillRemoved': 'O comando fill agora está disponível apenas por ferramentas de IA com MCP.',
+  'errors.commands.updateRemoved': 'O comando update não é mais suportado. Execute `dotcontext init` novamente para atualizar as bases.',
   'errors.commands.previewRemoved': 'O modo de pré-visualização foi descontinuado. Use diretamente os docs e playbooks gerados.',
   'errors.commands.guidelinesRemoved': 'A geração de guidelines dependia de LLMs e não está mais disponível.',
   'errors.cli.executionFailed': 'Falha na execução do CLI',
@@ -709,7 +739,7 @@ const portugueseMessages: TranslationDictionary = {
   'errors.fill.apiKeyMissing': 'É necessária uma chave de API {provider}. Defina uma das variáveis {envVars} ou use --api-key.',
   'info.interactive.returning.title': 'Menu principal',
   'info.interactive.returning.detail': 'Voltando ao menu interativo. Escolha outra ação ou selecione Sair.',
-  'success.interactive.goodbye': 'Até logo! Obrigado por usar o ai-context.',
+  'success.interactive.goodbye': 'Até logo! Obrigado por usar o dotcontext.',
   'agent.starting': 'Iniciando',
   'agent.complete': 'Concluído',
   'agent.steps': 'passos',
@@ -717,6 +747,7 @@ const portugueseMessages: TranslationDictionary = {
   'agent.type.playbook': 'Agente de Playbook',
   'agent.type.plan': 'Agente de Plano',
   'agent.type.fill': 'Agente de Preenchimento',
+  'agent.type.skill': 'Agente de Skill',
   'commands.sync.description': 'Sincronizar playbooks de agentes com diretórios de ferramentas IA (.claude, .github, etc.)',
   'commands.sync.options.source': 'Diretório de origem dos agentes',
   'commands.sync.options.target': 'Diretórios de destino para sincronizar',
@@ -728,16 +759,18 @@ const portugueseMessages: TranslationDictionary = {
   'prompts.main.choice.syncAgents': 'Sincronizar agentes com ferramentas IA',
   'prompts.main.choice.create': 'Criar documentação para este projeto',
   'prompts.main.choice.moreOptions': 'Mais opções...',
+  'prompts.main.choice.viewPending': 'Ver arquivos pendentes',
   'prompts.main.choice.updateDocs': 'Atualizar documentação',
   'prompts.main.choice.updateDocsBehind': 'Atualizar documentação ({daysBehind} dias atrás)',
   'prompts.main.choice.rescaffold': 'Refazer scaffold (sobrescrever)',
-  'prompts.main.unfilledPrompt': '{count} arquivos precisam ser preenchidos. O que você gostaria de fazer?',
+  'prompts.main.unfilledPrompt': '{count} arquivos ainda precisam de conteudo. O que você gostaria de fazer?',
+  'prompts.main.pendingFilesHeader': 'Arquivos pendentes de conteúdo:',
   'prompts.setup.confirmContinue': 'Isso criará e preencherá a documentação. Continuar?',
   'spinner.setup.creatingStructure': 'Criando estrutura de documentação...',
   'spinner.setup.fillingDocs': 'Preenchendo documentação com IA...',
   'info.setup.incomplete.title': 'Configuração incompleta',
-  'info.setup.incomplete.detail': 'Execute `npx @ai-coders/context fill .` para preencher a documentação depois.',
-  'info.setup.enhanceWithAI': 'Execute `ai-context fill .` para aprimorar a documentação com IA.',
+  'info.setup.incomplete.detail': 'Use MCP na sua ferramenta de IA para preencher ou atualizar a documentação depois.',
+  'info.setup.enhanceWithAI': 'Use MCP na sua ferramenta de IA para preencher ou atualizar os arquivos de contexto.',
   'success.setup.docsCreated': 'Documentação criada!',
   'success.setup.scaffoldCreated': 'Scaffolds criados com contexto do codebase!',
   'info.setup.reviewFiles': 'Revise os arquivos em .context/ e faça commit.',
@@ -839,11 +872,14 @@ const portugueseMessages: TranslationDictionary = {
   'prompts.workflow.action.viewStatus': 'Ver status do workflow concluído',
   'prompts.workflow.confirmNewWorkflow': 'Isso substituirá o workflow atual. Continuar?',
   // Traduções do comando start
-  'commands.start.description': 'Início inteligente: inicializa, preenche e inicia workflow em um comando',
+  'commands.start.description': 'Inicio inteligente: inicializa o contexto e inicia o workflow em um comando',
   'commands.start.arguments.featureName': 'Nome opcional da feature para iniciar um workflow',
   'commands.start.options.template': 'Template de workflow: hotfix, feature, mvp ou auto',
   'commands.start.options.skipFill': 'Pular preenchimento de documentação com IA',
   'commands.start.options.skipWorkflow': 'Pular inicialização do workflow',
+  'commands.previewSplash.description': 'Renderizar uma previa da splash screen interativa',
+  'commands.previewSplash.options.title': 'Sobrescrever o titulo da splash',
+  'commands.previewSplash.options.directory': 'Diretorio exibido na splash',
   'spinner.start.detectingStack': 'Detectando stack de tecnologia...',
   'spinner.start.stackDetected': 'Stack detectada: {stack}',
   'spinner.start.initializing': 'Inicializando contexto do projeto...',
@@ -851,7 +887,7 @@ const portugueseMessages: TranslationDictionary = {
   'spinner.start.initFailed': 'Falha ao inicializar contexto',
   'spinner.start.filling': 'Preenchendo documentação com IA...',
   'spinner.start.filled': 'Documentação preenchida',
-  'spinner.start.fillFailed': 'Preenchimento de documentação pulado (sem chave de API)',
+  'spinner.start.fillFailed': 'A atualização da documentação agora é feita por ferramentas de IA com MCP',
   'errors.start.workflowFailed': 'Falha ao iniciar workflow',
   'success.start.complete': 'Projeto pronto! {details}',
   // Traduções do comando mcp:install
@@ -967,7 +1003,7 @@ const portugueseMessages: TranslationDictionary = {
   'info.skill.skipped': 'Puladas (já existem)',
   'info.skill.path': 'Caminho',
   // Quick Sync translations
-  'prompts.main.choice.quickSync': 'Quick Sync',
+  'prompts.main.choice.quickSync': 'Sincronização Rápida',
   'prompts.quickSync.selectComponents': 'Selecione os componentes para sincronizar:',
   'prompts.quickSync.components.agents': 'Agents',
   'prompts.quickSync.components.skills': 'Skills',
@@ -984,7 +1020,7 @@ const portugueseMessages: TranslationDictionary = {
   'prompts.quickSync.updateDocs': 'Atualizar docs também?',
   'success.quickSync.complete': 'Sincronização completa',
   // Reverse Sync translations
-  'prompts.main.choice.reverseSync': 'Reverse Sync (importar de ferramentas IA)',
+  'prompts.main.choice.reverseSync': 'Sincronização Reversa (importar de ferramentas de IA)',
   'prompts.reverseSync.detecting': 'Detectando configurações de ferramentas IA...',
   'prompts.reverseSync.detected': 'Ferramentas IA Detectadas:',
   'prompts.reverseSync.noFilesFound': 'Nenhum arquivo de configuração de ferramentas IA encontrado',
@@ -1000,7 +1036,8 @@ const portugueseMessages: TranslationDictionary = {
   // Manage submenus
   'prompts.main.choice.manageSkills': 'Gerenciar Skills',
   'prompts.main.choice.manageAgents': 'Gerenciar Agents',
-  'prompts.main.choice.settings': 'Configurações',
+  'prompts.main.choice.settings': 'Configurações (idioma)',
+  'prompts.main.choice.mcpInstall': 'Instalar/Configurar MCP',
   'prompts.main.choice.startWorkflow': 'Iniciar Workflow',
   'prompts.main.choice.createPlan': 'Criar Plano',
   'prompts.main.choice.quickSetup': 'Setup Rápido (cria contexto do codebase)',
@@ -1022,15 +1059,42 @@ const portugueseMessages: TranslationDictionary = {
   'prompts.settings.action': 'Configurações:',
   'prompts.settings.choice.language': 'Mudar idioma',
   'prompts.settings.choice.back': 'Voltar',
+  // Mode selection (interactive entry)
+  'prompts.modeSelect.select': 'Como você gostaria de usar o @dotcontext/cli?',
+  'prompts.modeSelect.choice.mcp': 'Configurar MCP para minha ferramenta de IA (recomendado — sem API key)',
+  'prompts.modeSelect.choice.cli': 'Usar a CLI interativa para workflow, sincronização, importações e configuração MCP',
+  'prompts.modeSelect.choice.exit': 'Sair',
+  // More options submenu
+  'prompts.more.action': 'Mais opções:',
+  'prompts.more.choice.back': 'Voltar',
+  // Quick Sync mode
+  'prompts.quickSync.mode': 'Sincronizar tudo (agents, skills, docs) para destinos comuns?',
+  'prompts.quickSync.mode.syncAll': 'Sim, sincronizar tudo',
+  'prompts.quickSync.mode.customize': 'Personalizar destinos...',
+  'prompts.quickSync.mode.cancel': 'Cancelar',
   // Compact status
-  'status.compact': 'Docs: {docs} | Agents: {agents} synced | Skills: {skills} ativos',
-  'status.outdated': 'Docs: {docs} ({days}d atrás) | Agents: {agents} | Skills: {skills}',
-  'status.new': 'Nenhum contexto encontrado.',
-  'status.unfilled': 'Contexto: {count} arquivos precisam preenchimento',
+  'status.compact': '✓ Contexto pronto ({docs} docs, {agents} agents, {skills} skills)',
+  'status.outdated': '⚠ Contexto desatualizado ({days} dias) - atualize via MCP',
+  'status.new': 'Nenhum contexto encontrado. Use MCP ou reverse sync.',
+  'status.unfilled': 'Contexto encontrado, {count} arquivos ainda precisam de conteúdo',
+  'status.detected.project': 'Detectado: projeto {languages}',
   // Hit Enter / Press Enter
   'prompts.pressEnter': 'Pressione Enter para continuar...',
   // Environment variable loading
-  'prompts.env.loadEnv': 'Carregar variáveis de ambiente do arquivo .env?'
+  'prompts.env.loadEnv': 'Carregar variáveis de ambiente do arquivo .env?',
+  // Config summary labels
+  'configSummary.config': 'Configuração:',
+  'configSummary.options': 'Opções:',
+  'configSummary.repo': 'repo',
+  'configSummary.provider': 'provedor',
+  'configSummary.yes': 'Sim',
+  'configSummary.no': 'Não',
+  // API key validation
+  'warnings.apiKey.empty': 'A chave de API está vazia. Chamadas ao LLM provavelmente falharão.',
+  'warnings.apiKey.formatMismatch': 'A chave de API não começa com o prefixo esperado "{prefix}" para {provider}. Pode funcionar se estiver correta.',
+  // Back/cancel options
+  'prompts.analysis.back': 'Voltar (cancelar opções de análise)',
+  'prompts.llm.back': 'Voltar (cancelar configuração do LLM)'
 };
 
 const dictionaries: Record<Locale, TranslationDictionary> = {
@@ -1053,17 +1117,27 @@ export function createTranslator(locale: Locale): TranslateFn {
 }
 
 export function normalizeLocale(locale: string): Locale {
-  return SUPPORTED_LOCALES.find(candidate => candidate.toLowerCase() === locale.toLowerCase()) || DEFAULT_LOCALE;
+  return resolveLocaleCandidate(locale) || DEFAULT_LOCALE;
 }
 
-export function detectLocale(argv: string[], envLocale?: string | null): Locale {
-  const candidateFromArgs = extractLocaleFromArgs(argv);
-  if (candidateFromArgs) {
-    return normalizeLocale(candidateFromArgs);
+export function detectLocale(
+  argv: string[],
+  envLocale?: string | null,
+  systemLocaleCandidates: Array<string | null | undefined> = []
+): Locale {
+  const candidates = [
+    extractLocaleFromArgs(argv),
+    envLocale,
+    ...systemLocaleCandidates
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = resolveLocaleCandidate(candidate);
+    if (resolved) {
+      return resolved;
+    }
   }
-  if (envLocale) {
-    return normalizeLocale(envLocale);
-  }
+
   return DEFAULT_LOCALE;
 }
 
@@ -1095,4 +1169,35 @@ function fillTemplate(template: string, params?: TranslateParams): string {
 
 export function isSupportedLocale(locale: string): boolean {
   return SUPPORTED_LOCALES.some(candidate => candidate.toLowerCase() === locale.toLowerCase());
+}
+
+function resolveLocaleCandidate(locale?: string | null): Locale | undefined {
+  if (!locale) {
+    return undefined;
+  }
+
+  const trimmed = locale.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const directMatch = SUPPORTED_LOCALES.find(candidate => candidate.toLowerCase() === trimmed.toLowerCase());
+  if (directMatch) {
+    return directMatch;
+  }
+
+  const normalized = trimmed.replace(/_/g, '-').split('.')[0].toLowerCase();
+  if (normalized === 'c' || normalized === 'posix') {
+    return undefined;
+  }
+
+  if (normalized === 'pt' || normalized.startsWith('pt-')) {
+    return 'pt-BR';
+  }
+
+  if (normalized === 'en' || normalized.startsWith('en-')) {
+    return 'en';
+  }
+
+  return undefined;
 }
