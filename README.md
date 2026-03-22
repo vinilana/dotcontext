@@ -107,7 +107,7 @@ This interactive command:
 - Supports global (home directory) and local (project directory) installation
 - Merges with existing MCP configurations without overwriting
 - Includes dry-run mode to preview changes
-- Works with Claude Code, Cursor, Windsurf, Cline, Continue.dev, and more
+- Works with Claude Code, Cursor, Windsurf, Codex, Continue.dev, and more
 
 ### Manual Configuration
 

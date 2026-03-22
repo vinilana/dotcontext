@@ -76,6 +76,7 @@ describe('MCPInstallService', () => {
       const ids = service.getSupportedToolIds();
       expect(ids).toContain('claude');
       expect(ids).toContain('cursor');
+      expect(ids).toContain('codex');
       expect(ids).toContain('windsurf');
       expect(ids).toContain('continue');
       expect(ids).toContain('trae');
@@ -335,6 +336,23 @@ describe('MCPInstallService', () => {
 
       const config = await fs.readJson(configPath);
       expect(config.mcpServers['dotcontext']).toBeDefined();
+    });
+
+    it('should install MCP configuration for Codex CLI using TOML', async () => {
+      const result = await service.run({
+        tool: 'codex',
+        global: false,
+        repoPath: tempDir,
+      });
+
+      expect(result.filesCreated).toBe(1);
+      const configPath = path.join(tempDir, '.codex', 'config.toml');
+      expect(await fs.pathExists(configPath)).toBe(true);
+
+      const config = await fs.readFile(configPath, 'utf-8');
+      expect(config).toContain('[mcp_servers.dotcontext]');
+      expect(config).toContain('command = "npx"');
+      expect(config).toContain('args = ["-y", "@dotcontext/cli@latest", "mcp"]');
     });
 
     it('should install MCP configuration for Kiro at settings path', async () => {

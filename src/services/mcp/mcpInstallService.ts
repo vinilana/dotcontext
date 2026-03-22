@@ -66,6 +66,10 @@ interface MCPConfigTemplate {
   generateConfig: (existingConfig: unknown, mcpServer: MCPServerConfig) => unknown;
   /** Function to check if MCP is already configured */
   isConfigured: (config: unknown) => boolean;
+  /** Optional parser for non-JSON config formats */
+  parseConfig?: (content: string) => unknown;
+  /** Optional serializer for non-JSON config formats */
+  serializeConfig?: (config: unknown) => string;
 }
 
 /**
@@ -76,6 +80,28 @@ const AI_CONTEXT_MCP_SERVER: MCPServerConfig = {
   args: ['-y', '@dotcontext/cli@latest', 'mcp'],
   env: {},
 };
+
+const parseJsonConfig = (content: string): unknown => JSON.parse(content);
+const serializeJsonConfig = (config: unknown): string => JSON.stringify(config, null, 2);
+
+function buildCodexTomlConfig(existingConfig: string, server: MCPServerConfig): string {
+  const lines = [
+    '[mcp_servers.dotcontext]',
+    `command = ${JSON.stringify(server.command)}`,
+    `args = [${server.args.map(arg => JSON.stringify(arg)).join(', ')}]`,
+  ];
+
+  if (server.env && Object.keys(server.env).length > 0) {
+    lines.push('[mcp_servers.dotcontext.env]');
+    for (const [key, value] of Object.entries(server.env)) {
+      lines.push(`${key} = ${JSON.stringify(value)}`);
+    }
+  }
+
+  const trimmed = existingConfig.trimEnd();
+  const block = lines.join('\n');
+  return trimmed ? `${trimmed}\n\n${block}\n` : `${block}\n`;
+}
 
 /**
  * MCP configuration templates for each supported tool
@@ -281,6 +307,22 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
       const servers = c?.mcpServers as Record<string, unknown>;
       return !!servers?.['dotcontext'];
     },
+  },
+
+  // Codex CLI - TOML config
+  {
+    toolId: 'codex',
+    globalConfigPath: '.codex/config.toml',
+    localConfigPath: '.codex/config.toml',
+    generateConfig: (existing, server) => buildCodexTomlConfig(
+      typeof existing === 'string' ? existing : '',
+      server
+    ),
+    isConfigured: (config) => (
+      typeof config === 'string' && /^\s*\[mcp_servers\.dotcontext\]\s*$/m.test(config)
+    ),
+    parseConfig: (content) => content,
+    serializeConfig: (config) => (typeof config === 'string' ? config : String(config ?? '')),
   },
 
   // Kiro
@@ -561,15 +603,18 @@ export class MCPInstallService {
 
     const configPath = isGlobal ? template.globalConfigPath : template.localConfigPath;
     const fullConfigPath = path.join(basePath, configPath);
+    const parseConfig = template.parseConfig ?? parseJsonConfig;
+    const serializeConfig = template.serializeConfig ?? serializeJsonConfig;
 
     // Read existing config if it exists
     let existingConfig: unknown = {};
-    if (await fs.pathExists(fullConfigPath)) {
+    const configExists = await fs.pathExists(fullConfigPath);
+    if (configExists) {
       try {
         const content = await fs.readFile(fullConfigPath, 'utf-8');
-        existingConfig = JSON.parse(content);
+        existingConfig = parseConfig(content);
       } catch {
-        // File exists but is not valid JSON, we'll overwrite
+        // File exists but could not be parsed, we'll overwrite while preserving custom formats when possible.
         existingConfig = {};
       }
     }
@@ -595,12 +640,13 @@ export class MCPInstallService {
     const newConfig = template.generateConfig(existingConfig, AI_CONTEXT_MCP_SERVER);
 
     if (dryRun) {
+      const serializedConfig = serializeConfig(newConfig);
       this.deps.ui.displayInfo(
         toolDef.displayName,
         this.deps.t('info.mcp.wouldInstall', { tool: toolDef.displayName, path: fullConfigPath })
       );
       if (verbose) {
-        console.log(JSON.stringify(newConfig, null, 2));
+        console.log(serializedConfig);
       }
       return {
         tool: toolId,
@@ -614,7 +660,7 @@ export class MCPInstallService {
     // Write config
     try {
       await fs.ensureDir(path.dirname(fullConfigPath));
-      await fs.writeJson(fullConfigPath, newConfig, { spaces: 2 });
+      await fs.writeFile(fullConfigPath, serializeConfig(newConfig), 'utf-8');
 
       if (verbose) {
         this.deps.ui.displayInfo(
@@ -623,7 +669,7 @@ export class MCPInstallService {
         );
       }
 
-      const action = Object.keys(existingConfig as object).length > 0 ? 'updated' : 'created';
+      const action = configExists ? 'updated' : 'created';
       return {
         tool: toolId,
         toolDisplayName: toolDef.displayName,

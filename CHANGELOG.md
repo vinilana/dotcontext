@@ -109,6 +109,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Multi-tool Context Export**: Context now syncs to Claude Code, Cursor, GitHub Copilot, Codex, Windsurf, and Gemini
 
+- **Codex MCP Install Support**: `mcp:install` now supports Codex CLI directly
+  - Writes MCP configuration to `.codex/config.toml`
+  - Uses the documented `[mcp_servers.dotcontext]` TOML configuration block
+  - Brings Codex in line with other first-class MCP install targets
+
 ### Fixed
 
 - **`needsFill()` false positives**: Fixed bug where `needsFill()` matched `status: unfilled` in document body content (e.g., code examples in agent playbooks) instead of only checking the YAML frontmatter block. The function now parses only the frontmatter between `---` delimiters.
@@ -116,6 +121,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`configSummary` i18n**: `displayConfigSummary()` now uses the `_t()` translation function instead of hardcoded English labels ("Config:", "Options:", "Yes", "No").
 
 - **Missing i18n key**: Added `agent.type.skill` translation key (en + pt-BR) that was referenced but undefined.
+
+- **Guide Consistency**: Updated the user guide to match the real CLI surface
+  - Clarifies that quick sync still exists in the interactive CLI
+  - Removes the mismatch where Codex was described as an MCP install target before it was actually supported
 
 ### Removed
 

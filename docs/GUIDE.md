@@ -44,7 +44,7 @@ Older docs and examples may still refer to flows that are no longer the primary 
 
 - Standalone CLI generation is no longer the recommended path for creating or filling context.
 - Use MCP-connected AI tools for context init, plan scaffolding, and AI-generated content.
-- Legacy command flows such as `quick-sync` are not part of the current CLI surface.
+- There is no top-level `quick-sync` command, but interactive quick sync is still available from `npx @dotcontext/cli`.
 
 If you are looking for `init`, `fill`, `plan`, `update`, or `analyze` as direct CLI commands, that is expected. Those responsibilities moved into MCP workflows.
 
@@ -128,6 +128,16 @@ Reverse-sync everything back into `.context/`:
 npx @dotcontext/cli reverse-sync --dry-run
 ```
 
+### 4a. Interactive Quick Sync
+
+If you want a guided export flow instead of calling individual commands, use the interactive CLI:
+
+```bash
+npx @dotcontext/cli
+```
+
+The quick sync flow can export docs, agents, and skills together. It is part of the interactive experience, not a separate `quick-sync` command.
+
 ### 5. Review Progress
 
 Generate a workflow report when you want a quick status snapshot:
@@ -159,7 +169,7 @@ These are the main commands currently exposed by the CLI:
 
 | Command | Purpose |
 | --- | --- |
-| `npx @dotcontext/cli` | Launch the interactive CLI |
+| `npx @dotcontext/cli` | Launch the interactive CLI, including quick sync |
 | `npx @dotcontext/cli mcp:install` | Install MCP configuration for supported AI tools |
 | `npx @dotcontext/cli mcp` | Start the MCP server manually |
 | `npx @dotcontext/cli workflow ...` | Manage PREVC workflow state |
