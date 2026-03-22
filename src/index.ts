@@ -2,7 +2,6 @@
 
 import { Command } from 'commander';
 import * as path from 'path';
-import * as dotenv from 'dotenv';
 import inquirer from 'inquirer';
 
 import { colors, typography } from './utils/theme';
@@ -43,12 +42,6 @@ const isInteractiveMode = rawArgs.every(arg =>
   rawArgs[rawArgs.indexOf(arg) - 1]?.startsWith('--language') ||
   rawArgs[rawArgs.indexOf(arg) - 1]?.startsWith('-l')
 );
-
-// Load dotenv immediately for command-line mode (not MCP, not interactive)
-// For interactive mode, we'll ask the user first
-if (!isMcpCommand && !isInteractiveMode) {
-  dotenv.config({ quiet: true });
-}
 
 const initialLocale = detectLocale(rawArgs, process.env.DOTCONTEXT_LANG, [
   process.env.LC_ALL,
@@ -667,9 +660,6 @@ type InteractiveAction = 'syncAgents' | 'update' | 'changeLanguage' | 'exit' | '
 type StateAction = 'exit' | 'mcpInstall' | 'reverseSync' | 'settings';
 
 async function runInteractive(): Promise<void> {
-  // Auto-load .env if it exists (no-op if absent)
-  dotenv.config({ quiet: true });
-
   const projectPath = process.cwd();
   const detector = new StateDetector({ projectPath });
   const result = await detector.detect();
