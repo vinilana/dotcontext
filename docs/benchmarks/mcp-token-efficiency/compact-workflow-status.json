@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "name": "benchmark-execution-legacy",
+  "scale": "Medium",
+  "profile": "standalone",
+  "currentPhase": {
+    "code": "P",
+    "name": "Planning"
+  },
+  "progress": {
+    "completed": 0,
+    "total": 4,
+    "percentage": 0
+  },
+  "isComplete": false,
+  "phases": [
+    {
+      "code": "P",
+      "name": "Planning",
+      "status": "in_progress",
+      "startedAt": "2026-03-22T06:10:42.931Z"
+    },
+    {
+      "code": "R",
+      "name": "Review",
+      "status": "pending"
+    },
+    {
+      "code": "E",
+      "name": "Execution",
+      "status": "pending"
+    },
+    {
+      "code": "V",
+      "name": "Validation",
+      "status": "pending"
+    }
+  ],
+  "activeAgents": [],
+  "gates": {
+    "canAdvance": true
+  },
+  "approval": {
+    "planCreated": false,
+    "planApproved": false
+  },
+  "bundleId": "74e1bc42f8a4",
+  "revision": "879c16d404c4"
+}

@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "profile": "standalone",
+  "currentPhase": {
+    "code": "R",
+    "name": "Review"
+  },
+  "startWith": "architect-specialist",
+  "bundleId": "0312c9dc1d11",
+  "nextAction": "Start architect-specialist for Review phase",
+  "hint": "Begin with architect-specialist, then hand off or call workflow-advance when Review is complete.",
+  "revision": "0aa8bbf55219"
+}

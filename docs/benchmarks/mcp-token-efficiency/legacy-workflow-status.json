@@ -1,0 +1,132 @@
+{
+  "success": true,
+  "name": "benchmark-execution-legacy",
+  "scale": "Medium",
+  "profile": "standalone",
+  "currentPhase": {
+    "code": "P",
+    "name": "Planning"
+  },
+  "progress": {
+    "completed": 0,
+    "total": 4,
+    "percentage": 0
+  },
+  "isComplete": false,
+  "phases": {
+    "P": {
+      "status": "in_progress",
+      "started_at": "2026-03-22T06:10:42.931Z"
+    },
+    "R": {
+      "status": "pending"
+    },
+    "E": {
+      "status": "pending"
+    },
+    "V": {
+      "status": "pending"
+    },
+    "C": {
+      "status": "skipped",
+      "reason": "Not required for scale MEDIUM"
+    }
+  },
+  "activeAgents": [],
+  "gates": {
+    "canAdvance": true
+  },
+  "approval": {
+    "planCreated": false,
+    "planApproved": false
+  },
+  "bundleId": "74e1bc42f8a4",
+  "revision": "879c16d404c4",
+  "bundle": {
+    "startWith": "architect-specialist",
+    "agentIds": [
+      "architect-specialist",
+      "documentation-writer",
+      "frontend-specialist"
+    ],
+    "skillIds": [
+      "documentation",
+      "feature-breakdown",
+      "api-design"
+    ],
+    "docRefs": [
+      ".context/docs/architecture.md",
+      ".context/docs/glossary.md",
+      ".context/docs/README.md"
+    ],
+    "nextAction": "Start architect-specialist for Planning phase",
+    "hint": "Begin with architect-specialist, then hand off or call workflow-advance when Planning is complete."
+  },
+  "helpRef": "workflow://guide/workflow-status",
+  "settings": {
+    "autonomous_mode": true,
+    "require_plan": true,
+    "require_approval": true
+  },
+  "agents": {},
+  "roles": {},
+  "orchestration": {
+    "recommendedAgents": [
+      "architect-specialist",
+      "documentation-writer",
+      "frontend-specialist"
+    ],
+    "suggestedSequence": [
+      {
+        "agent": "architect-specialist",
+        "task": "Design system architecture"
+      },
+      {
+        "agent": "documentation-writer",
+        "task": "Document the changes"
+      },
+      {
+        "agent": "frontend-specialist",
+        "task": "Build user interface"
+      }
+    ],
+    "startWith": "architect-specialist",
+    "instruction": "ORCHESTRATION GUIDE for Planning phase:\n\n1. START: Activate architect-specialist agent\n   - Review agent playbook: .context/agents/architect-specialist.md\n   - Understand responsibilities and outputs\n\n2. DISCOVER: Find all agents for this phase\n   - Call: agent({ action: \"orchestrate\", phase: \"P\" })\n   - Review: Recommended agents and their roles\n\n3. SEQUENCE: Plan agent handoff order\n   - Call: agent({ action: \"getSequence\", phases: [\"P\"] })\n   - Follow: Suggested sequence for optimal workflow\n\n4. EXECUTE: Perform work and handoffs\n   - Work: Complete tasks as architect-specialist\n   - Handoff: workflow-manage({ action: \"handoff\", from: \"architect-specialist\", to: \"<next-agent>\", artifacts: [...] })\n   - Repeat: Continue through sequence until phase complete\n\n5. ADVANCE: Move to next phase\n   - Call: workflow-advance({ outputs: [...] })\n   - Review: Next phase orchestration guidance",
+    "recommendedSkills": [
+      {
+        "slug": "documentation",
+        "name": "documentation",
+        "description": "Generate and update technical documentation",
+        "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/documentation/SKILL.md",
+        "isBuiltIn": true
+      },
+      {
+        "slug": "feature-breakdown",
+        "name": "feature-breakdown",
+        "description": "Break down features into implementable tasks",
+        "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/feature-breakdown/SKILL.md",
+        "isBuiltIn": true
+      },
+      {
+        "slug": "api-design",
+        "name": "api-design",
+        "description": "Design RESTful APIs following best practices",
+        "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/api-design/SKILL.md",
+        "isBuiltIn": true
+      }
+    ],
+    "toolGuidance": {
+      "discoverExample": "agent({ action: \"orchestrate\", phase: \"P\" })",
+      "sequenceExample": "agent({ action: \"getSequence\", phases: [\"P\"] })",
+      "handoffExample": "workflow-manage({ action: \"handoff\", from: \"architect-specialist\", to: \"<next-agent>\", artifacts: [\"output.md\"] })"
+    },
+    "orchestrationSteps": [
+      "1. Discover agents for Planning phase: agent({ action: \"orchestrate\", phase: \"P\" })",
+      "2. Review recommended sequence: agent({ action: \"getSequence\", phases: [\"P\"] })",
+      "3. Begin with architect-specialist agent - follow playbook at .context/agents/architect-specialist.md",
+      "4. Execute handoffs: workflow-manage({ action: \"handoff\", from: \"architect-specialist\", to: \"documentation-writer\", artifacts: [\"output.md\"] })",
+      "5. Leverage skills: skill({ action: \"getForPhase\", phase: \"P\" })"
+    ]
+  },
+  "statusFilePath": "/tmp/execution-benchmark-wdwSXi/.context/workflow/status.yaml"
+}

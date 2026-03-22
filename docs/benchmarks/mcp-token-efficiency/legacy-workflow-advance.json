@@ -1,0 +1,134 @@
+{
+  "success": true,
+  "profile": "standalone",
+  "currentPhase": {
+    "code": "E",
+    "name": "Execution"
+  },
+  "startWith": "feature-developer",
+  "bundleId": "ed655422bfca",
+  "nextAction": "Start feature-developer for Execution phase",
+  "hint": "Begin with feature-developer, then hand off or call workflow-advance when Execution is complete.",
+  "helpRef": "workflow://guide/workflow-advance",
+  "revision": "e0aa012021fb",
+  "bundle": {
+    "startWith": "feature-developer",
+    "agentIds": [
+      "feature-developer",
+      "backend-specialist",
+      "frontend-specialist",
+      "database-specialist",
+      "mobile-specialist",
+      "bug-fixer"
+    ],
+    "skillIds": [
+      "commit-message",
+      "test-generation",
+      "refactoring",
+      "bug-investigation"
+    ],
+    "docRefs": [
+      ".context/docs/architecture.md",
+      ".context/docs/api.md",
+      ".context/docs/data-flow.md",
+      ".context/docs/getting-started.md"
+    ]
+  },
+  "message": "Advanced to Execution phase",
+  "nextPhase": {
+    "code": "E",
+    "name": "Execution"
+  },
+  "orchestration": {
+    "recommendedAgents": [
+      "feature-developer",
+      "backend-specialist",
+      "frontend-specialist",
+      "database-specialist",
+      "mobile-specialist",
+      "bug-fixer"
+    ],
+    "suggestedSequence": [
+      {
+        "agent": "feature-developer",
+        "task": "Implement core functionality"
+      },
+      {
+        "agent": "backend-specialist",
+        "task": "Implement server-side logic"
+      },
+      {
+        "agent": "frontend-specialist",
+        "task": "Build user interface"
+      },
+      {
+        "agent": "database-specialist",
+        "task": "Design and optimize database"
+      },
+      {
+        "agent": "mobile-specialist",
+        "task": "Develop mobile features"
+      },
+      {
+        "agent": "bug-fixer",
+        "task": "Fix identified issues"
+      }
+    ],
+    "startWith": "feature-developer",
+    "instruction": "ORCHESTRATION GUIDE for Execution phase:\n\n1. START: Activate feature-developer agent\n   - Review agent playbook: .context/agents/feature-developer.md\n   - Understand responsibilities and outputs\n\n2. DISCOVER: Find all agents for this phase\n   - Call: agent({ action: \"orchestrate\", phase: \"E\" })\n   - Review: Recommended agents and their roles\n\n3. SEQUENCE: Plan agent handoff order\n   - Call: agent({ action: \"getSequence\", phases: [\"E\"] })\n   - Follow: Suggested sequence for optimal workflow\n\n4. EXECUTE: Perform work and handoffs\n   - Work: Complete tasks as feature-developer\n   - Handoff: workflow-manage({ action: \"handoff\", from: \"feature-developer\", to: \"<next-agent>\", artifacts: [...] })\n   - Repeat: Continue through sequence until phase complete\n\n5. ADVANCE: Move to next phase\n   - Call: workflow-advance({ outputs: [...] })\n   - Review: Next phase orchestration guidance",
+    "recommendedSkills": [
+      {
+        "slug": "commit-message",
+        "name": "commit-message",
+        "description": "Generate commit messages following conventional commits with scope detection",
+        "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/commit-message/SKILL.md",
+        "isBuiltIn": true
+      },
+      {
+        "slug": "test-generation",
+        "name": "test-generation",
+        "description": "Generate comprehensive test cases for code",
+        "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/test-generation/SKILL.md",
+        "isBuiltIn": true
+      },
+      {
+        "slug": "refactoring",
+        "name": "refactoring",
+        "description": "Safe code refactoring with step-by-step approach",
+        "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/refactoring/SKILL.md",
+        "isBuiltIn": true
+      },
+      {
+        "slug": "bug-investigation",
+        "name": "bug-investigation",
+        "description": "Systematic bug investigation and root cause analysis",
+        "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/bug-investigation/SKILL.md",
+        "isBuiltIn": true
+      }
+    ],
+    "toolGuidance": {
+      "discoverExample": "agent({ action: \"orchestrate\", phase: \"E\" })",
+      "sequenceExample": "agent({ action: \"getSequence\", phases: [\"E\"] })",
+      "handoffExample": "workflow-manage({ action: \"handoff\", from: \"feature-developer\", to: \"<next-agent>\", artifacts: [\"output.md\"] })"
+    },
+    "orchestrationSteps": [
+      "1. Discover agents for Execution phase: agent({ action: \"orchestrate\", phase: \"E\" })",
+      "2. Review recommended sequence: agent({ action: \"getSequence\", phases: [\"E\"] })",
+      "3. Begin with feature-developer agent - follow playbook at .context/agents/feature-developer.md",
+      "4. Execute handoffs: workflow-manage({ action: \"handoff\", from: \"feature-developer\", to: \"backend-specialist\", artifacts: [\"output.md\"] })",
+      "5. Leverage skills: skill({ action: \"getForPhase\", phase: \"E\" })"
+    ]
+  },
+  "quickStart": {
+    "message": "Ready to start Execution phase",
+    "firstStep": "Call agent({ action: \"orchestrate\", phase: \"E\" }) to discover agents",
+    "agentPlaybook": ".context/agents/feature-developer.md",
+    "nextActions": [
+      "1. Discover agents: agent({ action: \"orchestrate\", phase: \"E\" })",
+      "2. Review sequence: agent({ action: \"getSequence\", phases: [\"E\"] })",
+      "3. Begin with feature-developer - follow playbook at .context/agents/feature-developer.md",
+      "4. Use workflow-manage to execute handoffs between agents",
+      "5. Call workflow-advance when phase is complete"
+    ]
+  }
+}

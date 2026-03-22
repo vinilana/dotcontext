@@ -1,0 +1,54 @@
+{
+  "success": true,
+  "section": "all",
+  "defaultSectionApplied": false,
+  "data": {
+    "stack": {
+      "runtime": "node",
+      "language": "typescript"
+    },
+    "structure": {
+      "root": [
+        "src",
+        ".context"
+      ]
+    },
+    "architecture": {
+      "layers": [
+        {
+          "name": "CLI",
+          "directories": [
+            "src"
+          ],
+          "dependsOn": [
+            "services"
+          ]
+        },
+        {
+          "name": "MCP",
+          "directories": [
+            "src/services/mcp"
+          ],
+          "dependsOn": [
+            "workflow"
+          ]
+        }
+      ]
+    },
+    "symbols": {
+      "classes": [],
+      "interfaces": [],
+      "functions": [],
+      "types": [],
+      "enums": []
+    },
+    "publicAPI": [],
+    "dependencies": [],
+    "stats": {
+      "files": 2
+    },
+    "keyFiles": [],
+    "navigation": {}
+  },
+  "mapPath": "/tmp/planning-benchmark-DQHJj0/.context/docs/codebase-map.json"
+}

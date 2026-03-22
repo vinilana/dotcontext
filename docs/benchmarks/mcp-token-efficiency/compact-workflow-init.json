@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "name": "benchmark-execution",
+  "scale": "Medium",
+  "currentPhase": {
+    "code": "P",
+    "name": "Planning"
+  },
+  "settings": {
+    "autonomous_mode": true,
+    "require_plan": true,
+    "require_approval": true
+  },
+  "startWith": "architect-specialist",
+  "bundleId": "74e1bc42f8a4",
+  "nextAction": "Start architect-specialist for Planning phase",
+  "hint": "Begin with architect-specialist, then hand off or call workflow-advance when Planning is complete.",
+  "helpRef": "workflow://guide/workflow-init",
+  "profile": "standalone",
+  "revision": "e620f1cb64b5"
+}

@@ -1,0 +1,24 @@
+{
+  "instruction": "Plan template created. Fill it with project-specific details via context({ action: \"fillSingle\", filePath: \"/tmp/planning-benchmark-DQHJj0/.context/plans/compact-plan.md\" }).",
+  "_warning": "ACTION REQUIRED",
+  "status": "incomplete",
+  "complete": false,
+  "success": true,
+  "planPath": "/tmp/planning-benchmark-DQHJj0/.context/plans/compact-plan.md",
+  "contentIncluded": false,
+  "guidanceIncluded": false,
+  "contextType": "plan",
+  "contextResource": "context://codebase/plan",
+  "classification": {
+    "projectType": "unknown",
+    "confidence": "low",
+    "reasoning": [
+      "Unable to determine project type from detected stack",
+      "Primary language: typescript"
+    ]
+  },
+  "nextStep": {
+    "action": "Call fillSingle to get plan-scoped context, then write the completed plan",
+    "example": "context({ action: \"fillSingle\", filePath: \"/tmp/planning-benchmark-DQHJj0/.context/plans/compact-plan.md\" })"
+  }
+}

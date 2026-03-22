@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "section": "architecture",
+  "defaultSectionApplied": true,
+  "explicitAllHint": "Request section: \"all\" only when you need the full map payload.",
+  "data": {
+    "layers": [
+      {
+        "name": "CLI",
+        "directories": [
+          "src"
+        ],
+        "dependsOn": [
+          "services"
+        ]
+      },
+      {
+        "name": "MCP",
+        "directories": [
+          "src/services/mcp"
+        ],
+        "dependsOn": [
+          "workflow"
+        ]
+      }
+    ]
+  },
+  "mapPath": "/tmp/planning-benchmark-DQHJj0/.context/docs/codebase-map.json"
+}

@@ -1,0 +1,720 @@
+{
+  "planning": {
+    "compact": [
+      {
+        "label": "getCodebaseMap",
+        "bytes": 388,
+        "chars": 388,
+        "estimatedTokens": 97,
+        "payload": {
+          "success": true,
+          "section": "architecture",
+          "defaultSectionApplied": true,
+          "explicitAllHint": "Request section: \"all\" only when you need the full map payload.",
+          "data": {
+            "layers": [
+              {
+                "name": "CLI",
+                "directories": [
+                  "src"
+                ],
+                "dependsOn": [
+                  "services"
+                ]
+              },
+              {
+                "name": "MCP",
+                "directories": [
+                  "src/services/mcp"
+                ],
+                "dependsOn": [
+                  "workflow"
+                ]
+              }
+            ]
+          },
+          "mapPath": "/tmp/planning-benchmark-DQHJj0/.context/docs/codebase-map.json"
+        }
+      },
+      {
+        "label": "scaffoldPlan",
+        "bytes": 853,
+        "chars": 853,
+        "estimatedTokens": 214,
+        "payload": {
+          "instruction": "Plan template created. Fill it with project-specific details via context({ action: \"fillSingle\", filePath: \"/tmp/planning-benchmark-DQHJj0/.context/plans/compact-plan.md\" }).",
+          "_warning": "ACTION REQUIRED",
+          "status": "incomplete",
+          "complete": false,
+          "success": true,
+          "planPath": "/tmp/planning-benchmark-DQHJj0/.context/plans/compact-plan.md",
+          "contentIncluded": false,
+          "guidanceIncluded": false,
+          "contextType": "plan",
+          "contextResource": "context://codebase/plan",
+          "classification": {
+            "projectType": "unknown",
+            "confidence": "low",
+            "reasoning": [
+              "Unable to determine project type from detected stack",
+              "Primary language: typescript"
+            ]
+          },
+          "nextStep": {
+            "action": "Call fillSingle to get plan-scoped context, then write the completed plan",
+            "example": "context({ action: \"fillSingle\", filePath: \"/tmp/planning-benchmark-DQHJj0/.context/plans/compact-plan.md\" })"
+          }
+        }
+      }
+    ],
+    "legacy": [
+      {
+        "label": "getCodebaseMap",
+        "bytes": 563,
+        "chars": 563,
+        "estimatedTokens": 141,
+        "payload": {
+          "success": true,
+          "section": "all",
+          "defaultSectionApplied": false,
+          "data": {
+            "stack": {
+              "runtime": "node",
+              "language": "typescript"
+            },
+            "structure": {
+              "root": [
+                "src",
+                ".context"
+              ]
+            },
+            "architecture": {
+              "layers": [
+                {
+                  "name": "CLI",
+                  "directories": [
+                    "src"
+                  ],
+                  "dependsOn": [
+                    "services"
+                  ]
+                },
+                {
+                  "name": "MCP",
+                  "directories": [
+                    "src/services/mcp"
+                  ],
+                  "dependsOn": [
+                    "workflow"
+                  ]
+                }
+              ]
+            },
+            "symbols": {
+              "classes": [],
+              "interfaces": [],
+              "functions": [],
+              "types": [],
+              "enums": []
+            },
+            "publicAPI": [],
+            "dependencies": [],
+            "stats": {
+              "files": 2
+            },
+            "keyFiles": [],
+            "navigation": {}
+          },
+          "mapPath": "/tmp/planning-benchmark-DQHJj0/.context/docs/codebase-map.json"
+        }
+      },
+      {
+        "label": "scaffoldPlan",
+        "bytes": 13472,
+        "chars": 13466,
+        "estimatedTokens": 3367,
+        "payload": {
+          "instruction": "Plan template created. Fill it with project-specific details via context({ action: \"fillSingle\", filePath: \"/tmp/planning-benchmark-DQHJj0/.context/plans/legacy-plan.md\" }).",
+          "_warning": "ACTION REQUIRED",
+          "status": "incomplete",
+          "complete": false,
+          "success": true,
+          "planPath": "/tmp/planning-benchmark-DQHJj0/.context/plans/legacy-plan.md",
+          "planContent": "---\nstatus: unfilled\ngenerated: 2026-03-22\nagents:\n  - type: \"code-reviewer\"\n    role: \"Review code changes for quality, style, and best practices\"\n  - type: \"bug-fixer\"\n    role: \"Analyze bug reports and error messages\"\n  - type: \"feature-developer\"\n    role: \"Implement new features according to specifications\"\n  - type: \"refactoring-specialist\"\n    role: \"Identify code smells and improvement opportunities\"\n  - type: \"test-writer\"\n    role: \"Write comprehensive unit and integration tests\"\n  - type: \"documentation-writer\"\n    role: \"Create clear, comprehensive documentation\"\n  - type: \"performance-optimizer\"\n    role: \"Identify performance bottlenecks\"\n  - type: \"security-auditor\"\n    role: \"Identify security vulnerabilities\"\n  - type: \"backend-specialist\"\n    role: \"Design and implement server-side architecture\"\n  - type: \"frontend-specialist\"\n    role: \"Design and implement user interfaces\"\n  - type: \"architect-specialist\"\n    role: \"Design overall system architecture and patterns\"\n  - type: \"devops-specialist\"\n    role: \"Design and maintain CI/CD pipelines\"\n  - type: \"database-specialist\"\n    role: \"Design and optimize database schemas\"\n  - type: \"mobile-specialist\"\n    role: \"Develop native and cross-platform mobile applications\"\ndocs:\n  - \"project-overview.md\"\n  - \"architecture.md\"\n  - \"development-workflow.md\"\n  - \"testing-strategy.md\"\n  - \"glossary.md\"\n  - \"data-flow.md\"\n  - \"security.md\"\n  - \"tooling.md\"\nphases:\n  - id: \"phase-1\"\n    name: \"Discovery & Alignment\"\n    prevc: \"P\"\n    agent: \"TODO: assign-agent\"\n  - id: \"phase-2\"\n    name: \"Implementation & Iteration\"\n    prevc: \"E\"\n    agent: \"TODO: assign-agent\"\n  - id: \"phase-3\"\n    name: \"Validation & Handoff\"\n    prevc: \"V\"\n    agent: \"TODO: assign-agent\"\n---\n\n# Legacy Plan Plan\n\n> TODO: Summarize the desired outcome and the problem this plan addresses.\n\n## Task Snapshot\n- **Primary goal:** TODO: Describe the outcome to achieve.\n- **Success signal:** TODO: Define how the team will know the plan worked.\n- **Key references:**\n  - [Documentation Index](../docs/README.md)\n  - [Agent Handbook](../agents/README.md)\n  - [Plans Index](./README.md)\n\n## Codebase Context\n- **Total files analyzed:** 1\n- **Total symbols discovered:** 0\n- **Entry points:** src/index.ts\n\n## Agent Lineup\n| Agent | Role in this plan | Playbook | First responsibility focus |\n| --- | --- | --- | --- |\n| Code Reviewer | TODO: Describe why this agent is involved. | [Code Reviewer](../agents/code-reviewer.md) | Review code changes for quality, style, and best practices |\n| Bug Fixer | TODO: Describe why this agent is involved. | [Bug Fixer](../agents/bug-fixer.md) | Analyze bug reports and error messages |\n| Feature Developer | TODO: Describe why this agent is involved. | [Feature Developer](../agents/feature-developer.md) | Implement new features according to specifications |\n| Refactoring Specialist | TODO: Describe why this agent is involved. | [Refactoring Specialist](../agents/refactoring-specialist.md) | Identify code smells and improvement opportunities |\n| Test Writer | TODO: Describe why this agent is involved. | [Test Writer](../agents/test-writer.md) | Write comprehensive unit and integration tests |\n| Documentation Writer | TODO: Describe why this agent is involved. | [Documentation Writer](../agents/documentation-writer.md) | Create clear, comprehensive documentation |\n| Performance Optimizer | TODO: Describe why this agent is involved. | [Performance Optimizer](../agents/performance-optimizer.md) | Identify performance bottlenecks |\n| Security Auditor | TODO: Describe why this agent is involved. | [Security Auditor](../agents/security-auditor.md) | Identify security vulnerabilities |\n| Backend Specialist | TODO: Describe why this agent is involved. | [Backend Specialist](../agents/backend-specialist.md) | Design and implement server-side architecture |\n| Frontend Specialist | TODO: Describe why this agent is involved. | [Frontend Specialist](../agents/frontend-specialist.md) | Design and implement user interfaces |\n| Architect Specialist | TODO: Describe why this agent is involved. | [Architect Specialist](../agents/architect-specialist.md) | Design overall system architecture and patterns |\n| Devops Specialist | TODO: Describe why this agent is involved. | [Devops Specialist](../agents/devops-specialist.md) | Design and maintain CI/CD pipelines |\n| Database Specialist | TODO: Describe why this agent is involved. | [Database Specialist](../agents/database-specialist.md) | Design and optimize database schemas |\n| Mobile Specialist | TODO: Describe why this agent is involved. | [Mobile Specialist](../agents/mobile-specialist.md) | Develop native and cross-platform mobile applications |\n\n## Documentation Touchpoints\n| Guide | File | Primary Inputs |\n| --- | --- | --- |\n| Project Overview | [project-overview.md](../docs/project-overview.md) | Roadmap, README, stakeholder notes |\n| Architecture Notes | [architecture.md](../docs/architecture.md) | ADRs, service boundaries, dependency graphs |\n| Development Workflow | [development-workflow.md](../docs/development-workflow.md) | Branching rules, CI config, contributing guide |\n| Testing Strategy | [testing-strategy.md](../docs/testing-strategy.md) | Test configs, CI gates, known flaky suites |\n| Glossary & Domain Concepts | [glossary.md](../docs/glossary.md) | Business terminology, user personas, domain rules |\n| Data Flow & Integrations | [data-flow.md](../docs/data-flow.md) | System diagrams, integration specs, queue topics |\n| Security & Compliance Notes | [security.md](../docs/security.md) | Auth model, secrets management, compliance requirements |\n| Tooling & Productivity Guide | [tooling.md](../docs/tooling.md) | CLI scripts, IDE configs, automation workflows |\n\n## Risk Assessment\nIdentify potential blockers, dependencies, and mitigation strategies before beginning work.\n\n### Identified Risks\n| Risk | Probability | Impact | Mitigation Strategy | Owner (Agent) |\n| --- | --- | --- | --- | --- |\n| TODO: Dependency on external team | Medium | High | Early coordination meeting, clear requirements | `TODO: agent` |\n| TODO: Insufficient test coverage | Low | Medium | Allocate time for test writing in Phase 2 | `test-writer` |\n\n### Dependencies\n- **Internal:** TODO: List dependencies on other teams, services, or infrastructure\n- **External:** TODO: List dependencies on third-party services, vendors, or partners\n- **Technical:** TODO: List technical prerequisites or required upgrades\n\n### Assumptions\n- TODO: Document key assumptions being made (e.g., \"Assume current API schema remains stable\")\n- TODO: Note what happens if assumptions prove false\n\n## Resource Estimation\n\n### Time Allocation\n| Phase | Estimated Effort | Calendar Time | Team Size |\n| --- | --- | --- | --- |\n| Phase 1 - Discovery | TODO: e.g., 2 person-days | 3-5 days | 1-2 people |\n| Phase 2 - Implementation | TODO: e.g., 5 person-days | 1-2 weeks | 2-3 people |\n| Phase 3 - Validation | TODO: e.g., 2 person-days | 3-5 days | 1-2 people |\n| **Total** | **TODO: total** | **TODO: total** | **-** |\n\n### Required Skills\n- TODO: List required expertise (e.g., \"React experience\", \"Database optimization\", \"Infrastructure knowledge\")\n- TODO: Identify skill gaps and training needs\n\n### Resource Availability\n- **Available:** TODO: List team members and their availability\n- **Blocked:** TODO: Note any team members with conflicting priorities\n- **Escalation:** TODO: Name of person to contact if resources are insufficient\n\n## Working Phases\n\n### Phase 1 — Discovery & Alignment\n> **Primary Agent:** `TODO: assign-agent` - [Playbook](../agents/TODO-agent.md)\n\n**Objective:** TODO: Define the goal for this phase.\n\n**Tasks**\n\n| # | Task | Agent | Status | Deliverable |\n|---|------|-------|--------|-------------|\n| 1.1 | TODO: Outline discovery task | `TODO: agent` | pending | TODO: Expected output |\n| 1.2 | TODO: Capture open questions | `TODO: agent` | pending | TODO: Expected output |\n\n**Commit Checkpoint**\n- After completing this phase, capture the agreed context and create a commit (for example, `git commit -m \"chore(plan): complete phase 1 discovery\"`).\n\n---\n\n### Phase 2 — Implementation & Iteration\n> **Primary Agent:** `TODO: assign-agent` - [Playbook](../agents/TODO-agent.md)\n\n**Objective:** TODO: Define the goal for this phase.\n\n**Tasks**\n\n| # | Task | Agent | Status | Deliverable |\n|---|------|-------|--------|-------------|\n| 2.1 | TODO: Build task description | `TODO: agent` | pending | TODO: Expected output |\n| 2.2 | TODO: Reference docs or playbooks | `TODO: agent` | pending | TODO: Expected output |\n\n**Commit Checkpoint**\n- Summarize progress, update cross-links, and create a commit documenting the outcomes of this phase (for example, `git commit -m \"chore(plan): complete phase 2 implementation\"`).\n\n---\n\n### Phase 3 — Validation & Handoff\n> **Primary Agent:** `TODO: assign-agent` - [Playbook](../agents/TODO-agent.md)\n\n**Objective:** TODO: Define the goal for this phase.\n\n**Tasks**\n\n| # | Task | Agent | Status | Deliverable |\n|---|------|-------|--------|-------------|\n| 3.1 | TODO: Testing and verification | `TODO: agent` | pending | TODO: Expected output |\n| 3.2 | TODO: Documentation updates | `TODO: agent` | pending | TODO: Expected output |\n| 3.3 | TODO: Capture evidence for maintainers | `TODO: agent` | pending | TODO: Expected output |\n\n**Commit Checkpoint**\n- Record the validation evidence and create a commit signalling the handoff completion (for example, `git commit -m \"chore(plan): complete phase 3 validation\"`).\n\n## Rollback Plan\nDocument how to revert changes if issues arise during or after implementation.\n\n### Rollback Triggers\nWhen to initiate rollback:\n- Critical bugs affecting core functionality\n- Performance degradation beyond acceptable thresholds\n- Data integrity issues detected\n- Security vulnerabilities introduced\n- User-facing errors exceeding alert thresholds\n\n### Rollback Procedures\n#### Phase 1 Rollback\n- Action: Discard discovery branch, restore previous documentation state\n- Data Impact: None (no production changes)\n- Estimated Time: < 1 hour\n\n#### Phase 2 Rollback\n- Action: TODO: Revert commits, restore database to pre-migration snapshot\n- Data Impact: TODO: Describe any data loss or consistency concerns\n- Estimated Time: TODO: e.g., 2-4 hours\n\n#### Phase 3 Rollback\n- Action: TODO: Full deployment rollback, restore previous version\n- Data Impact: TODO: Document data synchronization requirements\n- Estimated Time: TODO: e.g., 1-2 hours\n\n### Post-Rollback Actions\n1. Document reason for rollback in incident report\n2. Notify stakeholders of rollback and impact\n3. Schedule post-mortem to analyze failure\n4. Update plan with lessons learned before retry\n\n## Evidence & Follow-up\n\n### Artifacts to Collect\n- TODO: List artifacts (logs, PR links, test runs, design notes)\n\n### Success Metrics\n- TODO: Define measurable success criteria\n\n### Follow-up Actions\n| Action | Owner (Agent) | Due |\n|--------|---------------|-----|\n| TODO: Action description | `TODO: agent` | TODO: Date/milestone |\n",
+          "contentIncluded": true,
+          "guidanceIncluded": true,
+          "contextType": "plan",
+          "contextResource": "context://codebase/plan",
+          "classification": {
+            "projectType": "unknown",
+            "confidence": "low",
+            "reasoning": [
+              "Unable to determine project type from detected stack",
+              "Primary language: typescript"
+            ]
+          },
+          "fillInstructions": "# Plan Fill Instructions\n\nA plan template has been created at: `/tmp/planning-benchmark-DQHJj0/.context/plans/legacy-plan.md`\n\nYou MUST now fill in the following sections with specific implementation details:\n\n## Required Sections to Fill\n\n### 1. Goal & Scope\n- Define the specific objective of this plan\n- List what is included and excluded from scope\n\n### 2. Phases\n- Break down the implementation into logical phases\n- Each phase should have:\n  - Clear objective\n  - Specific steps with owners (agent types)\n  - Deliverables and evidence of completion\n  - Git commit checkpoint message\n\n### 3. Agent Lineup\n- Assign specific agents to phases\n- Define focus areas for each agent\n\n### 4. Documentation Touchpoints\n- List which docs need to be updated\n- Specify which sections and why\n\n### 5. Success Criteria\n- Define measurable success criteria\n- Include testing and validation requirements\n\n## Action Required\n\n1. Read the generated plan template\n2. Fill in each section with specific, actionable content\n3. Write the completed plan back to the file\n\nDO NOT leave placeholder text. Each section must have concrete, implementation-ready content.",
+          "nextStep": {
+            "action": "Call fillSingle to get plan-scoped context, then write the completed plan",
+            "example": "context({ action: \"fillSingle\", filePath: \"/tmp/planning-benchmark-DQHJj0/.context/plans/legacy-plan.md\" })"
+          }
+        }
+      }
+    ],
+    "nonMcp": {
+      "label": "non-mcp-planning",
+      "bytes": 2089,
+      "chars": 2089,
+      "estimatedTokens": 523,
+      "payload": "Analyze this repository manually and produce a full implementation plan for improving MCP token efficiency. Because you do not have MCP tools, do the equivalent of codebase discovery inline: infer architecture layers, likely hot-path files, workflow entry points, and planning touchpoints. Write a plan that includes: goal, scope included, scope excluded, baseline assumptions, execution risks, rollout strategy, compatibility strategy, and measurable success criteria. Break the work into PREVC-style phases and, for each phase, include: objective, concrete steps, primary owner/agent role, expected deliverables, verification evidence, and a commit checkpoint. Also include documentation updates, benchmark methodology, test strategy, migration guidance, and follow-up backlog items. Assume the client needs all instructions inline, including how to scaffold the plan, how to fill missing context manually, and how to keep compact and verbose compatibility paths available. Please include a detailed agent lineup covering architect, feature developer, performance optimizer, test writer, documentation writer, and code reviewer, and explain the first responsibility focus for each one. For the benchmark methodology, compare current MCP, optimized MCP, and a non-MCP manual workflow for both planning and execution. Define the scenario matrix, the exact prompts or commands to use, how payload size is measured, and how estimated tokens are calculated. For documentation, specify updates to the top-level README, the MCP service README, workflow guidance, and any rollout or migration notes that explain profiles, compact defaults, verbose compatibility, and benchmark evidence. For the planning deliverable, include explicit instructions for how a manual user without MCP would gather architecture context, inspect code, enumerate workflow tools, and keep track of phase state without cached bundles or status revisions. Make the plan self-contained and execution-ready so another engineer can follow it without any additional resources, hidden context, or MCP-specific helper surfaces."
+    }
+  },
+  "execution": {
+    "compact": [
+      {
+        "label": "workflow-init",
+        "bytes": 510,
+        "chars": 510,
+        "estimatedTokens": 128,
+        "payload": {
+          "success": true,
+          "name": "benchmark-execution",
+          "scale": "Medium",
+          "currentPhase": {
+            "code": "P",
+            "name": "Planning"
+          },
+          "settings": {
+            "autonomous_mode": true,
+            "require_plan": true,
+            "require_approval": true
+          },
+          "startWith": "architect-specialist",
+          "bundleId": "74e1bc42f8a4",
+          "nextAction": "Start architect-specialist for Planning phase",
+          "hint": "Begin with architect-specialist, then hand off or call workflow-advance when Planning is complete.",
+          "helpRef": "workflow://guide/workflow-init",
+          "profile": "standalone",
+          "revision": "e620f1cb64b5"
+        }
+      },
+      {
+        "label": "workflow-status",
+        "bytes": 616,
+        "chars": 616,
+        "estimatedTokens": 154,
+        "payload": {
+          "success": true,
+          "name": "benchmark-execution-legacy",
+          "scale": "Medium",
+          "profile": "standalone",
+          "currentPhase": {
+            "code": "P",
+            "name": "Planning"
+          },
+          "progress": {
+            "completed": 0,
+            "total": 4,
+            "percentage": 0
+          },
+          "isComplete": false,
+          "phases": [
+            {
+              "code": "P",
+              "name": "Planning",
+              "status": "in_progress",
+              "startedAt": "2026-03-22T06:10:42.931Z"
+            },
+            {
+              "code": "R",
+              "name": "Review",
+              "status": "pending"
+            },
+            {
+              "code": "E",
+              "name": "Execution",
+              "status": "pending"
+            },
+            {
+              "code": "V",
+              "name": "Validation",
+              "status": "pending"
+            }
+          ],
+          "activeAgents": [],
+          "gates": {
+            "canAdvance": true
+          },
+          "approval": {
+            "planCreated": false,
+            "planApproved": false
+          },
+          "bundleId": "74e1bc42f8a4",
+          "revision": "879c16d404c4"
+        }
+      },
+      {
+        "label": "workflow-advance",
+        "bytes": 335,
+        "chars": 335,
+        "estimatedTokens": 84,
+        "payload": {
+          "success": true,
+          "profile": "standalone",
+          "currentPhase": {
+            "code": "R",
+            "name": "Review"
+          },
+          "startWith": "architect-specialist",
+          "bundleId": "0312c9dc1d11",
+          "nextAction": "Start architect-specialist for Review phase",
+          "hint": "Begin with architect-specialist, then hand off or call workflow-advance when Review is complete.",
+          "revision": "0aa8bbf55219"
+        }
+      }
+    ],
+    "legacy": [
+      {
+        "label": "workflow-init",
+        "bytes": 5149,
+        "chars": 5147,
+        "estimatedTokens": 1287,
+        "payload": {
+          "success": true,
+          "name": "benchmark-execution-legacy",
+          "scale": "Medium",
+          "currentPhase": {
+            "code": "P",
+            "name": "Planning"
+          },
+          "settings": {
+            "autonomous_mode": true,
+            "require_plan": true,
+            "require_approval": true
+          },
+          "startWith": "architect-specialist",
+          "bundleId": "74e1bc42f8a4",
+          "nextAction": "Start architect-specialist for Planning phase",
+          "hint": "Begin with architect-specialist, then hand off or call workflow-advance when Planning is complete.",
+          "helpRef": "workflow://guide/workflow-init",
+          "profile": "standalone",
+          "revision": "62e237cb15e3",
+          "bundle": {
+            "agentIds": [
+              "architect-specialist",
+              "documentation-writer",
+              "frontend-specialist"
+            ],
+            "skillIds": [
+              "documentation",
+              "feature-breakdown",
+              "api-design"
+            ],
+            "docRefs": [
+              ".context/docs/architecture.md",
+              ".context/docs/glossary.md",
+              ".context/docs/README.md"
+            ]
+          },
+          "guidance": {
+            "mode": "autonomous",
+            "gate": "bypassed",
+            "next": "Start implementation work directly and advance phases as they complete."
+          },
+          "message": "Workflow initialized: benchmark-execution-legacy",
+          "phases": [
+            "P",
+            "R",
+            "E",
+            "V"
+          ],
+          "statusFilePath": "/tmp/execution-benchmark-wdwSXi/.context/workflow/status.yaml",
+          "contextPath": "/tmp/execution-benchmark-wdwSXi/.context",
+          "orchestration": {
+            "recommendedAgents": [
+              "architect-specialist",
+              "documentation-writer",
+              "frontend-specialist"
+            ],
+            "suggestedSequence": [
+              {
+                "agent": "architect-specialist",
+                "task": "Design system architecture"
+              },
+              {
+                "agent": "documentation-writer",
+                "task": "Document the changes"
+              },
+              {
+                "agent": "frontend-specialist",
+                "task": "Build user interface"
+              }
+            ],
+            "startWith": "architect-specialist",
+            "instruction": "ORCHESTRATION GUIDE for Planning phase:\n\n1. START: Activate architect-specialist agent\n   - Review agent playbook: .context/agents/architect-specialist.md\n   - Understand responsibilities and outputs\n\n2. DISCOVER: Find all agents for this phase\n   - Call: agent({ action: \"orchestrate\", phase: \"P\" })\n   - Review: Recommended agents and their roles\n\n3. SEQUENCE: Plan agent handoff order\n   - Call: agent({ action: \"getSequence\", phases: [\"P\"] })\n   - Follow: Suggested sequence for optimal workflow\n\n4. EXECUTE: Perform work and handoffs\n   - Work: Complete tasks as architect-specialist\n   - Handoff: workflow-manage({ action: \"handoff\", from: \"architect-specialist\", to: \"<next-agent>\", artifacts: [...] })\n   - Repeat: Continue through sequence until phase complete\n\n5. ADVANCE: Move to next phase\n   - Call: workflow-advance({ outputs: [...] })\n   - Review: Next phase orchestration guidance",
+            "recommendedSkills": [
+              {
+                "slug": "documentation",
+                "name": "documentation",
+                "description": "Generate and update technical documentation",
+                "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/documentation/SKILL.md",
+                "isBuiltIn": true
+              },
+              {
+                "slug": "feature-breakdown",
+                "name": "feature-breakdown",
+                "description": "Break down features into implementable tasks",
+                "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/feature-breakdown/SKILL.md",
+                "isBuiltIn": true
+              },
+              {
+                "slug": "api-design",
+                "name": "api-design",
+                "description": "Design RESTful APIs following best practices",
+                "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/api-design/SKILL.md",
+                "isBuiltIn": true
+              }
+            ],
+            "toolGuidance": {
+              "discoverExample": "agent({ action: \"orchestrate\", phase: \"P\" })",
+              "sequenceExample": "agent({ action: \"getSequence\", phases: [\"P\"] })",
+              "handoffExample": "workflow-manage({ action: \"handoff\", from: \"architect-specialist\", to: \"<next-agent>\", artifacts: [\"output.md\"] })"
+            },
+            "orchestrationSteps": [
+              "1. Discover agents for Planning phase: agent({ action: \"orchestrate\", phase: \"P\" })",
+              "2. Review recommended sequence: agent({ action: \"getSequence\", phases: [\"P\"] })",
+              "3. Begin with architect-specialist agent - follow playbook at .context/agents/architect-specialist.md",
+              "4. Execute handoffs: workflow-manage({ action: \"handoff\", from: \"architect-specialist\", to: \"documentation-writer\", artifacts: [\"output.md\"] })",
+              "5. Leverage skills: skill({ action: \"getForPhase\", phase: \"P\" })"
+            ]
+          },
+          "_actionRequired": true,
+          "_status": "workflow_active",
+          "enhancementPrompt": "✓ WORKFLOW ACTIVE - AUTONOMOUS MODE\n\nWorkflow \"benchmark-execution-legacy\" initialized (Medium scale).\nCurrent phase: P (Plan)\n\nAUTONOMOUS MODE ENABLED - All gates bypassed.\n\nAGENT ORCHESTRATION:\n1. Use agent tool to discover agents: agent({ action: \"orchestrate\", phase: \"P\" })\n2. Use workflow-manage for handoffs: workflow-manage({ action: \"handoff\", from: \"agent-1\", to: \"agent-2\", artifacts: [...] })\n3. Collaborate when needed: workflow-manage({ action: \"collaborate\", topic: \"architecture\", participants: [...] })\n\nNEXT ACTIONS:\n1. Begin implementation work directly\n2. Use workflow-advance to move through phases as work progresses\n3. Use workflow-status to check current state at any time\n\nYou may proceed without creating formal plans or waiting for approvals.",
+          "nextSteps": [
+            "ENABLED: Begin implementation work directly (autonomous mode)",
+            "ACTION: Call agent({ action: \"orchestrate\", phase: \"P\" }) to discover agents",
+            "ACTION: Use workflow-manage({ action: \"handoff\", ... }) to execute agent transitions",
+            "OPTIONAL: Call workflow-advance to track phase progression",
+            "OPTIONAL: Call workflow-status to check current state"
+          ]
+        }
+      },
+      {
+        "label": "workflow-status",
+        "bytes": 4044,
+        "chars": 4044,
+        "estimatedTokens": 1011,
+        "payload": {
+          "success": true,
+          "name": "benchmark-execution-legacy",
+          "scale": "Medium",
+          "profile": "standalone",
+          "currentPhase": {
+            "code": "P",
+            "name": "Planning"
+          },
+          "progress": {
+            "completed": 0,
+            "total": 4,
+            "percentage": 0
+          },
+          "isComplete": false,
+          "phases": {
+            "P": {
+              "status": "in_progress",
+              "started_at": "2026-03-22T06:10:42.931Z"
+            },
+            "R": {
+              "status": "pending"
+            },
+            "E": {
+              "status": "pending"
+            },
+            "V": {
+              "status": "pending"
+            },
+            "C": {
+              "status": "skipped",
+              "reason": "Not required for scale MEDIUM"
+            }
+          },
+          "activeAgents": [],
+          "gates": {
+            "canAdvance": true
+          },
+          "approval": {
+            "planCreated": false,
+            "planApproved": false
+          },
+          "bundleId": "74e1bc42f8a4",
+          "revision": "879c16d404c4",
+          "bundle": {
+            "startWith": "architect-specialist",
+            "agentIds": [
+              "architect-specialist",
+              "documentation-writer",
+              "frontend-specialist"
+            ],
+            "skillIds": [
+              "documentation",
+              "feature-breakdown",
+              "api-design"
+            ],
+            "docRefs": [
+              ".context/docs/architecture.md",
+              ".context/docs/glossary.md",
+              ".context/docs/README.md"
+            ],
+            "nextAction": "Start architect-specialist for Planning phase",
+            "hint": "Begin with architect-specialist, then hand off or call workflow-advance when Planning is complete."
+          },
+          "helpRef": "workflow://guide/workflow-status",
+          "settings": {
+            "autonomous_mode": true,
+            "require_plan": true,
+            "require_approval": true
+          },
+          "agents": {},
+          "roles": {},
+          "orchestration": {
+            "recommendedAgents": [
+              "architect-specialist",
+              "documentation-writer",
+              "frontend-specialist"
+            ],
+            "suggestedSequence": [
+              {
+                "agent": "architect-specialist",
+                "task": "Design system architecture"
+              },
+              {
+                "agent": "documentation-writer",
+                "task": "Document the changes"
+              },
+              {
+                "agent": "frontend-specialist",
+                "task": "Build user interface"
+              }
+            ],
+            "startWith": "architect-specialist",
+            "instruction": "ORCHESTRATION GUIDE for Planning phase:\n\n1. START: Activate architect-specialist agent\n   - Review agent playbook: .context/agents/architect-specialist.md\n   - Understand responsibilities and outputs\n\n2. DISCOVER: Find all agents for this phase\n   - Call: agent({ action: \"orchestrate\", phase: \"P\" })\n   - Review: Recommended agents and their roles\n\n3. SEQUENCE: Plan agent handoff order\n   - Call: agent({ action: \"getSequence\", phases: [\"P\"] })\n   - Follow: Suggested sequence for optimal workflow\n\n4. EXECUTE: Perform work and handoffs\n   - Work: Complete tasks as architect-specialist\n   - Handoff: workflow-manage({ action: \"handoff\", from: \"architect-specialist\", to: \"<next-agent>\", artifacts: [...] })\n   - Repeat: Continue through sequence until phase complete\n\n5. ADVANCE: Move to next phase\n   - Call: workflow-advance({ outputs: [...] })\n   - Review: Next phase orchestration guidance",
+            "recommendedSkills": [
+              {
+                "slug": "documentation",
+                "name": "documentation",
+                "description": "Generate and update technical documentation",
+                "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/documentation/SKILL.md",
+                "isBuiltIn": true
+              },
+              {
+                "slug": "feature-breakdown",
+                "name": "feature-breakdown",
+                "description": "Break down features into implementable tasks",
+                "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/feature-breakdown/SKILL.md",
+                "isBuiltIn": true
+              },
+              {
+                "slug": "api-design",
+                "name": "api-design",
+                "description": "Design RESTful APIs following best practices",
+                "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/api-design/SKILL.md",
+                "isBuiltIn": true
+              }
+            ],
+            "toolGuidance": {
+              "discoverExample": "agent({ action: \"orchestrate\", phase: \"P\" })",
+              "sequenceExample": "agent({ action: \"getSequence\", phases: [\"P\"] })",
+              "handoffExample": "workflow-manage({ action: \"handoff\", from: \"architect-specialist\", to: \"<next-agent>\", artifacts: [\"output.md\"] })"
+            },
+            "orchestrationSteps": [
+              "1. Discover agents for Planning phase: agent({ action: \"orchestrate\", phase: \"P\" })",
+              "2. Review recommended sequence: agent({ action: \"getSequence\", phases: [\"P\"] })",
+              "3. Begin with architect-specialist agent - follow playbook at .context/agents/architect-specialist.md",
+              "4. Execute handoffs: workflow-manage({ action: \"handoff\", from: \"architect-specialist\", to: \"documentation-writer\", artifacts: [\"output.md\"] })",
+              "5. Leverage skills: skill({ action: \"getForPhase\", phase: \"P\" })"
+            ]
+          },
+          "statusFilePath": "/tmp/execution-benchmark-wdwSXi/.context/workflow/status.yaml"
+        }
+      },
+      {
+        "label": "workflow-advance",
+        "bytes": 4664,
+        "chars": 4664,
+        "estimatedTokens": 1166,
+        "payload": {
+          "success": true,
+          "profile": "standalone",
+          "currentPhase": {
+            "code": "E",
+            "name": "Execution"
+          },
+          "startWith": "feature-developer",
+          "bundleId": "ed655422bfca",
+          "nextAction": "Start feature-developer for Execution phase",
+          "hint": "Begin with feature-developer, then hand off or call workflow-advance when Execution is complete.",
+          "helpRef": "workflow://guide/workflow-advance",
+          "revision": "e0aa012021fb",
+          "bundle": {
+            "startWith": "feature-developer",
+            "agentIds": [
+              "feature-developer",
+              "backend-specialist",
+              "frontend-specialist",
+              "database-specialist",
+              "mobile-specialist",
+              "bug-fixer"
+            ],
+            "skillIds": [
+              "commit-message",
+              "test-generation",
+              "refactoring",
+              "bug-investigation"
+            ],
+            "docRefs": [
+              ".context/docs/architecture.md",
+              ".context/docs/api.md",
+              ".context/docs/data-flow.md",
+              ".context/docs/getting-started.md"
+            ]
+          },
+          "message": "Advanced to Execution phase",
+          "nextPhase": {
+            "code": "E",
+            "name": "Execution"
+          },
+          "orchestration": {
+            "recommendedAgents": [
+              "feature-developer",
+              "backend-specialist",
+              "frontend-specialist",
+              "database-specialist",
+              "mobile-specialist",
+              "bug-fixer"
+            ],
+            "suggestedSequence": [
+              {
+                "agent": "feature-developer",
+                "task": "Implement core functionality"
+              },
+              {
+                "agent": "backend-specialist",
+                "task": "Implement server-side logic"
+              },
+              {
+                "agent": "frontend-specialist",
+                "task": "Build user interface"
+              },
+              {
+                "agent": "database-specialist",
+                "task": "Design and optimize database"
+              },
+              {
+                "agent": "mobile-specialist",
+                "task": "Develop mobile features"
+              },
+              {
+                "agent": "bug-fixer",
+                "task": "Fix identified issues"
+              }
+            ],
+            "startWith": "feature-developer",
+            "instruction": "ORCHESTRATION GUIDE for Execution phase:\n\n1. START: Activate feature-developer agent\n   - Review agent playbook: .context/agents/feature-developer.md\n   - Understand responsibilities and outputs\n\n2. DISCOVER: Find all agents for this phase\n   - Call: agent({ action: \"orchestrate\", phase: \"E\" })\n   - Review: Recommended agents and their roles\n\n3. SEQUENCE: Plan agent handoff order\n   - Call: agent({ action: \"getSequence\", phases: [\"E\"] })\n   - Follow: Suggested sequence for optimal workflow\n\n4. EXECUTE: Perform work and handoffs\n   - Work: Complete tasks as feature-developer\n   - Handoff: workflow-manage({ action: \"handoff\", from: \"feature-developer\", to: \"<next-agent>\", artifacts: [...] })\n   - Repeat: Continue through sequence until phase complete\n\n5. ADVANCE: Move to next phase\n   - Call: workflow-advance({ outputs: [...] })\n   - Review: Next phase orchestration guidance",
+            "recommendedSkills": [
+              {
+                "slug": "commit-message",
+                "name": "commit-message",
+                "description": "Generate commit messages following conventional commits with scope detection",
+                "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/commit-message/SKILL.md",
+                "isBuiltIn": true
+              },
+              {
+                "slug": "test-generation",
+                "name": "test-generation",
+                "description": "Generate comprehensive test cases for code",
+                "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/test-generation/SKILL.md",
+                "isBuiltIn": true
+              },
+              {
+                "slug": "refactoring",
+                "name": "refactoring",
+                "description": "Safe code refactoring with step-by-step approach",
+                "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/refactoring/SKILL.md",
+                "isBuiltIn": true
+              },
+              {
+                "slug": "bug-investigation",
+                "name": "bug-investigation",
+                "description": "Systematic bug investigation and root cause analysis",
+                "path": "/tmp/execution-benchmark-wdwSXi/.context/skills/bug-investigation/SKILL.md",
+                "isBuiltIn": true
+              }
+            ],
+            "toolGuidance": {
+              "discoverExample": "agent({ action: \"orchestrate\", phase: \"E\" })",
+              "sequenceExample": "agent({ action: \"getSequence\", phases: [\"E\"] })",
+              "handoffExample": "workflow-manage({ action: \"handoff\", from: \"feature-developer\", to: \"<next-agent>\", artifacts: [\"output.md\"] })"
+            },
+            "orchestrationSteps": [
+              "1. Discover agents for Execution phase: agent({ action: \"orchestrate\", phase: \"E\" })",
+              "2. Review recommended sequence: agent({ action: \"getSequence\", phases: [\"E\"] })",
+              "3. Begin with feature-developer agent - follow playbook at .context/agents/feature-developer.md",
+              "4. Execute handoffs: workflow-manage({ action: \"handoff\", from: \"feature-developer\", to: \"backend-specialist\", artifacts: [\"output.md\"] })",
+              "5. Leverage skills: skill({ action: \"getForPhase\", phase: \"E\" })"
+            ]
+          },
+          "quickStart": {
+            "message": "Ready to start Execution phase",
+            "firstStep": "Call agent({ action: \"orchestrate\", phase: \"E\" }) to discover agents",
+            "agentPlaybook": ".context/agents/feature-developer.md",
+            "nextActions": [
+              "1. Discover agents: agent({ action: \"orchestrate\", phase: \"E\" })",
+              "2. Review sequence: agent({ action: \"getSequence\", phases: [\"E\"] })",
+              "3. Begin with feature-developer - follow playbook at .context/agents/feature-developer.md",
+              "4. Use workflow-manage to execute handoffs between agents",
+              "5. Call workflow-advance when phase is complete"
+            ]
+          }
+        }
+      }
+    ],
+    "polling": {
+      "label": "workflow-status",
+      "bytes": 61,
+      "chars": 61,
+      "estimatedTokens": 16,
+      "payload": {
+        "success": true,
+        "notModified": true,
+        "revision": "879c16d404c4"
+      }
+    },
+    "nonMcp": {
+      "label": "non-mcp-execution",
+      "bytes": 1761,
+      "chars": 1761,
+      "estimatedTokens": 441,
+      "payload": "Current workflow state is not available through MCP. Reconstruct it from the description below and then provide the full next-step guidance inline. Summarize the current PREVC phase, overall progress, whether the workflow can advance, which gates might block advancement, and what approval or plan-link requirements still apply. List the next agent to start with, the recommended agent sequence for the current phase, relevant documents to read first, useful skills to load, and the safest way to hand off work. Then explain how to advance to the next phase, what artifacts should be produced before advancing, and what a fallback path looks like if the workflow is blocked. Assume there is no cached bundle, no workflow help resource, and no dedicated status endpoint, so include the operational guidance, examples, and cautions inline in the response. Include examples of the manual commands or notes the engineer should keep for state tracking: current phase, completed phases, remaining phases, active agent, pending approvals, linked plan status, and produced artifacts. Explain which documents to consult for the current phase, why they matter, and what a reviewer should verify before the workflow advances. Also note which skills or playbooks would normally be suggested by the system and summarize them inline. Provide concrete examples of handoff messages, approval checks, and phase-completion evidence so the execution guidance can be followed without any machine-generated bundle, compact delta response, or not-modified polling support. Make the answer complete enough that the user does not need to ask a second question to know the next action, the fallback path, or the compatibility implications of enabling autonomous mode or bypassing gates."
+    }
+  },
+  "profileToolCounts": {
+    "standalone": 10,
+    "planning": 9,
+    "execution": 6
+  },
+  "planningSummary": {
+    "compactTokens": 311,
+    "legacyTokens": 3508,
+    "nonMcpTokens": 523,
+    "compactVsLegacyPct": -91.1,
+    "compactVsNonMcpPct": -40.5
+  },
+  "executionSummary": {
+    "compactTokens": 366,
+    "legacyTokens": 3464,
+    "nonMcpTokens": 441,
+    "compactVsLegacyPct": -89.4,
+    "compactVsNonMcpPct": -17
+  }
+}
