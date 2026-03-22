@@ -1,4 +1,4 @@
-# Contributing to @ai-coders/context
+# Contributing to @dotcontext/cli
 
 We love your input! We want to make contributing to this project as easy and transparent as possible.
 

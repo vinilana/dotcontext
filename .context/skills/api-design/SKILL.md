@@ -1,7 +1,7 @@
 ---
 type: skill
 name: MCP Tool Design
-description: Design MCP tools and gateway interfaces for the ai-context server
+description: Design MCP tools and gateway interfaces for the dotcontext server
 skillSlug: api-design
 phases: [P, R]
 generated: 2026-03-18

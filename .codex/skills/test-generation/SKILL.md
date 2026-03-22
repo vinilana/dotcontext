@@ -6,7 +6,7 @@ phases: [E, V]
 
 # Test Generation
 
-Generate and maintain tests for the `@ai-coders/context` project using Jest with ts-jest.
+Generate and maintain tests for the `@dotcontext/cli` project using Jest with ts-jest.
 
 ## When to Use
 

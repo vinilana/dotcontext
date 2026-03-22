@@ -1,8 +1,10 @@
-# @ai-coders/context
+# @dotcontext/cli
 
-[![npm version](https://badge.fury.io/js/@ai-coders%2Fcontext.svg)](https://www.npmjs.com/package/@ai-coders/context)
+[![npm version](https://badge.fury.io/js/@dotcontext%2Fcli.svg)](https://www.npmjs.com/package/@dotcontext/cli)
 [![CI](https://github.com/vinilana/ai-coders-context/actions/workflows/ci.yml/badge.svg)](https://github.com/vinilana/ai-coders-context/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> **Formerly `@ai-coders/context`.** Renamed to avoid confusion with Context7 and other "context" tools in the AI space. The `.context/` directory standard is unchanged. See [Migration Guide](#migration-from-ai-coderscontext).
 
 **The Ultimate MCP for AI Agent Orchestration, Context Engineering, and Spec-Driven Development.**
 Context engineering for AI now is stupidly simple.
@@ -42,10 +44,10 @@ Export to any tool.
 **Write once. Use anywhere. No boilerplate.**
 
 > **Using GitHub Copilot, Cursor, Claude, or another AI tool?**
-> Just run `npx @ai-coders/context mcp:install` — no API key needed!
+> Just run `npx @dotcontext/cli mcp:install` — no API key needed!
 >
 > **Usando GitHub Copilot, Cursor, Claude ou outra ferramenta de IA?**
-> Execute `npx @ai-coders/context mcp:install` — sem necessidade de API key!
+> Execute `npx @dotcontext/cli mcp:install` — sem necessidade de API key!
 
 > **Note / Nota**
 > Standalone CLI generation is no longer supported. Use MCP-enabled AI tools to create, fill, or refresh context.
@@ -57,18 +59,18 @@ Export to any tool.
 
 #### English
 
-1. Run `npx @ai-coders/context mcp:install`
+1. Run `npx @dotcontext/cli mcp:install`
 2. Prompt your AI agent: `init the context`
-3. Then: `plan [YOUR TASK] using ai-context`
+3. Then: `plan [YOUR TASK] using dotcontext`
 4. After planned: `start the workflow`
 
 **No API key needed.** Your AI tool provides the LLM.
 
 #### Português
 
-1. Execute `npx @ai-coders/context mcp:install`
+1. Execute `npx @dotcontext/cli mcp:install`
 2. Diga ao seu agente de IA: `init the context`
-3. Depois: `plan [SUA TAREFA] using ai-context`
+3. Depois: `plan [SUA TAREFA] using dotcontext`
 4. Após o planejamento: `start the workflow`
 
 **Sem necessidade de API key.** Sua ferramenta de IA fornece o LLM.
@@ -77,13 +79,13 @@ Export to any tool.
 
 #### English
 
-1. Run `npx @ai-coders/context`
+1. Run `npx @dotcontext/cli`
 2. Use the interactive CLI for workflow, sync, reverse sync, and MCP setup
 3. When you need context creation or AI-generated content, use your MCP-connected AI tool
 
 #### Português
 
-1. Execute `npx @ai-coders/context`
+1. Execute `npx @dotcontext/cli`
 2. Use a CLI interativa para workflow, sincronização, reverse sync e configuração MCP
 3. Quando precisar criar contexto ou gerar conteúdo com IA, use sua ferramenta conectada via MCP
 
@@ -96,12 +98,12 @@ This package includes an MCP (Model Context Protocol) server that provides AI co
 Use the MCP Install command to automatically configure the MCP server:
 
 ```bash
-npx @ai-coders/context mcp:install
+npx @dotcontext/cli mcp:install
 ```
 
 This interactive command:
 - Detects installed AI tools on your system
-- Configures ai-context MCP server in each tool
+- Configures dotcontext MCP server in each tool
 - Supports global (home directory) and local (project directory) installation
 - Merges with existing MCP configurations without overwriting
 - Includes dry-run mode to preview changes
@@ -133,9 +135,9 @@ Here is the template to add a server (example using `npx` for a Node.js server o
 ```json
 {
   "mcpServers": {
-    "ai-context": {
+    "dotcontext": {
       "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
+      "args": ["@dotcontext/cli", "mcp"]
     }
   }
 }
@@ -154,7 +156,7 @@ After saving the `mcp.json` file:
 Add the MCP server using the Claude CLI:
 
 ```bash
-claude mcp add ai-context -- npx @ai-coders/context mcp
+claude mcp add dotcontext -- npx @dotcontext/cli mcp
 ```
 
 Or configure manually in `~/.claude.json`:
@@ -162,9 +164,9 @@ Or configure manually in `~/.claude.json`:
 ```json
 {
   "mcpServers": {
-    "ai-context": {
+    "dotcontext": {
       "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
+      "args": ["@dotcontext/cli", "mcp"]
     }
   }
 }
@@ -177,9 +179,9 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 ```json
 {
   "mcpServers": {
-    "ai-context": {
+    "dotcontext": {
       "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
+      "args": ["@dotcontext/cli", "mcp"]
     }
   }
 }
@@ -192,9 +194,9 @@ Create `.cursor/mcp.json` in your project root:
 ```json
 {
   "mcpServers": {
-    "ai-context": {
+    "dotcontext": {
       "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
+      "args": ["@dotcontext/cli", "mcp"]
     }
   }
 }
@@ -207,9 +209,9 @@ Add to your Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json`):
 ```json
 {
   "mcpServers": {
-    "ai-context": {
+    "dotcontext": {
       "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
+      "args": ["@dotcontext/cli", "mcp"]
     }
   }
 }
@@ -222,10 +224,10 @@ Add to your Zed settings (`~/.config/zed/settings.json`):
 ```json
 {
   "context_servers": {
-    "ai-context": {
+    "dotcontext": {
       "command": {
         "path": "npx",
-        "args": ["@ai-coders/context", "mcp"]
+        "args": ["@dotcontext/cli", "mcp"]
       }
     }
   }
@@ -239,9 +241,9 @@ Configure in Cline settings (VS Code → Settings → Cline → MCP Servers):
 ```json
 {
   "mcpServers": {
-    "ai-context": {
+    "dotcontext": {
       "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
+      "args": ["@dotcontext/cli", "mcp"]
     }
   }
 }
@@ -252,9 +254,9 @@ Configure in Cline settings (VS Code → Settings → Cline → MCP Servers):
 Add to your Codex CLI config (`~/.codex/config.toml`):
 
 ```toml
-[mcp_servers.ai-context]
+[mcp_servers.dotcontext]
 command = "npx"
-args = ["--yes", "@ai-coders/context@latest", "mcp"]
+args = ["--yes", "@dotcontext/cli@latest", "mcp"]
 ```
 
 ### Google Antigravity
@@ -264,9 +266,9 @@ Add to your Antigravity MCP config (`~/.gemini/mcp_config.json`):
 ```json
 {
   "mcpServers": {
-    "ai-context": {
+    "dotcontext": {
       "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
+      "args": ["@dotcontext/cli", "mcp"]
     }
   }
 }
@@ -279,9 +281,9 @@ Add to your Trae AI MCP config (Settings > MCP Servers):
 ```json
 {
   "mcpServers": {
-    "ai-context": {
+    "dotcontext": {
       "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
+      "args": ["@dotcontext/cli", "mcp"]
     }
   }
 }
@@ -294,9 +296,9 @@ For local development, point directly to the built distribution:
 ```json
 {
   "mcpServers": {
-    "ai-context-dev": {
+    "dotcontext-dev": {
       "command": "node",
-      "args": ["/path/to/ai-coders-context/dist/index.js", "mcp"]
+      "args": ["/path/to/dotcontext-cli/dist/index.js", "mcp"]
     }
   }
 }
@@ -311,7 +313,7 @@ Built by [AI Coders Academy](http://aicoders.academy/) — Learn AI-assisted dev
 
 - [AI Coders Academy](http://aicoders.academy/) — Courses and resources for AI-powered coding
 - [YouTube Channel](https://www.youtube.com/@aicodersacademy) — Tutorials, demos, and best practices
-- [Connect with Vini](https://www.linkedin.com/in/viniciuslanadepaula/) — Creator of @ai-coders/context
+- [Connect with Vini](https://www.linkedin.com/in/viniciuslanadepaula/) — Creator of @dotcontext/cli
 
 
 ## Why PREVC?
@@ -433,7 +435,7 @@ The system automatically detects project scale and adjusts the workflow:
 
 - Node.js 20+
 
-**Context creation, AI generation, and refresh are MCP-only.** Use `npx @ai-coders/context mcp:install` and let your AI tool use its own LLM.
+**Context creation, AI generation, and refresh are MCP-only.** Use `npx @dotcontext/cli mcp:install` and let your AI tool use its own LLM.
 
 ### Available MCP Tools
 
@@ -487,8 +489,8 @@ Skills are task-specific procedures that AI agents activate when needed:
 | `security-audit` | Security review checklist | R, V |
 
 ```bash
-npx @ai-coders/context skill list   # List available skills
-npx @ai-coders/context skill export # Export to AI tools
+npx @dotcontext/cli skill list   # List available skills
+npx @dotcontext/cli skill export # Export to AI tools
 ```
 
 Use MCP tools from your AI assistant to scaffold, fill, or refresh skills and other context files.
@@ -514,6 +516,50 @@ The orchestration system maps tasks to specialized agents:
 | `mobile-specialist` | Mobile applications |
 | `refactoring-specialist` | Code structure improvements |
 
+
+## Migration from @ai-coders/context
+
+### Why the rename?
+
+The previous name `@ai-coders/context` caused frequent confusion with **Context7** and other tools that use "context" in their name. In the AI/LLM tooling space, "context" is too generic. The new name **dotcontext** is unique, searchable, and directly references the `.context/` directory convention at the core of this tool.
+
+### What changed
+
+| Before | After |
+|--------|-------|
+| `npm install @ai-coders/context` | `npm install @dotcontext/cli` |
+| `npx @ai-coders/context` | `npx @dotcontext/cli` |
+| CLI command: `ai-context` | CLI command: `dotcontext` |
+| MCP server name: `"ai-context"` | MCP server name: `"dotcontext"` |
+| Env var: `AI_CONTEXT_LANG` | Env var: `DOTCONTEXT_LANG` |
+
+### What did NOT change
+
+- The `.context/` directory structure and all its contents
+- The PREVC workflow system
+- All MCP tool names and actions
+- All scaffold formats and frontmatter conventions
+- The MIT license
+
+### Step-by-step migration
+
+1. **Update your global install** (if applicable):
+   ```bash
+   npm uninstall -g @ai-coders/context
+   npm install -g @dotcontext/cli
+   ```
+
+2. **Update MCP configurations** -- re-run the installer:
+   ```bash
+   npx @dotcontext/cli mcp:install
+   ```
+   Or manually replace `"ai-context"` with `"dotcontext"` and `"@ai-coders/context"` with `"@dotcontext/cli"` in your MCP JSON configs.
+
+3. **Update shell aliases** -- replace `ai-context` with `dotcontext` in your `.bashrc`, `.zshrc`, or equivalent.
+
+4. **Update environment variables** -- rename `AI_CONTEXT_LANG` to `DOTCONTEXT_LANG` if you set it.
+
+5. **No changes to `.context/` needed** -- the directory, files, and frontmatter are all unchanged.
 
 ## License
 

@@ -29,10 +29,10 @@ npm run build
 ## Installation (as a user)
 
 ```bash
-npm install -g @ai-coders/context
+npm install -g @dotcontext/cli
 ```
 
-After installation the `ai-context` binary is available globally.
+After installation the `dotcontext` binary is available globally.
 
 ## Running in development
 
@@ -58,24 +58,24 @@ npm start
 
 ## CLI commands overview
 
-The CLI is built with Commander. Run `ai-context --help` to see all commands. Key commands include:
+The CLI is built with Commander. Run `dotcontext --help` to see all commands. Key commands include:
 
-- **`ai-context sync-agents`** -- Synchronize agent playbooks
-- **`ai-context reverse-sync`** -- Import rules, agents, and skills from AI tool directories
-- **`ai-context mcp`** -- Start in MCP (Model Context Protocol) server mode
-- **`ai-context mcp:install [tool]`** -- Install MCP configuration for AI tools
-- **`ai-context export-rules`** -- Export rules for AI coding tools
-- **`ai-context report`** -- Generate context reports
-- **`ai-context workflow init|status|advance`** -- Manage PREVC workflow phases
+- **`dotcontext sync-agents`** -- Synchronize agent playbooks
+- **`dotcontext reverse-sync`** -- Import rules, agents, and skills from AI tool directories
+- **`dotcontext mcp`** -- Start in MCP (Model Context Protocol) server mode
+- **`dotcontext mcp:install [tool]`** -- Install MCP configuration for AI tools
+- **`dotcontext export-rules`** -- Export rules for AI coding tools
+- **`dotcontext report`** -- Generate context reports
+- **`dotcontext workflow init|status|advance`** -- Manage PREVC workflow phases
 
 ## Interactive mode
 
-Running `ai-context` with no command arguments enters interactive mode, which guides you through project state, workflow, sync, imports, and MCP setup using Inquirer prompts.
+Running `dotcontext` with no command arguments enters interactive mode, which guides you through project state, workflow, sync, imports, and MCP setup using Inquirer prompts.
 
 ## Environment variables
 
-- `AI_CONTEXT_LANG` -- Override the UI locale (`en` or `pt-BR`)
+- `DOTCONTEXT_LANG` -- Override the UI locale (`en` or `pt-BR`)
 - A `.env` file in the project root is loaded automatically via `dotenv`
 
 The standalone CLI no longer creates or fills context directly.
-For context creation, plan scaffolding, AI-generated filling, or refresh, use MCP-enabled AI tools after running `ai-context mcp:install`.
+For context creation, plan scaffolding, AI-generated filling, or refresh, use MCP-enabled AI tools after running `dotcontext mcp:install`.

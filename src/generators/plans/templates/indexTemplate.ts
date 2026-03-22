@@ -5,7 +5,7 @@ export function renderPlanIndex(entries: PlanIndexEntry[]): string {
     ? entries
         .map((entry, index) => `${index + 1}. [${entry.title}](./${entry.slug}.md)`)
         .join('\n')
-    : '_No plans created yet. Use "ai-context plan <name>" to create the first one._';
+    : '_No plans created yet. Use "dotcontext plan <name>" to create the first one._';
 
   return `# Collaboration Plans
 
@@ -15,8 +15,8 @@ This directory contains plans for coordinating work across documentation and pla
 ${planList}
 
 ## How To Create Or Update Plans
-- Run "ai-context plan <name>" to scaffold a new plan template.
-- Run "ai-context plan <name> --fill" to have an LLM refresh the plan using the latest repository context.
+- Run "dotcontext plan <name>" to scaffold a new plan template.
+- Run "dotcontext plan <name> --fill" to have an LLM refresh the plan using the latest repository context.
 
 ## Related Resources
 - [Agent Handbook](../agents/README.md)

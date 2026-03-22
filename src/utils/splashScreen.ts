@@ -39,6 +39,10 @@ export function renderSplashScreen(options: SplashScreenOptions): string {
 }
 
 export function packageNameToDisplayName(packageName: string): string {
+  if (packageName === '@dotcontext/cli') {
+    return 'Dotcontext';
+  }
+
   return packageName
     .replace(/^@/, '')
     .replace(/\//g, ' ')

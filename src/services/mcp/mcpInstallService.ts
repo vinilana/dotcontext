@@ -1,7 +1,7 @@
 /**
  * MCP Install Service
  *
- * Installs and configures the ai-context MCP server for various AI tools.
+ * Installs and configures the dotcontext MCP server for various AI tools.
  * Supports Claude Code, Cursor, VS Code, Continue, and more.
  */
 
@@ -69,11 +69,11 @@ interface MCPConfigTemplate {
 }
 
 /**
- * Standard MCP server configuration for ai-context
+ * Standard MCP server configuration for dotcontext
  */
 const AI_CONTEXT_MCP_SERVER: MCPServerConfig = {
   command: 'npx',
-  args: ['-y', '@ai-coders/context@latest', 'mcp'],
+  args: ['-y', '@dotcontext/cli@latest', 'mcp'],
   env: {},
 };
 
@@ -92,14 +92,14 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+          'dotcontext': server,
         },
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
@@ -114,7 +114,7 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': {
+          'dotcontext': {
             type: 'stdio',
             ...server,
           },
@@ -124,7 +124,7 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
@@ -139,22 +139,22 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+          'dotcontext': server,
         },
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
   // Continue.dev — standalone per-server file
   {
     toolId: 'continue',
-    globalConfigPath: '.continue/mcpServers/ai-context.json',
-    localConfigPath: '.continue/mcpServers/ai-context.json',
+    globalConfigPath: '.continue/mcpServers/dotcontext.json',
+    localConfigPath: '.continue/mcpServers/dotcontext.json',
     generateConfig: (_existing, server) => {
       return {
         command: server.command,
@@ -181,14 +181,14 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+          'dotcontext': server,
         },
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
@@ -203,7 +203,7 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         servers: {
           ...(config.servers as Record<string, unknown> || {}),
-          'ai-context': {
+          'dotcontext': {
             type: 'stdio',
             ...server,
           },
@@ -213,7 +213,7 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.servers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
@@ -228,14 +228,14 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+          'dotcontext': server,
         },
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
@@ -250,14 +250,14 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+          'dotcontext': server,
         },
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
@@ -272,14 +272,14 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+          'dotcontext': server,
         },
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
@@ -294,14 +294,14 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+          'dotcontext': server,
         },
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
@@ -316,7 +316,7 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         context_servers: {
           ...(config.context_servers as Record<string, unknown> || {}),
-          'ai-context': {
+          'dotcontext': {
             command: server.command,
             args: server.args,
             env: server.env || {},
@@ -327,7 +327,7 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.context_servers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
@@ -339,12 +339,12 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
     generateConfig: (existing, server) => {
       const config = (existing as Record<string, unknown>) || {};
       const existingServers = (config.servers as Array<Record<string, unknown>>) || [];
-      const filtered = existingServers.filter(s => s.name !== 'ai-context');
+      const filtered = existingServers.filter(s => s.name !== 'dotcontext');
       return {
         servers: [
           ...filtered,
           {
-            name: 'ai-context',
+            name: 'dotcontext',
             command: server.command,
             args: server.args,
             env: server.env || {},
@@ -355,7 +355,7 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.servers as Array<Record<string, unknown>>;
-      return Array.isArray(servers) && servers.some(s => s.name === 'ai-context');
+      return Array.isArray(servers) && servers.some(s => s.name === 'dotcontext');
     },
   },
 
@@ -370,14 +370,14 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+          'dotcontext': server,
         },
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 
@@ -392,7 +392,7 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcp: {
           ...(config.mcp as Record<string, unknown> || {}),
-          'ai-context': {
+          'dotcontext': {
             type: 'local',
             command: [server.command, ...server.args],
             enabled: true,
@@ -403,7 +403,7 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const mcp = c?.mcp as Record<string, unknown>;
-      return !!mcp?.['ai-context'];
+      return !!mcp?.['dotcontext'];
     },
   },
 
@@ -418,14 +418,14 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+          'dotcontext': server,
         },
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
       const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
+      return !!servers?.['dotcontext'];
     },
   },
 ];

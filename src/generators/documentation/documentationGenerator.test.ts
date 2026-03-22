@@ -64,7 +64,7 @@ describe('DocumentationGenerator', () => {
   const generator = new DocumentationGenerator();
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ai-context-docs-'));
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'dotcontext-docs-'));
     outputDir = path.join(tempDir, '.context');
     await fs.ensureDir(path.join(tempDir, 'repo'));
   });

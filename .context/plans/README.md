@@ -1,6 +1,6 @@
 # Plans Index
 
-This directory contains implementation plans for upcoming changes to `@ai-coders/context`.
+This directory contains implementation plans for upcoming changes to `@dotcontext/cli`.
 
 ## Active Plans
 

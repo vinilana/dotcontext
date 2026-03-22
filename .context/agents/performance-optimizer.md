@@ -12,7 +12,7 @@ scaffoldVersion: "2.0.0"
 
 ## Role
 
-Identify and resolve performance bottlenecks in the ai-coders-context CLI tool. The primary performance concerns are: file system scanning speed (glob operations over large repositories), tree-sitter parsing throughput, semantic-context construction cost, MCP payload size, and CLI startup time. Since this is a developer tool that operates on entire codebases, performance at scale (repositories with thousands of files) is critical.
+Identify and resolve performance bottlenecks in the dotcontext CLI tool. The primary performance concerns are: file system scanning speed (glob operations over large repositories), tree-sitter parsing throughput, semantic-context construction cost, MCP payload size, and CLI startup time. Since this is a developer tool that operates on entire codebases, performance at scale (repositories with thousands of files) is critical.
 
 ## Key Files to Understand
 
@@ -32,8 +32,8 @@ Identify and resolve performance bottlenecks in the ai-coders-context CLI tool. 
 1. **Profile the operation**: Identify which CLI command is slow. Run with `--verbose` flag and observe timing. Key operations to profile:
    - `context({ action: "init" })` -- File scanning + scaffold generation
    - `context({ action: "fill" })` / `fillSingle` -- Semantic context assembly per scaffold file
-   - `ai-context sync` -- File discovery + symlink/reference creation
-   - `ai-context report` -- File scanning + frontmatter parsing
+   - `dotcontext sync` -- File discovery + symlink/reference creation
+   - `dotcontext report` -- File scanning + frontmatter parsing
 
 2. **Measure file I/O**: FileMapper and glob operations are the most common bottleneck. Check:
    - Are exclude patterns in `globPatterns.ts` covering all irrelevant directories?

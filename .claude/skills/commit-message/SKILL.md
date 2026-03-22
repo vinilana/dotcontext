@@ -6,7 +6,7 @@ phases: [E, C]
 
 # Commit Message
 
-Generate consistent, informative commit messages for the `@ai-coders/context` project.
+Generate consistent, informative commit messages for the `@dotcontext/cli` project.
 
 ## When to Use
 

@@ -13,7 +13,7 @@ function stripAnsi(value: string): string {
 
 describe('splashScreen', () => {
   it('humanizes scoped package names for the splash title', () => {
-    expect(packageNameToDisplayName('@ai-coders/context')).toBe('AI Coders Context');
+    expect(packageNameToDisplayName('@dotcontext/cli')).toBe('Dotcontext');
   });
 
   it('shortens home-directory paths with a tilde', () => {

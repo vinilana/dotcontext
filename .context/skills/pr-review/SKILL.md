@@ -11,7 +11,7 @@ scaffoldVersion: "2.0.0"
 
 # PR Review
 
-Review pull requests for the `@ai-coders/context` project against established patterns and quality standards.
+Review pull requests for the `@dotcontext/cli` project against established patterns and quality standards.
 
 ## When to Use
 

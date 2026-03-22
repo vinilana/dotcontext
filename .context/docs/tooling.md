@@ -10,7 +10,7 @@ scaffoldVersion: "2.0.0"
 
 # Tooling & Productivity Guide
 
-This document covers the scripts, tools, IDE configuration, and productivity practices used in the `@ai-coders/context` project.
+This document covers the scripts, tools, IDE configuration, and productivity practices used in the `@dotcontext/cli` project.
 
 ## Required Tooling
 
@@ -141,7 +141,7 @@ Test files (`**/*.test.ts`) are excluded from the build output but included in t
 
 3. **Leverage the `--help` flag.** Every CLI command supports `--help` for discoverability: `npm run dev -- workflow --help`.
 
-4. **Use MCP for context creation and AI generation.** Standalone CLI generation is no longer supported. Install MCP with `npx @ai-coders/context mcp:install` and use your AI tool to create, fill, or refresh context.
+4. **Use MCP for context creation and AI generation.** Standalone CLI generation is no longer supported. Install MCP with `npx @dotcontext/cli mcp:install` and use your AI tool to create, fill, or refresh context.
 
 5. **Read the generated context.** After initializing context through MCP, browse `.context/docs/` and `.context/agents/` to understand what the tool produces -- this helps when working on generators and templates.
 

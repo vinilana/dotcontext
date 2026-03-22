@@ -12,7 +12,7 @@ scaffoldVersion: "2.0.0"
 
 ## Role
 
-Create and maintain documentation for the ai-coders-context project, both the user-facing README/guides and the internal `.context/` documentation that the tool itself generates. This includes writing doc templates, improving scaffold structures, updating the guide registry, and ensuring documentation accurately reflects the current CLI commands and service capabilities.
+Create and maintain documentation for the dotcontext project, both the user-facing README/guides and the internal `.context/` documentation that the tool itself generates. This includes writing doc templates, improving scaffold structures, updating the guide registry, and ensuring documentation accurately reflects the current CLI commands and service capabilities.
 
 ## Key Files to Understand
 
@@ -50,6 +50,6 @@ Create and maintain documentation for the ai-coders-context project, both the us
 
 - **Forgetting the index template**: When adding new documentation types, also update `src/generators/documentation/templates/indexTemplate.ts` so the `.context/docs/README.md` index includes a link to the new document.
 - **Template vs. fill content confusion**: Templates generate the scaffold skeleton; MCP clients or auto-fill complete the actual content. Do not put project-specific details in templates -- those are inferred from the codebase during fill.
-- **Stale documentation after refactoring**: After service or generator refactoring, re-run the MCP context flow to regenerate scaffolding and refresh filled content. The `ai-context report` command can identify stale or unfilled documents.
+- **Stale documentation after refactoring**: After service or generator refactoring, re-run the MCP context flow to regenerate scaffolding and refresh filled content. The `dotcontext report` command can identify stale or unfilled documents.
 - **Ignoring auto-fill**: The `AutoFillService` (`src/services/autoFill/`) can populate scaffolds with semantic data without an LLM. When writing structures, define auto-fill hints in the scaffold structure so auto-fill can provide baseline content.
 - **Missing `getScaffoldStructure()` registration**: New scaffold types must be registered in `src/generators/shared/scaffoldStructures.ts` via `getScaffoldStructure()`. Without this, the fill pipeline cannot locate the structure definition for the document.

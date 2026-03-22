@@ -10,7 +10,7 @@ scaffoldVersion: "2.0.0"
 
 # Development Workflow
 
-This document covers the day-to-day engineering processes for contributing to `@ai-coders/context`, including branching conventions, local development setup, release procedures, and code review expectations.
+This document covers the day-to-day engineering processes for contributing to `@dotcontext/cli`, including branching conventions, local development setup, release procedures, and code review expectations.
 
 ## Branching & Releases
 
@@ -89,9 +89,9 @@ npm install
 
 ### Environment variables
 
-The CLI supports locale overrides via `AI_CONTEXT_LANG` (`en` or `pt-BR`).
+The CLI supports locale overrides via `DOTCONTEXT_LANG` (`en` or `pt-BR`).
 
-For AI-generated filling or refresh, install MCP with `npx @ai-coders/context mcp:install` and use your connected AI tool instead of standalone CLI commands.
+For AI-generated filling or refresh, install MCP with `npx @dotcontext/cli mcp:install` and use your connected AI tool instead of standalone CLI commands.
 
 Use a `.env` file in the project root (loaded via dotenv). Do not commit `.env` files.
 

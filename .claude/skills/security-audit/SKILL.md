@@ -6,7 +6,7 @@ phases: [R, V]
 
 # Security Audit
 
-Security review checklist specific to the `@ai-coders/context` CLI tool and MCP server.
+Security review checklist specific to the `@dotcontext/cli` CLI tool and MCP server.
 
 ## When to Use
 
@@ -19,7 +19,7 @@ Security review checklist specific to the `@ai-coders/context` CLI tool and MCP 
 
 ## Threat Model
 
-The `@ai-coders/context` tool has a specific threat surface:
+The `@dotcontext/cli` tool has a specific threat surface:
 
 | Asset | Risk | Location |
 |-------|------|----------|

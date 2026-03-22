@@ -12,7 +12,7 @@ scaffoldVersion: "2.0.0"
 
 ## Role
 
-Review pull requests and code changes in the ai-coders-context project for correctness, consistency with existing patterns, type safety, proper error handling, and adherence to the project's architectural conventions. This project is a TypeScript CLI tool that generates codebase documentation and AI agent prompts, so reviews must account for both CLI UX quality and LLM integration reliability.
+Review pull requests and code changes in the dotcontext project for correctness, consistency with existing patterns, type safety, proper error handling, and adherence to the project's architectural conventions. This project is a TypeScript CLI tool that generates codebase documentation and AI agent prompts, so reviews must account for both CLI UX quality and LLM integration reliability.
 
 ## Key Files to Understand
 

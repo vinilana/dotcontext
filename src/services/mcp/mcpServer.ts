@@ -70,7 +70,7 @@ export class AIContextMCPServer {
 
   constructor(options: MCPServerOptions = {}) {
     this.options = {
-      name: 'ai-context',
+      name: 'dotcontext',
       verbose: false,
       ...options
     };

@@ -6,7 +6,7 @@ phases: [R, V]
 
 # Code Review
 
-Guidelines for reviewing code changes in the `@ai-coders/context` project.
+Guidelines for reviewing code changes in the `@dotcontext/cli` project.
 
 ## When to Use
 

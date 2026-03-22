@@ -12,7 +12,7 @@ scaffoldVersion: "2.0.0"
 
 ## Role
 
-Implement new features in the ai-coders-context CLI tool, including new CLI commands, services, generators, workflow capabilities, MCP tools, and integrations with LLM providers. Features must follow the project's established architecture: Commander-based CLI -> Service layer -> Generator/AI layer, with dependency injection, i18n support, and proper frontmatter handling.
+Implement new features in the dotcontext CLI tool, including new CLI commands, services, generators, workflow capabilities, MCP tools, and integrations with LLM providers. Features must follow the project's established architecture: Commander-based CLI -> Service layer -> Generator/AI layer, with dependency injection, i18n support, and proper frontmatter handling.
 
 ## Key Files to Understand
 

@@ -2,7 +2,7 @@
 
 On-demand expertise for AI agents. Skills are task-specific procedures that get activated when relevant.
 
-> Project: ai-coders-context
+> Project: dotcontext
 
 ## How Skills Work
 
@@ -16,7 +16,7 @@ On-demand expertise for AI agents. Skills are task-specific procedures that get 
 
 | Skill | Description | Phases | Status |
 |-------|-------------|--------|--------|
-| [MCP Tool Design](./api-design/SKILL.md) | Design MCP tools and gateway interfaces for the ai-context server | P, R | filled |
+| [MCP Tool Design](./api-design/SKILL.md) | Design MCP tools and gateway interfaces for the dotcontext server | P, R | filled |
 | [Bug Investigation](./bug-investigation/SKILL.md) | Systematic bug investigation and root cause analysis | E, V | filled |
 | [Code Review](./code-review/SKILL.md) | Review code quality, patterns, and best practices | R, V | filled |
 | [Commit Message](./commit-message/SKILL.md) | Generate commit messages following conventional commits with scope detection | E, C | filled |

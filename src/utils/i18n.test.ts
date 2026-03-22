@@ -10,7 +10,7 @@ describe('i18n locale detection', () => {
     expect(detectLocale(['--lang', 'en'], 'pt-BR', ['pt_BR.UTF-8'])).toBe('en');
   });
 
-  it('falls back to AI_CONTEXT_LANG before OS locale', () => {
+  it('falls back to DOTCONTEXT_LANG before OS locale', () => {
     expect(detectLocale([], 'pt-BR', ['en_US.UTF-8'])).toBe('pt-BR');
   });
 

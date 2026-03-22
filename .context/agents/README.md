@@ -1,6 +1,6 @@
 # Agent Handbook
 
-This directory contains ready-to-customize playbooks for AI agents collaborating on the `@ai-coders/context` codebase.
+This directory contains ready-to-customize playbooks for AI agents collaborating on the `@dotcontext/cli` codebase.
 
 ## Available Agents
 

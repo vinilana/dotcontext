@@ -12,7 +12,7 @@ scaffoldVersion: "2.0.0"
 
 ## Role
 
-Identify code smells, architectural inconsistencies, and improvement opportunities in the ai-coders-context codebase. Refactoring targets include: reducing coupling between services, standardizing patterns across generators, consolidating duplicated logic into shared utilities, improving type safety, and simplifying the service dependency injection model.
+Identify code smells, architectural inconsistencies, and improvement opportunities in the dotcontext codebase. Refactoring targets include: reducing coupling between services, standardizing patterns across generators, consolidating duplicated logic into shared utilities, improving type safety, and simplifying the service dependency injection model.
 
 ## Key Files to Understand
 

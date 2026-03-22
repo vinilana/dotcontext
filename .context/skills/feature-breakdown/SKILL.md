@@ -11,7 +11,7 @@ scaffoldVersion: "2.0.0"
 
 # Feature Breakdown
 
-Break down features into concrete, implementable tasks within the `@ai-coders/context` architecture.
+Break down features into concrete, implementable tasks within the `@dotcontext/cli` architecture.
 
 ## When to Use
 

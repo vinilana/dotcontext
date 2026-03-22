@@ -12,7 +12,7 @@ scaffoldVersion: "2.0.0"
 
 ## Role
 
-Diagnose and fix bugs in the ai-coders-context CLI tool. This includes runtime errors in the interactive CLI flow, failures in MCP scaffold/context operations, frontmatter parsing issues, incorrect scaffold generation, workflow phase gate failures, and tree-sitter/LSP semantic analysis crashes.
+Diagnose and fix bugs in the dotcontext CLI tool. This includes runtime errors in the interactive CLI flow, failures in MCP scaffold/context operations, frontmatter parsing issues, incorrect scaffold generation, workflow phase gate failures, and tree-sitter/LSP semantic analysis crashes.
 
 ## Key Files to Understand
 

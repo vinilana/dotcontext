@@ -12,7 +12,7 @@ scaffoldVersion: "2.0.0"
 
 ## Role
 
-Write and maintain unit and integration tests for the ai-coders-context project using Jest with ts-jest. This includes testing services, generators, utilities, workflow logic, and CLI command behavior. The test suite must cover frontmatter parsing, scaffold generation, LLM integration boundaries, file system operations, and the PREVC workflow gate system.
+Write and maintain unit and integration tests for the dotcontext project using Jest with ts-jest. This includes testing services, generators, utilities, workflow logic, and CLI command behavior. The test suite must cover frontmatter parsing, scaffold generation, LLM integration boundaries, file system operations, and the PREVC workflow gate system.
 
 ## Key Files to Understand
 

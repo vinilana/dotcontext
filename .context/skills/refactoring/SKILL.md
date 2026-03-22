@@ -11,7 +11,7 @@ scaffoldVersion: "2.0.0"
 
 # Refactoring
 
-Safe, systematic refactoring procedures for the `@ai-coders/context` codebase.
+Safe, systematic refactoring procedures for the `@dotcontext/cli` codebase.
 
 ## When to Use
 

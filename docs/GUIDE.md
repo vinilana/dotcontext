@@ -1,6 +1,6 @@
 # AI Coders Context - User Guide
 
-A comprehensive guide on how to use `@ai-coders/context` for AI-assisted software development.
+A comprehensive guide on how to use `@dotcontext/cli` for AI-assisted software development.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ A comprehensive guide on how to use `@ai-coders/context` for AI-assisted softwar
 
 ## Overview
 
-`@ai-coders/context` is a context engineering tool that helps AI coding assistants understand your codebase better. It creates structured documentation, generates agent playbooks, and provides a workflow system for organized development.
+`@dotcontext/cli` is a context engineering tool that helps AI coding assistants understand your codebase better. It creates structured documentation, generates agent playbooks, and provides a workflow system for organized development.
 
 > Note: standalone CLI generation is no longer supported. Use MCP-enabled AI tools to create, fill, or refresh context, plans, agents, and skills.
 
@@ -40,11 +40,11 @@ A comprehensive guide on how to use `@ai-coders/context` for AI-assisted softwar
 
 | Scenario | Command |
 |----------|---------|
-| Starting a new project | `npx @ai-coders/context mcp:install` then initialize through your AI tool |
+| Starting a new project | `npx @dotcontext/cli mcp:install` then initialize through your AI tool |
 | Onboarding AI to your codebase | Configure MCP and initialize context in your AI tool |
 | Documentation is outdated | Refresh via MCP in your AI tool |
 | Planning a new feature | Use MCP plan tools in your AI tool |
-| Starting structured development | `npx @ai-coders/context workflow init` |
+| Starting structured development | `npx @dotcontext/cli workflow init` |
 | Need AI assistance in IDE | Configure MCP server |
 
 ### Decision Matrix
@@ -71,7 +71,7 @@ Using Claude/Cursor/Windsurf/Antigravity/Trae?
 ### Quick Start (Interactive)
 
 ```bash
-npx @ai-coders/context
+npx @dotcontext/cli
 ```
 
 This launches the interactive wizard that guides you through all options.
@@ -80,12 +80,12 @@ This launches the interactive wizard that guides you through all options.
 
 ```bash
 # 1. Connect your AI tool through MCP
-npx @ai-coders/context mcp:install
+npx @dotcontext/cli mcp:install
 
 # 2. Ask your AI tool to initialize context
 
 # 3. Start a workflow when needed (optional)
-npx @ai-coders/context workflow init "my-feature"
+npx @dotcontext/cli workflow init "my-feature"
 ```
 
 ### Project Structure After Init
@@ -119,7 +119,7 @@ Create the `.context/` structure through MCP-connected AI tools, not through sta
 Recommended flow:
 
 ```bash
-npx @ai-coders/context mcp:install
+npx @dotcontext/cli mcp:install
 ```
 
 Then ask your AI tool to initialize, fill, or refresh the generated context.
@@ -174,16 +174,16 @@ The workflow adapts to your project size:
 
 ```bash
 # Initialize a new workflow
-npx @ai-coders/context workflow init "feature-name"
+npx @dotcontext/cli workflow init "feature-name"
 
 # Check current status
-npx @ai-coders/context workflow status
+npx @dotcontext/cli workflow status
 
 # Advance to next phase
-npx @ai-coders/context workflow advance
+npx @dotcontext/cli workflow advance
 
 # Interactive workflow management
-npx @ai-coders/context workflow
+npx @dotcontext/cli workflow
 ```
 
 ### Workflow Status File
@@ -245,7 +245,7 @@ Plans can be linked to the PREVC workflow for structured execution.
 # Create a plan through MCP in your AI tool
 
 # Then start or continue workflow tracking from the CLI
-npx @ai-coders/context workflow init "authentication-system"
+npx @dotcontext/cli workflow init "authentication-system"
 ```
 
 ### Plan Frontmatter
@@ -313,23 +313,23 @@ Quick Sync handles all of this automatically.
 
 ```bash
 # Sync everything to all tools
-npx @ai-coders/context quick-sync
+npx @dotcontext/cli quick-sync
 
 # Sync specific components
-npx @ai-coders/context quick-sync --components agents
-npx @ai-coders/context quick-sync --components skills
-npx @ai-coders/context quick-sync --components docs
-npx @ai-coders/context quick-sync --components agents,skills
+npx @dotcontext/cli quick-sync --components agents
+npx @dotcontext/cli quick-sync --components skills
+npx @dotcontext/cli quick-sync --components docs
+npx @dotcontext/cli quick-sync --components agents,skills
 
 # Sync to specific tools
-npx @ai-coders/context quick-sync --targets claude
-npx @ai-coders/context quick-sync --targets claude,cursor,github
+npx @dotcontext/cli quick-sync --targets claude
+npx @dotcontext/cli quick-sync --targets claude,cursor,github
 
 # Combine options
-npx @ai-coders/context quick-sync --components agents --targets claude,github
+npx @dotcontext/cli quick-sync --components agents --targets claude,github
 
 # Preview changes without writing
-npx @ai-coders/context quick-sync --dry-run
+npx @dotcontext/cli quick-sync --dry-run
 ```
 
 ### Interactive Mode
@@ -397,10 +397,10 @@ Skills are on-demand expertise modules that AI agents can activate when needed. 
 
 ```bash
 # List all available skills
-npx @ai-coders/context skill list
+npx @dotcontext/cli skill list
 
 # Export skills to AI tools (.claude/skills/, .gemini/skills/, .codex/skills/)
-npx @ai-coders/context skill export
+npx @dotcontext/cli skill export
 ```
 
 To scaffold, personalize, or refresh skills, use the MCP `scaffoldSkills` and `fillSkills` tools from your connected AI assistant. The standalone CLI only supports skill discovery/export utilities now.
@@ -529,7 +529,7 @@ Connect with AI coding assistants via Model Context Protocol.
 #### Claude Code (CLI)
 
 ```bash
-claude mcp add ai-context -- npx @ai-coders/context mcp
+claude mcp add dotcontext -- npx @dotcontext/cli mcp
 ```
 
 #### Claude Desktop
@@ -539,9 +539,9 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "ai-context": {
+    "dotcontext": {
       "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
+      "args": ["@dotcontext/cli", "mcp"]
     }
   }
 }
@@ -554,9 +554,9 @@ Create `.cursor/mcp.json` in your project:
 ```json
 {
   "mcpServers": {
-    "ai-context": {
+    "dotcontext": {
       "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
+      "args": ["@dotcontext/cli", "mcp"]
     }
   }
 }
@@ -569,9 +569,9 @@ For developing/testing locally:
 ```json
 {
   "mcpServers": {
-    "ai-context-dev": {
+    "dotcontext-dev": {
       "command": "node",
-      "args": ["/path/to/ai-coders-context/dist/index.js", "mcp"]
+      "args": ["/path/to/dotcontext-cli/dist/index.js", "mcp"]
     }
   }
 }
@@ -621,7 +621,7 @@ For developing/testing locally:
 Always initialize context before asking AI for help:
 
 ```bash
-npx @ai-coders/context mcp:install
+npx @dotcontext/cli mcp:install
 ```
 
 ### 2. Choose the Right Scale
@@ -671,15 +671,15 @@ Match tasks to appropriate agents:
 
 | Issue | Solution |
 |-------|----------|
-| "CLI init/plan/fill command not found" | Context creation and generation moved to MCP-enabled AI tools. Run `npx @ai-coders/context mcp:install` |
+| "CLI init/plan/fill command not found" | Context creation and generation moved to MCP-enabled AI tools. Run `npx @dotcontext/cli mcp:install` |
 | "Context folder not found" | Initialize or import context through MCP or `reverse-sync` |
-| "Workflow not initialized" | Run `npx @ai-coders/context workflow init "name"` |
+| "Workflow not initialized" | Run `npx @dotcontext/cli workflow init "name"` |
 | MCP tools not appearing | Restart your IDE after configuring MCP |
 
 ### Getting Help
 
 - [GitHub Issues](https://github.com/vinilana/ai-coders-context/issues)
-- Run `npx @ai-coders/context --help` for CLI options
+- Run `npx @dotcontext/cli --help` for CLI options
 
 ---
 
@@ -687,23 +687,23 @@ Match tasks to appropriate agents:
 
 ```bash
 # Interactive mode
-npx @ai-coders/context
+npx @dotcontext/cli
 
 # Install MCP for AI-assisted generation
-npx @ai-coders/context mcp:install
+npx @dotcontext/cli mcp:install
 
 # Workflow management
-npx @ai-coders/context workflow init "name"
-npx @ai-coders/context workflow status
-npx @ai-coders/context workflow advance
+npx @dotcontext/cli workflow init "name"
+npx @dotcontext/cli workflow status
+npx @dotcontext/cli workflow advance
 
 # Skills management
-npx @ai-coders/context skill list
-npx @ai-coders/context skill export
+npx @dotcontext/cli skill list
+npx @dotcontext/cli skill export
 
 # Import existing context from AI tools
-npx @ai-coders/context reverse-sync
+npx @dotcontext/cli reverse-sync
 
 # Start MCP server
-npx @ai-coders/context mcp
+npx @dotcontext/cli mcp
 ```

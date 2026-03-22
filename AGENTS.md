@@ -6,7 +6,7 @@
 
 # Documentation Index
 
-Welcome to the `@ai-coders/context` repository knowledge base. Start with the project overview, then dive into specific guides as needed.
+Welcome to the `@dotcontext/cli` repository knowledge base. Start with the project overview, then dive into specific guides as needed.
 
 ## Core Guides
 

@@ -1,6 +1,6 @@
 ---
 name: MCP Tool Design
-description: Design MCP tools and gateway interfaces for the ai-context server
+description: Design MCP tools and gateway interfaces for the dotcontext server
 phases: [P, R]
 ---
 

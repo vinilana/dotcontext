@@ -11,7 +11,7 @@ scaffoldVersion: "2.0.0"
 
 # Bug Investigation
 
-Systematic approach to investigating and fixing bugs in the `@ai-coders/context` CLI tool.
+Systematic approach to investigating and fixing bugs in the `@dotcontext/cli` CLI tool.
 
 ## When to Use
 

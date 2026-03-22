@@ -10,7 +10,7 @@ scaffoldVersion: "2.0.0"
 
 # Testing Strategy
 
-This document describes the test infrastructure, conventions, and quality expectations for the `@ai-coders/context` project.
+This document describes the test infrastructure, conventions, and quality expectations for the `@dotcontext/cli` project.
 
 ## Test Types
 

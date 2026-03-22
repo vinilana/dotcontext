@@ -5,7 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.0]
+## [0.8.0] - 2026-03-21
+
+### Changed
+- **BREAKING: Renamed package from `@ai-coders/context` to `@dotcontext/cli`**
+  - CLI command changed from `ai-context` to `dotcontext`
+  - MCP server name changed from `ai-context` to `dotcontext`
+  - Why: The previous name caused frequent confusion with Context7 during
+    prompt-based installation and search. "context" is too generic in the
+    AI/LLM space. The new name "dotcontext" is unique, searchable, and
+    directly references the `.context/` directory convention that is the
+    core of this tool.
+  - Migration: Replace `ai-context` with `dotcontext` in your shell aliases
+    and MCP configurations. Re-run `npx @dotcontext/cli mcp:install` to
+    update all tool integrations.
 
 ### Added
 

@@ -10,7 +10,7 @@ scaffoldVersion: "2.0.0"
 
 # Project Overview
 
-**@ai-coders/context** (v0.8.0) is an MCP-first context engineering toolkit for codebase documentation and AI agent prompts. MCP-enabled AI tools create and refresh the `.context` directory structure containing docs, agents, plans, and skills, while the standalone CLI now focuses on workflow management, sync/import utilities, reporting, and MCP configuration. The project also supports semantic code analysis via tree-sitter, a PREVC workflow engine, MCP server mode for AI tool integration, and context export/sync to Claude, Gemini, and Codex.
+**@dotcontext/cli** (v0.8.0) is an MCP-first context engineering toolkit for codebase documentation and AI agent prompts. MCP-enabled AI tools create and refresh the `.context` directory structure containing docs, agents, plans, and skills, while the standalone CLI now focuses on workflow management, sync/import utilities, reporting, and MCP configuration. The project also supports semantic code analysis via tree-sitter, a PREVC workflow engine, MCP server mode for AI tool integration, and context export/sync to Claude, Gemini, and Codex.
 
 ## Codebase Reference
 
@@ -20,17 +20,17 @@ The machine-readable codebase map lives at `.context/docs/codebase-map.json`. It
 
 | Property         | Value                                      |
 | ---------------- | ------------------------------------------ |
-| Package name     | `@ai-coders/context`                       |
+| Package name     | `@dotcontext/cli`                       |
 | Version          | 0.8.0                                      |
 | License          | MIT                                        |
 | Node requirement | >= 20.0.0                                  |
 | Language          | TypeScript (target ES2020, CommonJS)       |
-| Binary           | `ai-context`                               |
+| Binary           | `dotcontext`                               |
 | Repository       | https://github.com/vinilana/ai-coders-context |
 
 ## Entry Points
 
-- **CLI binary**: `dist/index.js` (mapped to the `ai-context` command via `package.json` `bin` field)
+- **CLI binary**: `dist/index.js` (mapped to the `dotcontext` command via `package.json` `bin` field)
 - **Source entry**: `src/index.ts` -- registers all commander commands and starts the CLI
 - **MCP server**: accessible through the `mcp` CLI command for AI tool integration
 
@@ -108,7 +108,7 @@ src/
 3. Run in development mode: `npm run dev` (uses tsx for fast TypeScript execution)
 4. Build for production: `npm run build`
 5. Run tests: `npm test`
-6. Try the CLI: `npx ai-context mcp:install` to connect the package to your AI tool
+6. Try the CLI: `npx dotcontext mcp:install` to connect the package to your AI tool
 
 ## Next Steps
 

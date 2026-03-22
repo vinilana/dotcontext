@@ -55,7 +55,7 @@ if (!isMcpCommand && !isInteractiveMode) {
   dotenv.config({ quiet: true });
 }
 
-const initialLocale = detectLocale(rawArgs, process.env.AI_CONTEXT_LANG, [
+const initialLocale = detectLocale(rawArgs, process.env.DOTCONTEXT_LANG, [
   process.env.LC_ALL,
   process.env.LC_MESSAGES,
   process.env.LANG
@@ -91,7 +91,7 @@ const importAgentsService = new ImportAgentsService({
 });
 
 program
-  .name('ai-context')
+  .name('dotcontext')
   .description(t('cli.description'))
   .version(VERSION);
 

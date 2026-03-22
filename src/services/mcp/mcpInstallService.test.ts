@@ -121,8 +121,8 @@ describe('MCPInstallService', () => {
       // Verify config content
       const config = await fs.readJson(configPath);
       expect(config.mcpServers).toBeDefined();
-      expect(config.mcpServers['ai-context']).toBeDefined();
-      expect(config.mcpServers['ai-context'].command).toBe('npx');
+      expect(config.mcpServers['dotcontext']).toBeDefined();
+      expect(config.mcpServers['dotcontext'].command).toBe('npx');
     });
 
     it('should support dry-run mode', async () => {
@@ -185,7 +185,7 @@ describe('MCPInstallService', () => {
       // Verify both servers exist
       const config = await fs.readJson(configPath);
       expect(config.mcpServers['other-server']).toBeDefined();
-      expect(config.mcpServers['ai-context']).toBeDefined();
+      expect(config.mcpServers['dotcontext']).toBeDefined();
     });
 
     it('should install for multiple tools when specifying tool as "all"', async () => {
@@ -229,9 +229,9 @@ describe('MCPInstallService', () => {
       expect(await fs.pathExists(configPath)).toBe(true);
 
       const config = await fs.readJson(configPath);
-      expect(config.mcpServers['ai-context']).toBeDefined();
-      expect(config.mcpServers['ai-context'].type).toBe('stdio');
-      expect(config.mcpServers['ai-context'].command).toBe('npx');
+      expect(config.mcpServers['dotcontext']).toBeDefined();
+      expect(config.mcpServers['dotcontext'].type).toBe('stdio');
+      expect(config.mcpServers['dotcontext'].command).toBe('npx');
     });
 
     it('should generate correct config for Continue.dev as standalone file', async () => {
@@ -243,7 +243,7 @@ describe('MCPInstallService', () => {
 
       expect(result.filesCreated).toBe(1);
 
-      const configPath = path.join(tempDir, '.continue', 'mcpServers', 'ai-context.json');
+      const configPath = path.join(tempDir, '.continue', 'mcpServers', 'dotcontext.json');
       expect(await fs.pathExists(configPath)).toBe(true);
 
       const config = await fs.readJson(configPath);
@@ -268,8 +268,8 @@ describe('MCPInstallService', () => {
       expect(await fs.pathExists(configPath)).toBe(true);
 
       const config = await fs.readJson(configPath);
-      expect(config.mcpServers['ai-context']).toBeDefined();
-      expect(config.mcpServers['ai-context'].command).toBe('npx');
+      expect(config.mcpServers['dotcontext']).toBeDefined();
+      expect(config.mcpServers['dotcontext'].command).toBe('npx');
     });
 
     it('should install MCP configuration for VS Code with servers key and type field', async () => {
@@ -286,9 +286,9 @@ describe('MCPInstallService', () => {
       const config = await fs.readJson(configPath);
       // Should use 'servers' key, not 'mcpServers'
       expect(config.servers).toBeDefined();
-      expect(config.servers['ai-context']).toBeDefined();
-      expect(config.servers['ai-context'].type).toBe('stdio');
-      expect(config.servers['ai-context'].command).toBe('npx');
+      expect(config.servers['dotcontext']).toBeDefined();
+      expect(config.servers['dotcontext'].type).toBe('stdio');
+      expect(config.servers['dotcontext'].command).toBe('npx');
       expect(config.mcpServers).toBeUndefined();
     });
 
@@ -304,7 +304,7 @@ describe('MCPInstallService', () => {
       expect(await fs.pathExists(configPath)).toBe(true);
 
       const config = await fs.readJson(configPath);
-      expect(config.mcpServers['ai-context']).toBeDefined();
+      expect(config.mcpServers['dotcontext']).toBeDefined();
     });
 
     it('should install MCP configuration for Amazon Q Developer CLI', async () => {
@@ -319,7 +319,7 @@ describe('MCPInstallService', () => {
       expect(await fs.pathExists(configPath)).toBe(true);
 
       const config = await fs.readJson(configPath);
-      expect(config.mcpServers['ai-context']).toBeDefined();
+      expect(config.mcpServers['dotcontext']).toBeDefined();
     });
 
     it('should install MCP configuration for Gemini CLI', async () => {
@@ -334,7 +334,7 @@ describe('MCPInstallService', () => {
       expect(await fs.pathExists(configPath)).toBe(true);
 
       const config = await fs.readJson(configPath);
-      expect(config.mcpServers['ai-context']).toBeDefined();
+      expect(config.mcpServers['dotcontext']).toBeDefined();
     });
 
     it('should install MCP configuration for Kiro at settings path', async () => {
@@ -349,7 +349,7 @@ describe('MCPInstallService', () => {
       expect(await fs.pathExists(configPath)).toBe(true);
 
       const config = await fs.readJson(configPath);
-      expect(config.mcpServers['ai-context']).toBeDefined();
+      expect(config.mcpServers['dotcontext']).toBeDefined();
     });
 
     it('should install MCP configuration for Windsurf at codeium path', async () => {
@@ -364,7 +364,7 @@ describe('MCPInstallService', () => {
       expect(await fs.pathExists(configPath)).toBe(true);
 
       const config = await fs.readJson(configPath);
-      expect(config.mcpServers['ai-context']).toBeDefined();
+      expect(config.mcpServers['dotcontext']).toBeDefined();
     });
   });
 
@@ -382,11 +382,11 @@ describe('MCPInstallService', () => {
 
       const config = await fs.readJson(configPath);
       expect(config.context_servers).toBeDefined();
-      expect(config.context_servers['ai-context']).toBeDefined();
+      expect(config.context_servers['dotcontext']).toBeDefined();
       // Should have flat command, not nested command.path
-      expect(config.context_servers['ai-context'].command).toBe('npx');
-      expect(config.context_servers['ai-context'].args).toBeDefined();
-      expect(config.context_servers['ai-context'].settings).toBeUndefined();
+      expect(config.context_servers['dotcontext'].command).toBe('npx');
+      expect(config.context_servers['dotcontext'].args).toBeDefined();
+      expect(config.context_servers['dotcontext'].settings).toBeUndefined();
     });
 
     it('should install MCP configuration for JetBrains with servers array', async () => {
@@ -404,7 +404,7 @@ describe('MCPInstallService', () => {
       // Should use servers array, not mcpServers object
       expect(config.servers).toBeDefined();
       expect(Array.isArray(config.servers)).toBe(true);
-      const aiContext = config.servers.find((s: { name: string }) => s.name === 'ai-context');
+      const aiContext = config.servers.find((s: { name: string }) => s.name === 'dotcontext');
       expect(aiContext).toBeDefined();
       expect(aiContext.command).toBe('npx');
       expect(config.mcpServers).toBeUndefined();
@@ -429,7 +429,7 @@ describe('MCPInstallService', () => {
       const config = await fs.readJson(configPath);
       expect(config.servers.length).toBe(2);
       expect(config.servers.some((s: { name: string }) => s.name === 'other-server')).toBe(true);
-      expect(config.servers.some((s: { name: string }) => s.name === 'ai-context')).toBe(true);
+      expect(config.servers.some((s: { name: string }) => s.name === 'dotcontext')).toBe(true);
     });
   });
 
@@ -446,8 +446,8 @@ describe('MCPInstallService', () => {
       expect(await fs.pathExists(configPath)).toBe(true);
 
       const config = await fs.readJson(configPath);
-      expect(config.mcpServers['ai-context']).toBeDefined();
-      expect(config.mcpServers['ai-context'].command).toBe('npx');
+      expect(config.mcpServers['dotcontext']).toBeDefined();
+      expect(config.mcpServers['dotcontext'].command).toBe('npx');
     });
 
     it('should install MCP configuration for Kilo Code with mcp format', async () => {
@@ -464,10 +464,10 @@ describe('MCPInstallService', () => {
       const config = await fs.readJson(configPath);
       // Should use 'mcp' key with type/command/enabled format
       expect(config.mcp).toBeDefined();
-      expect(config.mcp['ai-context']).toBeDefined();
-      expect(config.mcp['ai-context'].type).toBe('local');
-      expect(config.mcp['ai-context'].command).toEqual(['npx', '-y', '@ai-coders/context@latest', 'mcp']);
-      expect(config.mcp['ai-context'].enabled).toBe(true);
+      expect(config.mcp['dotcontext']).toBeDefined();
+      expect(config.mcp['dotcontext'].type).toBe('local');
+      expect(config.mcp['dotcontext'].command).toEqual(['npx', '-y', '@dotcontext/cli@latest', 'mcp']);
+      expect(config.mcp['dotcontext'].enabled).toBe(true);
       expect(config.mcpServers).toBeUndefined();
     });
 
@@ -483,8 +483,8 @@ describe('MCPInstallService', () => {
       expect(await fs.pathExists(configPath)).toBe(true);
 
       const config = await fs.readJson(configPath);
-      expect(config.mcpServers['ai-context']).toBeDefined();
-      expect(config.mcpServers['ai-context'].command).toBe('npx');
+      expect(config.mcpServers['dotcontext']).toBeDefined();
+      expect(config.mcpServers['dotcontext'].command).toBe('npx');
     });
   });
 
@@ -506,7 +506,7 @@ describe('MCPInstallService', () => {
 
       const config = await fs.readJson(configPath);
       expect(config.servers['other-server']).toBeDefined();
-      expect(config.servers['ai-context']).toBeDefined();
+      expect(config.servers['dotcontext']).toBeDefined();
     });
 
     it('should preserve existing context_servers when installing Zed', async () => {
@@ -526,7 +526,7 @@ describe('MCPInstallService', () => {
 
       const config = await fs.readJson(configPath);
       expect(config.context_servers['other-server']).toBeDefined();
-      expect(config.context_servers['ai-context']).toBeDefined();
+      expect(config.context_servers['dotcontext']).toBeDefined();
     });
   });
 });
