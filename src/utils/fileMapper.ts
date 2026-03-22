@@ -6,7 +6,9 @@ import { GitIgnoreManager } from './gitignoreManager';
 
 export class FileMapper {
   private excludePatterns: string[] = [
-    'node_modules/**',
+    'node_modules',
+    '**/node_modules',
+    '**/node_modules/**',
     '.git/**',
     'dist/**',
     'build/**',
@@ -23,6 +25,18 @@ export class FileMapper {
     this.gitIgnoreManager = new GitIgnoreManager({ extraPatterns: customExcludes });
   }
 
+  private async loadGitignorePatterns(repoPath: string): Promise<string[]> {
+    const gitignorePath = path.join(repoPath, '.gitignore');
+    if (!await fs.pathExists(gitignorePath)) {
+      return [];
+    }
+    const content = await fs.readFile(gitignorePath, 'utf-8');
+    return content
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && !line.startsWith('#'));
+  }
+
   async mapRepository(repoPath: string, includePatterns?: string[]): Promise<RepoStructure> {
     const absolutePath = path.resolve(repoPath);
 
@@ -30,8 +44,8 @@ export class FileMapper {
       throw new Error(`Repository path does not exist: ${absolutePath}`);
     }
 
-    // Load .gitignore patterns for additional filtering
-    await this.gitIgnoreManager.loadFromRepo(absolutePath);
+    const gitignorePatterns = await this.loadGitignorePatterns(absolutePath);
+    const ignorePatterns = [...this.excludePatterns, ...gitignorePatterns];
 
     const patterns = includePatterns || ['**/*'];
     const allFiles: string[] = [];
@@ -39,7 +53,7 @@ export class FileMapper {
     for (const pattern of patterns) {
       const files = await glob(pattern, {
         cwd: absolutePath,
-        ignore: this.excludePatterns,
+        ignore: ignorePatterns,
         dot: false,
         absolute: false
       });
