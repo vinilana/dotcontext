@@ -107,7 +107,7 @@ function scheduleVersionCheck(force: boolean = false): Promise<void> {
       ui,
       t,
       force
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   return versionCheckPromise;
@@ -991,7 +991,14 @@ async function createNewWorkflow(workflowService: WorkflowService): Promise<bool
 
 async function runInteractiveWorkflow(): Promise<void> {
   const projectPath = process.cwd();
-  const workflowService = new WorkflowService(projectPath, getWorkflowDeps());
+  const workflowDeps: WorkflowServiceDependencies = {
+    ui: {
+      displaySuccess: (msg: string) => ui.displaySuccess(msg),
+      displayError: (msg: string, err?: Error) => ui.displayError(msg, err),
+      displayInfo: (title: string, detail?: string) => ui.displayInfo(title, detail || '')
+    }
+  };
+  const workflowService = new WorkflowService(projectPath, workflowDeps);
   const hasWorkflow = await workflowService.hasWorkflow();
 
   if (!hasWorkflow) {

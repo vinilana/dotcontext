@@ -14,7 +14,9 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 
 import { readFileTool } from '../ai/tools';
+import { PathValidator, SecurityError } from '../../utils/pathSecurity';
 import { SemanticContextBuilder, type ContextFormat } from '../semantic/contextBuilder';
+import { ContextCache } from '../semantic/contextCache';
 import { VERSION } from '../../version';
 import { WorkflowService } from '../workflow';
 import { logMcpAction } from './actionLogger';
@@ -63,6 +65,7 @@ export interface MCPServerOptions {
 export class AIContextMCPServer {
   private server: McpServer;
   private contextBuilder: SemanticContextBuilder;
+  private readonly contextCache: ContextCache;
   private options: MCPServerOptions;
   private transport: StdioServerTransport | null = null;
   private initialRepoPath: string | null = null;
@@ -82,6 +85,7 @@ export class AIContextMCPServer {
 
     // Support dependency injection for testing, with default fallback
     this.contextBuilder = options.contextBuilder ?? new SemanticContextBuilder();
+    this.contextCache = new ContextCache();
 
     // Initialize and cache the correct repo path
     void this.initializeRepoPath();
@@ -545,20 +549,29 @@ Actions:
         const contextType = (match?.[1] || 'compact') as ContextFormat;
 
         let context: string;
-        switch (contextType) {
-          case 'documentation':
-            context = await this.contextBuilder.buildDocumentationContext(repoPath);
-            break;
-          case 'playbook':
-            context = await this.contextBuilder.buildPlaybookContext(repoPath, 'generic');
-            break;
-          case 'plan':
-            context = await this.contextBuilder.buildPlanContext(repoPath);
-            break;
-          case 'compact':
-          default:
-            context = await this.contextBuilder.buildCompactContext(repoPath);
-            break;
+
+        // Check cache first
+        const cached = await this.contextCache.get(repoPath, contextType);
+        if (cached) {
+          context = cached;
+        } else {
+          switch (contextType) {
+            case 'documentation':
+              context = await this.contextBuilder.buildDocumentationContext(repoPath);
+              break;
+            case 'playbook':
+              context = await this.contextBuilder.buildPlaybookContext(repoPath, 'generic');
+              break;
+            case 'plan':
+              context = await this.contextBuilder.buildPlanContext(repoPath);
+              break;
+            case 'compact':
+            default:
+              context = await this.contextBuilder.buildCompactContext(repoPath);
+              break;
+          }
+          // Store in cache for subsequent calls
+          await this.contextCache.set(repoPath, contextType, context);
         }
 
         return {
@@ -771,6 +784,22 @@ Actions:
         ? (params as { action?: string }).action!
         : toolName;
 
+      // Validate file paths to prevent path traversal attacks
+      try {
+        this.validatePathParams(params, resolvedRepoPath);
+      } catch (error) {
+        if (error instanceof SecurityError) {
+          this.log(`[SECURITY] Path traversal blocked: ${error.message} (tool: ${toolName}, path: ${error.attemptedPath})`);
+          const errorResponse: MCPToolResponse = {
+            content: [{ type: 'text', text: JSON.stringify({ success: false, error: `Security: ${error.message}` }) }],
+            isError: true,
+          };
+          await this.logToolError(resolvedRepoPath, toolName, action, params, error);
+          return errorResponse;
+        }
+        throw error;
+      }
+
       try {
         const response = await handler(params);
         await this.logToolResponse(resolvedRepoPath, toolName, action, params, response);
@@ -780,6 +809,22 @@ Actions:
         throw error;
       }
     };
+  }
+
+  /**
+   * Validate path-related parameters against the workspace boundary.
+   * Throws SecurityError if any path escapes the workspace.
+   */
+  private validatePathParams<TParams>(params: TParams, repoPath: string): void {
+    const validator = new PathValidator(repoPath);
+    const pathKeys: Array<keyof { filePath?: string; rootPath?: string; cwd?: string }> = ['filePath', 'rootPath', 'cwd'];
+
+    for (const key of pathKeys) {
+      const value = (params as Record<string, unknown>)[key as string];
+      if (typeof value === 'string' && value.length > 0) {
+        validator.validatePath(value);
+      }
+    }
   }
 
   private async logToolResponse<TParams>(
