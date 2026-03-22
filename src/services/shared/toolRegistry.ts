@@ -347,6 +347,26 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     paths: {},
     description: 'JetBrains IDEs MCP configuration',
   },
+
+  // Kilo Code
+  {
+    id: 'kilo',
+    displayName: 'Kilo Code',
+    directoryPrefix: '.kilo',
+    capabilities: { rules: false, agents: false, skills: false },
+    paths: {},
+    description: 'Kilo Code MCP configuration',
+  },
+
+  // GitHub Copilot CLI
+  {
+    id: 'copilot-cli',
+    displayName: 'GitHub Copilot CLI',
+    directoryPrefix: '.copilot',
+    capabilities: { rules: false, agents: false, skills: false },
+    paths: {},
+    description: 'GitHub Copilot CLI MCP configuration',
+  },
 ];
 
 // ============================================================================

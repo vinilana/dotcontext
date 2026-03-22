@@ -2,7 +2,7 @@
  * MCP Install Service
  *
  * Installs and configures the ai-context MCP server for various AI tools.
- * Supports Claude Code, Cursor, VS Code extensions (Cline, Continue), and more.
+ * Supports Claude Code, Cursor, VS Code, Continue, and more.
  */
 
 import * as path from 'path';
@@ -84,8 +84,8 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
   // Claude Code
   {
     toolId: 'claude',
-    globalConfigPath: '.claude/mcp_servers.json',
-    localConfigPath: '.claude/mcp_servers.json',
+    globalConfigPath: '.claude.json',
+    localConfigPath: '.mcp.json',
     generateConfig: (existing, server) => {
       const config = (existing as Record<string, unknown>) || {};
       return {
@@ -114,7 +114,10 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         ...config,
         mcpServers: {
           ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+          'ai-context': {
+            type: 'stdio',
+            ...server,
+          },
         },
       };
     },
@@ -128,8 +131,8 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
   // Windsurf (Codeium)
   {
     toolId: 'windsurf',
-    globalConfigPath: '.windsurf/mcp.json',
-    localConfigPath: '.windsurf/mcp.json',
+    globalConfigPath: '.codeium/windsurf/mcp_config.json',
+    localConfigPath: '.codeium/windsurf/mcp_config.json',
     generateConfig: (existing, server) => {
       const config = (existing as Record<string, unknown>) || {};
       return {
@@ -147,57 +150,21 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
     },
   },
 
-  // Cline (VS Code extension)
-  {
-    toolId: 'cline',
-    globalConfigPath: '.cline/mcp_servers.json',
-    localConfigPath: '.cline/mcp_servers.json',
-    generateConfig: (existing, server) => {
-      const config = (existing as Record<string, unknown>) || {};
-      return {
-        ...config,
-        mcpServers: {
-          ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
-        },
-      };
-    },
-    isConfigured: (config) => {
-      const c = config as Record<string, unknown>;
-      const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
-    },
-  },
-
-  // Continue.dev
+  // Continue.dev — standalone per-server file
   {
     toolId: 'continue',
-    globalConfigPath: '.continue/config.json',
-    localConfigPath: '.continue/config.json',
-    generateConfig: (existing, server) => {
-      const config = (existing as Record<string, unknown>) || {};
-      const experimental = (config.experimental as Record<string, unknown>) || {};
+    globalConfigPath: '.continue/mcpServers/ai-context.json',
+    localConfigPath: '.continue/mcpServers/ai-context.json',
+    generateConfig: (_existing, server) => {
       return {
-        ...config,
-        experimental: {
-          ...experimental,
-          modelContextProtocolServers: [
-            ...((experimental.modelContextProtocolServers as unknown[]) || []).filter(
-              (s: unknown) => (s as Record<string, unknown>)?.name !== 'ai-context'
-            ),
-            {
-              name: 'ai-context',
-              ...server,
-            },
-          ],
-        },
+        command: server.command,
+        args: server.args,
+        env: server.env || {},
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
-      const experimental = c?.experimental as Record<string, unknown>;
-      const servers = experimental?.modelContextProtocolServers as unknown[];
-      return servers?.some((s: unknown) => (s as Record<string, unknown>)?.name === 'ai-context') ?? false;
+      return !!c?.command;
     },
   },
 
@@ -234,15 +201,18 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
       const config = (existing as Record<string, unknown>) || {};
       return {
         ...config,
-        mcpServers: {
-          ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
+        servers: {
+          ...(config.servers as Record<string, unknown> || {}),
+          'ai-context': {
+            type: 'stdio',
+            ...server,
+          },
         },
       };
     },
     isConfigured: (config) => {
       const c = config as Record<string, unknown>;
-      const servers = c?.mcpServers as Record<string, unknown>;
+      const servers = c?.servers as Record<string, unknown>;
       return !!servers?.['ai-context'];
     },
   },
@@ -252,28 +222,6 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
     toolId: 'roo',
     globalConfigPath: '.roo/mcp_settings.json',
     localConfigPath: '.roo/mcp.json',
-    generateConfig: (existing, server) => {
-      const config = (existing as Record<string, unknown>) || {};
-      return {
-        ...config,
-        mcpServers: {
-          ...(config.mcpServers as Record<string, unknown> || {}),
-          'ai-context': server,
-        },
-      };
-    },
-    isConfigured: (config) => {
-      const c = config as Record<string, unknown>;
-      const servers = c?.mcpServers as Record<string, unknown>;
-      return !!servers?.['ai-context'];
-    },
-  },
-
-  // Warp Terminal
-  {
-    toolId: 'warp',
-    globalConfigPath: '.warp/mcp_servers.json',
-    localConfigPath: '.warp/mcp_servers.json',
     generateConfig: (existing, server) => {
       const config = (existing as Record<string, unknown>) || {};
       return {
@@ -338,8 +286,8 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
   // Kiro
   {
     toolId: 'kiro',
-    globalConfigPath: '.kiro/mcp.json',
-    localConfigPath: '.kiro/mcp.json',
+    globalConfigPath: '.kiro/settings/mcp.json',
+    localConfigPath: '.kiro/settings/mcp.json',
     generateConfig: (existing, server) => {
       const config = (existing as Record<string, unknown>) || {};
       return {
@@ -369,12 +317,9 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
         context_servers: {
           ...(config.context_servers as Record<string, unknown> || {}),
           'ai-context': {
-            settings: {},
-            command: {
-              path: server.command,
-              args: server.args,
-              env: server.env || {},
-            },
+            command: server.command,
+            args: server.args,
+            env: server.env || {},
           },
         },
       };
@@ -386,11 +331,87 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
     },
   },
 
-  // JetBrains IDEs
+  // JetBrains IDEs - Uses servers array with name field
   {
     toolId: 'jetbrains',
     globalConfigPath: '.config/JetBrains/mcp.json',
-    localConfigPath: '.idea/mcp.json',
+    localConfigPath: '.jb-mcp.json',
+    generateConfig: (existing, server) => {
+      const config = (existing as Record<string, unknown>) || {};
+      const existingServers = (config.servers as Array<Record<string, unknown>>) || [];
+      const filtered = existingServers.filter(s => s.name !== 'ai-context');
+      return {
+        servers: [
+          ...filtered,
+          {
+            name: 'ai-context',
+            command: server.command,
+            args: server.args,
+            env: server.env || {},
+          },
+        ],
+      };
+    },
+    isConfigured: (config) => {
+      const c = config as Record<string, unknown>;
+      const servers = c?.servers as Array<Record<string, unknown>>;
+      return Array.isArray(servers) && servers.some(s => s.name === 'ai-context');
+    },
+  },
+
+  // Trae AI (ByteDance)
+  {
+    toolId: 'trae',
+    globalConfigPath: '.trae/mcp.json',
+    localConfigPath: '.trae/mcp.json',
+    generateConfig: (existing, server) => {
+      const config = (existing as Record<string, unknown>) || {};
+      return {
+        ...config,
+        mcpServers: {
+          ...(config.mcpServers as Record<string, unknown> || {}),
+          'ai-context': server,
+        },
+      };
+    },
+    isConfigured: (config) => {
+      const c = config as Record<string, unknown>;
+      const servers = c?.mcpServers as Record<string, unknown>;
+      return !!servers?.['ai-context'];
+    },
+  },
+
+  // Kilo Code
+  {
+    toolId: 'kilo',
+    globalConfigPath: '.kilo/mcp.json',
+    localConfigPath: '.kilo/mcp.json',
+    generateConfig: (existing, server) => {
+      const config = (existing as Record<string, unknown>) || {};
+      return {
+        ...config,
+        mcp: {
+          ...(config.mcp as Record<string, unknown> || {}),
+          'ai-context': {
+            type: 'local',
+            command: [server.command, ...server.args],
+            enabled: true,
+          },
+        },
+      };
+    },
+    isConfigured: (config) => {
+      const c = config as Record<string, unknown>;
+      const mcp = c?.mcp as Record<string, unknown>;
+      return !!mcp?.['ai-context'];
+    },
+  },
+
+  // GitHub Copilot CLI
+  {
+    toolId: 'copilot-cli',
+    globalConfigPath: '.copilot/mcp-config.json',
+    localConfigPath: '.copilot/mcp-config.json',
     generateConfig: (existing, server) => {
       const config = (existing as Record<string, unknown>) || {};
       return {
