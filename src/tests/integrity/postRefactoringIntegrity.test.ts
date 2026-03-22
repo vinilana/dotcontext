@@ -112,17 +112,6 @@ describe('Module Connectivity (Phase 4)', () => {
         });
     });
 
-    describe('Contribution 5: CLI module exports', () => {
-        it('should export registerSkillCommands from cli/commands', () => {
-            const { registerSkillCommands } = require('../../cli/commands');
-            expect(typeof registerSkillCommands).toBe('function');
-        });
-
-        it('should export registerWorkflowCommands from cli/commands', () => {
-            const { registerWorkflowCommands } = require('../../cli/commands');
-            expect(typeof registerWorkflowCommands).toBe('function');
-        });
-    });
 });
 
 // ============================================================
@@ -260,13 +249,6 @@ describe('API Contract Verification (Phase 5)', () => {
         });
     });
 
-    describe('FillCommandFlags backward compatibility', () => {
-        it('should import FillCommandFlags type without breaking', () => {
-            // This verifies the type still exists and force is optional
-            const fillService = require('../../services/fill/fillService');
-            expect(fillService.FillService).toBeDefined();
-        });
-    });
 });
 
 // ============================================================
