@@ -8,6 +8,7 @@
 import * as path from 'path';
 import { WorkflowService } from '../../workflow';
 import {
+  PHASE_NAMES_EN,
   getScaleName,
   ProjectScale,
   PrevcPhase,
@@ -15,6 +16,13 @@ import {
 
 import type { MCPToolResponse } from './response';
 import { createJsonResponse, createErrorResponse } from './response';
+import {
+  createHelpResourceRef,
+  compactActiveAgents,
+  compactPhaseStates,
+  executionStateCache,
+  resolveResponsePreferences,
+} from './runtime';
 
 export interface WorkflowInitParams {
   name: string;
@@ -25,6 +33,11 @@ export interface WorkflowInitParams {
   require_approval?: boolean;
   archive_previous?: boolean;
   repoPath?: string;
+  verbose?: boolean;
+  includeGuidance?: boolean;
+  includeOrchestration?: boolean;
+  includeLegacy?: boolean;
+  profile?: string;
 }
 
 export interface WorkflowInitOptions {
@@ -42,6 +55,8 @@ export async function handleWorkflowInit(
   options: WorkflowInitOptions
 ): Promise<MCPToolResponse> {
   try {
+    const responsePrefs = resolveResponsePreferences(params);
+
     // Resolve repo path: use explicit param, then options
     // options.repoPath is guaranteed to be valid by MCP server initialization
     const repoPath = path.resolve(params.repoPath || options.repoPath);
@@ -65,50 +80,129 @@ export async function handleWorkflowInit(
     const scale = getScaleName(status.project.scale as ProjectScale);
     const isAutonomous = settings.autonomous_mode;
     const requiresPlan = settings.require_plan;
-    const orchestration = await service.getPhaseOrchestration(status.project.current_phase);
+    const currentPhase = status.project.current_phase;
+    const bundle = await executionStateCache.getPhaseBundle(
+      repoPath,
+      currentPhase,
+      () => service.getPhaseExecutionBundle(currentPhase)
+    );
+    const summary = await service.getSummary();
+    const fullStatus = await service.getStatus();
 
-    // Build actionable enhancement prompt based on workflow state
-    const enhancementPrompt = buildWorkflowEnhancementPrompt({
+    const response: Record<string, unknown> = {
+      success: true,
       name: params.name,
       scale,
-      currentPhase: status.project.current_phase,
-      isAutonomous,
-      requiresPlan,
-    });
-
-    // Build next steps based on workflow configuration
-    const nextSteps = buildWorkflowNextSteps({
-      currentPhase: status.project.current_phase,
-      isAutonomous,
-      requiresPlan,
-    });
-
-    return createJsonResponse({
-      success: true,
-      message: `Workflow initialized: ${params.name}`,
-      scale,
-      currentPhase: status.project.current_phase,
-      phases: Object.keys(status.phases).filter(
-        (p) => status.phases[p as PrevcPhase].status !== 'skipped'
-      ),
+      currentPhase: {
+        code: currentPhase,
+        name: PHASE_NAMES_EN[currentPhase],
+      },
       settings: {
         autonomous_mode: settings.autonomous_mode,
         require_plan: settings.require_plan,
         require_approval: settings.require_approval,
       },
-      statusFilePath,
-      contextPath,
-      orchestration,
+      startWith: bundle.startWith,
+      bundleId: bundle.bundleId,
+      nextAction: bundle.nextAction,
+      hint: bundle.hint,
+      helpRef: createHelpResourceRef('init'),
+      profile: responsePrefs.profile,
+      revision: executionStateCache.getRevision(repoPath, {
+        success: true,
+        name: summary.name,
+        scale: getScaleName(summary.scale as ProjectScale),
+        profile: responsePrefs.profile,
+        currentPhase: {
+          code: summary.currentPhase,
+          name: PHASE_NAMES_EN[summary.currentPhase],
+        },
+        progress: summary.progress,
+        isComplete: summary.isComplete,
+        phases: compactPhaseStates(fullStatus.phases),
+        activeAgents: compactActiveAgents(fullStatus.agents),
+        settings: {
+          autonomous_mode: settings.autonomous_mode,
+          require_plan: settings.require_plan,
+          require_approval: settings.require_approval,
+        },
+        bundleId: bundle.bundleId,
+      }),
+    };
 
-      // Action signals for AI agents
-      _actionRequired: true,
-      _status: 'workflow_active',
-      enhancementPrompt,
-      nextSteps,
-    });
+    if (responsePrefs.includeOrchestration) {
+      response.bundle = {
+        agentIds: bundle.agentIds,
+        skillIds: bundle.skillIds,
+        docRefs: bundle.docRefs,
+      };
+    }
+
+    if (responsePrefs.includeGuidance) {
+      response.guidance = buildCompactWorkflowGuidance({
+        isAutonomous,
+        requiresPlan,
+        currentPhase,
+      });
+    }
+
+    if (responsePrefs.includeLegacy) {
+      const orchestration = await service.getPhaseOrchestration(currentPhase);
+      response.message = `Workflow initialized: ${params.name}`;
+      response.phases = Object.keys(status.phases).filter(
+        (phase) => status.phases[phase as PrevcPhase].status !== 'skipped'
+      );
+      response.statusFilePath = statusFilePath;
+      response.contextPath = contextPath;
+      response.orchestration = orchestration;
+      response._actionRequired = true;
+      response._status = 'workflow_active';
+      response.enhancementPrompt = buildWorkflowEnhancementPrompt({
+        name: params.name,
+        scale,
+        currentPhase,
+        isAutonomous,
+        requiresPlan,
+      });
+      response.nextSteps = buildWorkflowNextSteps({
+        currentPhase,
+        isAutonomous,
+        requiresPlan,
+      });
+    }
+
+    return createJsonResponse(response);
   } catch (error) {
     return createErrorResponse(error);
   }
+}
+
+function buildCompactWorkflowGuidance(options: {
+  currentPhase: string;
+  isAutonomous: boolean;
+  requiresPlan: boolean;
+}): Record<string, unknown> {
+  if (options.isAutonomous) {
+    return {
+      mode: 'autonomous',
+      gate: 'bypassed',
+      next: 'Start implementation work directly and advance phases as they complete.',
+    };
+  }
+
+  if (options.requiresPlan) {
+    return {
+      mode: 'plan_required',
+      gate: 'plan_required',
+      next: 'Create and link a plan before advancing to Review.',
+    };
+  }
+
+  return {
+    mode: 'standard',
+    gate: 'none',
+    next: `Current phase is ${options.currentPhase}. Planning is recommended before advancing.`,
+  };
 }
 
 /**

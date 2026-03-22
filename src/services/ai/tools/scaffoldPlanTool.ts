@@ -12,8 +12,8 @@ import {
 
 export const scaffoldPlanTool = tool({
   description: `Create a plan template in .context/plans/.
-When autoFill is true (default), returns semantic context and fill instructions.
-The AI agent MUST then fill the plan with specific implementation details.`,
+By default this returns a compact response with the plan path and next action.
+Use includeContent/includeInstructions for compatibility clients that need inline payloads.`,
   inputSchema: ScaffoldPlanInputSchema,
   execute: async (input: ScaffoldPlanInput) => {
     const {
@@ -24,6 +24,8 @@ The AI agent MUST then fill the plan with specific implementation details.`,
       summary,
       semantic = true,
       autoFill = true,
+      includeContent = false,
+      includeInstructions = false,
     } = input;
 
     if (!customRepoPath) {
@@ -62,33 +64,24 @@ The AI agent MUST then fill the plan with specific implementation details.`,
         selectedDocKeys: filteredDocs,
       });
 
-      // Read the generated content to return
-      const planContent = await fs.readFile(result.planPath, 'utf-8');
-
-      // Build fill instructions for the plan
-      const fillInstructions = autoFill ? buildPlanFillInstructions(planName, result.planPath, summary) : undefined;
+      const contextType = autoFill && semantic ? 'plan' : 'compact';
+      const contextResource = `context://codebase/${contextType}`;
+      const planContent = includeContent
+        ? await fs.readFile(result.planPath, 'utf-8')
+        : undefined;
+      const fillInstructions = autoFill && includeInstructions
+        ? buildPlanFillInstructions(planName, result.planPath, summary)
+        : undefined;
 
       // Build response with consistent status signals (matching initializeContextTool pattern)
       const instruction = autoFill
-        ? `IMPORTANT ACTION REQUIRED: Plan template created but needs specific implementation details.
-
-You MUST fill in the plan with:
-1. Specific goals and scope for "${planName}"
-2. Detailed phases with concrete steps
-3. Agent assignments and focus areas
-4. Documentation touchpoints
-5. Success criteria
-
-Use context({ action: "fillSingle", filePath: "${result.planPath}" }) to get semantic context,
-then write the enhanced plan.
-
-DO NOT report completion until the plan has specific, actionable content.`
-        : 'The plan template has been created. You can customize it manually or use fillScaffolding to get suggested content.';
+        ? `Plan template created. Fill it with project-specific details via context({ action: "fillSingle", filePath: "${result.planPath}" }).`
+        : 'Plan template created.';
 
       return {
         // Action signals (appear first for visibility)
         instruction,
-        _warning: autoFill ? 'INCOMPLETE - ACTION REQUIRED' : undefined,
+        _warning: autoFill ? 'ACTION REQUIRED' : undefined,
 
         // Status signals
         status: autoFill ? 'incomplete' : 'success',
@@ -98,6 +91,10 @@ DO NOT report completion until the plan has specific, actionable content.`
         // Plan details
         planPath: result.planPath,
         planContent,
+        contentIncluded: includeContent,
+        guidanceIncluded: includeInstructions,
+        contextType,
+        contextResource,
 
         // Classification
         classification: {
@@ -111,7 +108,7 @@ DO NOT report completion until the plan has specific, actionable content.`
 
         // Next step guidance
         nextStep: autoFill ? {
-          action: 'Call fillSingle to get context, then write enhanced plan',
+          action: 'Call fillSingle to get plan-scoped context, then write the completed plan',
           example: `context({ action: "fillSingle", filePath: "${result.planPath}" })`,
         } : undefined,
       };

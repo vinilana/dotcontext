@@ -19,6 +19,15 @@ export {
   createJsonResponse,
   createErrorResponse,
   createTextResponse,
+  type ResponseMode,
+  type MCPClientProfile,
+  type ResolvedResponsePreferences,
+  type PhaseExecutionBundle,
+  type CompactWorkflowState,
+  executionStateCache,
+  resolveResponsePreferences,
+  normalizeClientProfile,
+  createHelpResourceRef,
 
   // Shared utilities
   minimalUI,

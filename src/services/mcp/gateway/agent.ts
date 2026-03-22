@@ -19,6 +19,10 @@ import {
 import type { AgentParams } from './types';
 import type { MCPToolResponse } from './response';
 import { createJsonResponse, createErrorResponse } from './response';
+import {
+  executionStateCache,
+  resolveResponsePreferences,
+} from './runtime';
 
 export interface AgentOptions {
   repoPath: string;
@@ -32,25 +36,27 @@ export async function handleAgent(
   options: AgentOptions
 ): Promise<MCPToolResponse> {
   const repoPath = options.repoPath || process.cwd();
+  const responsePrefs = resolveResponsePreferences(params);
 
   try {
     switch (params.action) {
       case 'discover': {
-        const linker = createPlanLinker(repoPath);
-        const agents = await linker.discoverAgents();
-
-        const builtIn = agents.filter(a => !a.isCustom);
-        const custom = agents.filter(a => a.isCustom);
+        const manifest = await executionStateCache.getAgentManifest(repoPath);
+        const builtIn = manifest.items.filter((agent) => !agent.isCustom);
+        const custom = manifest.items.filter((agent) => agent.isCustom);
 
         return createJsonResponse({
           success: true,
-          totalAgents: agents.length,
+          totalAgents: manifest.items.length,
           builtInCount: builtIn.length,
           customCount: custom.length,
-          agents: {
-            builtIn: builtIn.map(a => a.type),
-            custom: custom.map(a => ({ type: a.type, path: a.path })),
-          },
+          agentIds: manifest.items.map((agent) => agent.id),
+          ...(responsePrefs.includeLegacy || params.includeDocs ? {
+            agents: {
+              builtIn: builtIn.map((agent) => agent.id),
+              custom: custom.map((agent) => ({ type: agent.id, path: agent.path })),
+            },
+          } : {}),
         });
       }
 
@@ -81,17 +87,22 @@ export async function handleAgent(
           return createErrorResponse('Provide task, phase, or role parameter');
         }
 
-        const agentDetails = agents.map((agent) => ({
-          type: agent,
-          description: agentOrchestrator.getAgentDescription(agent),
-          docs: documentLinker.getDocPathsForAgent(agent),
-        }));
-
-        return createJsonResponse({
+        const response: Record<string, unknown> = {
           source,
-          agents: agentDetails,
+          agentIds: agents,
           count: agents.length,
-        });
+          startWith: agents[0] || null,
+        };
+
+        if (params.includeDocs || responsePrefs.includeLegacy) {
+          response.agents = agents.map((agent) => ({
+            type: agent,
+            description: agentOrchestrator.getAgentDescription(agent),
+            docs: documentLinker.getDocPathsForAgent(agent),
+          }));
+        }
+
+        return createJsonResponse(response);
       }
 
       case 'getSequence': {
@@ -106,18 +117,23 @@ export async function handleAgent(
           );
         }
 
-        const sequenceDetails = sequence.map((agent, index) => ({
-          order: index + 1,
-          agent,
-          description: agentOrchestrator.getAgentDescription(agent),
-          primaryDoc: documentLinker.getPrimaryDocForAgent(agent)?.path || null,
-        }));
-
-        return createJsonResponse({
+        const response: Record<string, unknown> = {
           task: params.task,
-          sequence: sequenceDetails,
+          sequence,
           totalAgents: sequence.length,
-        });
+          startWith: sequence[0] || null,
+        };
+
+        if (params.includeDocs || responsePrefs.includeLegacy) {
+          response.sequenceDetails = sequence.map((agent, index) => ({
+            order: index + 1,
+            agent,
+            description: agentOrchestrator.getAgentDescription(agent),
+            primaryDoc: documentLinker.getPrimaryDocForAgent(agent)?.path || null,
+          }));
+        }
+
+        return createJsonResponse(response);
       }
 
       case 'getDocs': {
@@ -147,29 +163,35 @@ export async function handleAgent(
         return createJsonResponse({
           phase: params.phase,
           phaseName: PHASE_NAMES_EN[params.phase!],
-          documentation: docs.map((doc) => ({
-            type: doc.type,
-            title: doc.title,
-            path: doc.path,
-            description: doc.description,
-          })),
-          recommendedAgents: agents.map((agent) => ({
-            type: agent,
-            description: agentOrchestrator.getAgentDescription(agent),
-          })),
+          docRefs: docs.map((doc) => doc.path),
+          recommendedAgents: agents,
+          ...(responsePrefs.includeLegacy || params.includeDocs ? {
+            documentation: docs.map((doc) => ({
+              type: doc.type,
+              title: doc.title,
+              path: doc.path,
+              description: doc.description,
+            })),
+            recommendedAgentDetails: agents.map((agent) => ({
+              type: agent,
+              description: agentOrchestrator.getAgentDescription(agent),
+            })),
+          } : {}),
         });
       }
 
       case 'listTypes': {
-        const agents = agentOrchestrator.getAllAgentTypes().map((agent) => ({
-          type: agent,
-          description: agentOrchestrator.getAgentDescription(agent),
-          primaryDoc: documentLinker.getPrimaryDocForAgent(agent)?.title || null,
-        }));
-
+        const agentIds = agentOrchestrator.getAllAgentTypes();
         return createJsonResponse({
-          agents,
-          total: agents.length,
+          agentIds,
+          total: agentIds.length,
+          ...(responsePrefs.includeLegacy ? {
+            agents: agentIds.map((agent) => ({
+              type: agent,
+              description: agentOrchestrator.getAgentDescription(agent),
+              primaryDoc: documentLinker.getPrimaryDocForAgent(agent)?.title || null,
+            })),
+          } : {}),
         });
       }
 

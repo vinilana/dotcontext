@@ -15,6 +15,7 @@ import {
   WorkflowSettings,
   PlanApproval,
   PhaseOrchestration,
+  PhaseExecutionBundleData,
   AgentSequenceStep,
   ToolGuidance,
 } from './types';
@@ -25,6 +26,7 @@ import { getRoleConfig } from './prevcConfig';
 import { WorkflowGateChecker, GateCheckResult, getDefaultSettings } from './gates';
 import { PlanLinker } from './plans/planLinker';
 import { AgentOrchestrator, PHASE_TO_AGENTS } from './orchestration/agentOrchestrator';
+import { documentLinker } from './orchestration/documentLinker';
 import { createSkillRegistry } from './skills';
 
 /**
@@ -262,8 +264,8 @@ export class PrevcOrchestrator {
    * Get orchestration guidance for a phase
    */
   async getPhaseOrchestration(phase: PrevcPhase): Promise<PhaseOrchestration> {
+    const compact = await this.getPhaseExecutionBundle(phase);
     const orchestrator = new AgentOrchestrator();
-    const agents = PHASE_TO_AGENTS[phase] || [];
     const sequence = orchestrator.getAgentHandoffSequence([phase]);
 
     const suggestedSequence: AgentSequenceStep[] = sequence.map((agent) => ({
@@ -271,8 +273,7 @@ export class PrevcOrchestrator {
       task: this.getAgentDefaultTask(agent),
     }));
 
-    const startWith = agents.length > 0 ? agents[0] : 'feature-developer';
-    const instruction = this.buildOrchestrationInstruction(phase, startWith);
+    const instruction = this.buildOrchestrationInstruction(phase, compact.startWith);
     const skillRegistry = createSkillRegistry(this.repoPath);
     const skills = await skillRegistry.getSkillsForPhase(phase);
     const recommendedSkills = skills.map((skill) => ({
@@ -284,19 +285,43 @@ export class PrevcOrchestrator {
     }));
 
     // Build tool guidance for explicit orchestration
-    const toolGuidance = this.buildToolGuidance(phase, startWith);
+    const toolGuidance = this.buildToolGuidance(phase, compact.startWith);
 
     // Build step-by-step orchestration instructions
     const orchestrationSteps = this.buildOrchestrationSteps(phase, sequence);
 
     return {
-      recommendedAgents: agents,
+      recommendedAgents: compact.agentIds,
       suggestedSequence,
-      startWith,
+      startWith: compact.startWith,
       instruction,
       recommendedSkills,
       toolGuidance,
       orchestrationSteps,
+    };
+  }
+
+  /**
+   * Get the compact execution bundle for a phase.
+   */
+  async getPhaseExecutionBundle(phase: PrevcPhase): Promise<PhaseExecutionBundleData> {
+    const phaseName = PHASE_NAMES_EN[phase];
+    const agentIds = PHASE_TO_AGENTS[phase] || [];
+    const startWith = agentIds[0] || 'feature-developer';
+    const skillRegistry = createSkillRegistry(this.repoPath);
+    const skills = await skillRegistry.getSkillsForPhase(phase);
+    const skillIds = skills.map((skill) => skill.slug);
+    const docRefs = documentLinker.getDocPathsForPhase(phase);
+
+    return {
+      phase,
+      phaseName,
+      startWith,
+      agentIds,
+      skillIds,
+      docRefs,
+      nextAction: `Start ${startWith} for ${phaseName} phase`,
+      hint: `Begin with ${startWith}, then hand off or call workflow-advance when ${phaseName} is complete.`,
     };
   }
 

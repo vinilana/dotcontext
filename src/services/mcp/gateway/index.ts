@@ -16,6 +16,18 @@ export {
   createTextResponse,
 } from './response';
 
+export {
+  type ResponseMode,
+  type MCPClientProfile,
+  type ResolvedResponsePreferences,
+  type PhaseExecutionBundle,
+  type CompactWorkflowState,
+  executionStateCache,
+  resolveResponsePreferences,
+  normalizeClientProfile,
+  createHelpResourceRef,
+} from './runtime';
+
 // Shared utilities
 export { minimalUI, mockTranslate, toolContext } from './shared';
 

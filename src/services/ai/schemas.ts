@@ -53,8 +53,8 @@ export const GetCodebaseMapInputSchema = z.object({
     'stats',
     'keyFiles',
     'navigation'
-  ]).default('all').optional()
-    .describe('Section of the codebase map to retrieve. Use specific sections to reduce token usage.')
+  ]).default('architecture').optional()
+    .describe('Section of the codebase map to retrieve. Defaults to architecture; request all explicitly when needed.')
 });
 
 // =============================================================================
@@ -145,6 +145,8 @@ export const SearchCodeOutputSchema = z.object({
 export const GetCodebaseMapOutputSchema = z.object({
   success: z.boolean(),
   section: z.string(),
+  defaultSectionApplied: z.boolean().optional(),
+  explicitAllHint: z.string().optional(),
   data: z.unknown().optional().describe('The requested section data from codebase-map.json'),
   mapPath: z.string().optional().describe('Path to the codebase-map.json file'),
   error: z.string().optional()
@@ -404,12 +406,21 @@ export const ScaffoldPlanInputSchema = z.object({
   semantic: z.boolean().default(true).optional().describe('Enable semantic analysis'),
   autoFill: z.boolean().default(true).optional()
     .describe('Automatically fill the plan with codebase-aware content (default: true)'),
+  includeContent: z.boolean().default(false).optional()
+    .describe('Return the generated plan markdown inline for compatibility clients'),
+  includeInstructions: z.boolean().default(false).optional()
+    .describe('Return verbose fill instructions and action text inline'),
 });
 
 export const ScaffoldPlanOutputSchema = z.object({
   success: z.boolean(),
   planPath: z.string().optional(),
   planContent: z.string().optional(),
+  contextType: z.string().optional(),
+  contextResource: z.string().optional(),
+  contentIncluded: z.boolean().optional(),
+  guidanceIncluded: z.boolean().optional(),
+  fillInstructions: z.string().optional(),
   error: z.string().optional()
 });
 

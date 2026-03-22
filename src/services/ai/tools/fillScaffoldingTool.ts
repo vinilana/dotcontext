@@ -2,34 +2,46 @@ import { tool } from 'ai';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { z } from 'zod';
-import { SemanticContextBuilder } from '../../semantic/contextBuilder';
+import { SemanticContextBuilder, type ContextFormat } from '../../semantic/contextBuilder';
 import { DEFAULT_EXCLUDE_PATTERNS } from '../../semantic/types';
 import { getScaffoldStructure, serializeStructureForAI } from '../../../generators/shared/scaffoldStructures';
 
 // Shared context builder instance for efficiency
 let sharedContextBuilder: SemanticContextBuilder | null = null;
-let cachedContext: { repoPath: string; context: string } | null = null;
+let cachedRepoPath: string | null = null;
+const cachedContexts = new Map<string, string>();
+
+type FillContextType = Extract<ContextFormat, 'documentation' | 'plan' | 'compact'>;
 
 /**
  * Get or build semantic context for a repository.
  * Caches the context for efficiency when processing multiple files.
  * Loads user-provided exclude patterns from .context/config.json if available.
  */
-export async function getOrBuildContext(repoPath: string): Promise<string> {
-  if (cachedContext && cachedContext.repoPath === repoPath) {
-    return cachedContext.context;
+export async function getOrBuildContext(
+  repoPath: string,
+  contextType: FillContextType = 'documentation'
+): Promise<string> {
+  const resolvedRepoPath = path.resolve(repoPath);
+  const cacheKey = `${resolvedRepoPath}:${contextType}`;
+
+  if (cachedRepoPath && cachedRepoPath !== resolvedRepoPath) {
+    if (sharedContextBuilder) {
+      await sharedContextBuilder.shutdown();
+      sharedContextBuilder = null;
+    }
+    cachedContexts.clear();
+  }
+
+  if (cachedContexts.has(cacheKey)) {
+    return cachedContexts.get(cacheKey)!;
   }
 
   // Cleanup existing builder before creating new one (cache invalidation)
   // This releases LSP language server child processes
-  if (sharedContextBuilder) {
-    await sharedContextBuilder.shutdown();
-    sharedContextBuilder = null;
-  }
-
   // Load user-provided exclude patterns persisted during init
   let options: { exclude?: string[] } = {};
-  const configPath = path.join(repoPath, '.context', 'config.json');
+  const configPath = path.join(resolvedRepoPath, '.context', 'config.json');
   if (await fs.pathExists(configPath)) {
     try {
       const config = await fs.readJson(configPath);
@@ -43,9 +55,26 @@ export async function getOrBuildContext(repoPath: string): Promise<string> {
     }
   }
 
-  sharedContextBuilder = new SemanticContextBuilder(options);
-  const context = await sharedContextBuilder.buildDocumentationContext(repoPath);
-  cachedContext = { repoPath, context };
+  if (!sharedContextBuilder) {
+    sharedContextBuilder = new SemanticContextBuilder(options);
+    cachedRepoPath = resolvedRepoPath;
+  }
+
+  let context: string;
+  switch (contextType) {
+    case 'plan':
+      context = await sharedContextBuilder.buildPlanContext(resolvedRepoPath);
+      break;
+    case 'compact':
+      context = await sharedContextBuilder.buildCompactContext(resolvedRepoPath);
+      break;
+    case 'documentation':
+    default:
+      context = await sharedContextBuilder.buildDocumentationContext(resolvedRepoPath);
+      break;
+  }
+
+  cachedContexts.set(cacheKey, context);
   return context;
 }
 
@@ -57,8 +86,33 @@ export async function cleanupSharedContext(): Promise<void> {
   if (sharedContextBuilder) {
     await sharedContextBuilder.shutdown();
     sharedContextBuilder = null;
-    cachedContext = null;
   }
+  cachedRepoPath = null;
+  cachedContexts.clear();
+}
+
+function getContextResource(contextType: FillContextType): string {
+  return `context://codebase/${contextType}`;
+}
+
+function getContextTypeForTarget(target: 'docs' | 'agents' | 'plans' | 'all'): FillContextType {
+  if (target === 'plans') {
+    return 'plan';
+  }
+  if (target === 'all') {
+    return 'compact';
+  }
+  return 'documentation';
+}
+
+function getContextTypeForFile(fileType: 'doc' | 'agent' | 'plan' | 'skill'): FillContextType {
+  if (fileType === 'plan') {
+    return 'plan';
+  }
+  if (fileType === 'skill') {
+    return 'compact';
+  }
+  return 'documentation';
 }
 
 // ============================================
@@ -171,7 +225,9 @@ Use this first to get the list, then call fillSingleFile for each file.`,
 
 const FillSingleFileInputSchema = z.object({
   repoPath: z.string().describe('Repository path'),
-  filePath: z.string().describe('Absolute path to the scaffold file to fill')
+  filePath: z.string().describe('Absolute path to the scaffold file to fill'),
+  includeContext: z.boolean().default(true).optional()
+    .describe('Include semantic context inline for compatibility clients')
 });
 
 export type FillSingleFileInput = z.infer<typeof FillSingleFileInputSchema>;
@@ -182,7 +238,7 @@ Returns semantic context (codebase analysis) and scaffold structure (section gui
 Use this context to generate intelligent content, then write the content to the file path.`,
   inputSchema: FillSingleFileInputSchema,
   execute: async (input: FillSingleFileInput) => {
-    const { repoPath, filePath } = input;
+    const { repoPath, filePath, includeContext = true } = input;
 
     const resolvedRepoPath = path.resolve(repoPath);
     const resolvedFilePath = path.resolve(filePath);
@@ -194,9 +250,6 @@ Use this context to generate intelligent content, then write the content to the 
           error: `File does not exist: ${resolvedFilePath}`
         };
       }
-
-      // Get or build semantic context (cached)
-      const semanticContext = await getOrBuildContext(resolvedRepoPath);
 
       // Read current content (frontmatter/template)
       const currentContent = await fs.readFile(resolvedFilePath, 'utf-8');
@@ -227,18 +280,28 @@ Use this context to generate intelligent content, then write the content to the 
       // Get scaffold structure and serialize for AI
       const structure = getScaffoldStructure(documentName);
       const scaffoldStructure = structure ? serializeStructureForAI(structure) : undefined;
+      const contextType = getContextTypeForFile(fileType);
+      const semanticContext = includeContext
+        ? await getOrBuildContext(resolvedRepoPath, contextType)
+        : undefined;
+      const contextResource = getContextResource(contextType);
 
       return {
         success: true,
         filePath: resolvedFilePath,
         fileType,
         documentName,
+        contextType,
+        contextResource,
+        contextIncluded: includeContext,
         // Context for intelligent generation
         semanticContext,
         scaffoldStructure,
         currentContent,
         // Instructions for the calling LLM
-        instructions: `Generate content for "${fileName}" using the provided semanticContext and scaffoldStructure. Follow the structure's tone (${structure?.tone || 'technical'}), audience (${structure?.audience || 'developers'}), and section guidance. Write the complete markdown content (without frontmatter) to ${resolvedFilePath}.`
+        instructions: includeContext
+          ? `Generate content for "${fileName}" using the provided semanticContext and scaffoldStructure. Follow the structure's tone (${structure?.tone || 'technical'}), audience (${structure?.audience || 'developers'}), and section guidance. Write the complete markdown content (without frontmatter) to ${resolvedFilePath}.`
+          : `Use ${contextResource} (${contextType}) plus scaffoldStructure to generate content for "${fileName}", then write the completed markdown to ${resolvedFilePath}.`
       };
     } catch (error) {
       return {
@@ -259,7 +322,9 @@ const FillScaffoldingInputSchema = z.object({
   target: z.enum(['docs', 'agents', 'plans', 'all']).default('all').optional()
     .describe('Which scaffolding to fill'),
   offset: z.number().optional().describe('Skip first N files (for pagination)'),
-  limit: z.number().optional().describe('Max files to return (default: 3, use 0 for all)')
+  limit: z.number().optional().describe('Max files to return (default: 3, use 0 for all)'),
+  includeContext: z.boolean().default(false).optional()
+    .describe('Include shared semantic context inline for compatibility clients')
 });
 
 export type FillScaffoldingInput = z.infer<typeof FillScaffoldingInputSchema>;
@@ -284,7 +349,8 @@ Supports pagination with offset/limit. Generate content for each file using its 
       outputDir: customOutputDir,
       target = 'all',
       offset = 0,
-      limit = 3
+      limit = 3,
+      includeContext = false,
     } = input;
 
     const resolvedRepoPath = path.resolve(repoPath);
@@ -308,8 +374,11 @@ Supports pagination with offset/limit. Generate content for each file using its 
         };
       }
 
-      // Get or build semantic context (cached for efficiency)
-      const semanticContext = await getOrBuildContext(resolvedRepoPath);
+      const contextType = getContextTypeForTarget(target);
+      const contextResource = getContextResource(contextType);
+      const semanticContext = includeContext
+        ? await getOrBuildContext(resolvedRepoPath, contextType)
+        : undefined;
 
       // Collect all file paths first
       const allFiles: { path: string; relativePath: string; type: 'doc' | 'agent' | 'plan' }[] = [];
@@ -393,6 +462,9 @@ Supports pagination with offset/limit. Generate content for each file using its 
       return {
         success: true,
         // Shared semantic context for all files
+        contextType,
+        contextResource,
+        contextIncluded: includeContext,
         semanticContext,
         filesToFill,
         pagination: {
@@ -403,8 +475,12 @@ Supports pagination with offset/limit. Generate content for each file using its 
           hasMore
         },
         instructions: hasMore
-          ? `Returned ${filesToFill.length} of ${totalCount} files. Generate content for each file using semanticContext + its scaffoldStructure. Call again with offset=${offset + paginatedFiles.length} to continue.`
-          : `All ${totalCount} files ready. Generate content for each file using semanticContext + its scaffoldStructure. Write each generated content to its file path.`
+          ? includeContext
+            ? `Returned ${filesToFill.length} of ${totalCount} files. Generate content for each file using semanticContext + its scaffoldStructure. Call again with offset=${offset + paginatedFiles.length} to continue.`
+            : `Returned ${filesToFill.length} of ${totalCount} files. Use ${contextResource} (${contextType}) plus each scaffoldStructure. Call again with offset=${offset + paginatedFiles.length} to continue.`
+          : includeContext
+            ? `All ${totalCount} files ready. Generate content for each file using semanticContext + its scaffoldStructure. Write each generated content to its file path.`
+            : `All ${totalCount} files ready. Use ${contextResource} (${contextType}) plus each scaffoldStructure, then write the generated content to each file path.`
       };
     } catch (error) {
       return {

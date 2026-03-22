@@ -39,6 +39,11 @@ export interface ExploreParams {
 export interface ContextParams {
   action: ContextAction;
   repoPath?: string;
+  verbose?: boolean;
+  includeGuidance?: boolean;
+  includeContent?: boolean;
+  includeContext?: boolean;
+  profile?: string;
   outputDir?: string;
   type?: 'docs' | 'agents' | 'both';
   semantic?: boolean;
@@ -112,6 +117,9 @@ export interface PlanParams {
 
 export interface AgentParams {
   action: AgentAction;
+  verbose?: boolean;
+  includeDocs?: boolean;
+  profile?: string;
   agentType?: string;
   task?: string;
   phase?: PrevcPhase;
@@ -123,6 +131,8 @@ export interface AgentParams {
 
 export interface SkillParams {
   action: SkillAction;
+  verbose?: boolean;
+  profile?: string;
   skillSlug?: string;
   phase?: PrevcPhase;
   skills?: string[];

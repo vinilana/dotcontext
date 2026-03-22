@@ -1,10 +1,9 @@
 /**
  * MCP Server - Model Context Protocol server for Claude Code integration
  *
- * Exposes 9 tools (5 consolidated gateways + 4 dedicated workflow tools) for
- * reduced context and simpler tool selection for AI agents.
+ * Exposes a profile-aware tool surface for reduced context overhead.
  *
- * Simplified workflow: context init → fillSingle → workflow-init
+ * Simplified workflow: context init -> fillSingle -> workflow-init
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -51,6 +50,33 @@ import {
   type MCPToolResponse,
 } from './gatewayTools';
 
+type MCPServerProfile = 'standalone' | 'planning' | 'execution';
+type MCPServerProfileInput = MCPServerProfile | 'full' | 'codex' | 'claude-code';
+
+const PROFILE_TOOLSETS: Record<MCPServerProfile, ReadonlySet<string>> = {
+  standalone: new Set(['explore', 'context', 'workflow-init', 'workflow-status', 'workflow-advance', 'workflow-manage', 'sync', 'plan', 'agent', 'skill']),
+  planning: new Set(['explore', 'context', 'workflow-init', 'workflow-status', 'workflow-advance', 'workflow-manage', 'plan', 'agent', 'skill']),
+  execution: new Set(['explore', 'workflow-init', 'workflow-status', 'workflow-advance', 'workflow-manage', 'plan']),
+};
+
+const HELP_TOPICS = ['overview', 'profiles', 'workflow-init', 'workflow-status', 'workflow-advance', 'workflow-manage'] as const;
+type HelpTopic = (typeof HELP_TOPICS)[number];
+
+function resolveServerProfile(profile?: string): MCPServerProfile {
+  switch ((profile || '').trim().toLowerCase()) {
+    case 'execution':
+    case 'codex':
+    case 'claude-code':
+      return 'execution';
+    case 'planning':
+      return 'planning';
+    case 'full':
+    case 'standalone':
+    default:
+      return 'standalone';
+  }
+}
+
 export interface MCPServerOptions {
   /** Default repository path for tools */
   repoPath?: string;
@@ -58,6 +84,8 @@ export interface MCPServerOptions {
   name?: string;
   /** Enable verbose logging */
   verbose?: boolean;
+  /** Tool-surface profile */
+  profile?: MCPServerProfileInput;
   /** Optional injected SemanticContextBuilder for testing */
   contextBuilder?: SemanticContextBuilder;
 }
@@ -67,6 +95,7 @@ export class AIContextMCPServer {
   private contextBuilder: SemanticContextBuilder;
   private readonly contextCache: ContextCache;
   private options: MCPServerOptions;
+  private readonly profile: MCPServerProfile;
   private transport: StdioServerTransport | null = null;
   private initialRepoPath: string | null = null;
   private cachedRepoPath: string | null = null;
@@ -77,6 +106,7 @@ export class AIContextMCPServer {
       verbose: false,
       ...options
     };
+    this.profile = resolveServerProfile(options.profile || process.env.DOTCONTEXT_MCP_PROFILE);
 
     this.server = new McpServer({
       name: this.options.name!,
@@ -90,442 +120,259 @@ export class AIContextMCPServer {
     // Initialize and cache the correct repo path
     void this.initializeRepoPath();
 
+    this.log(`Using MCP profile: ${this.profile}`);
     this.registerGatewayTools();
     this.registerResources();
   }
 
   /**
-   * Register tools: 5 consolidated gateways + 4 dedicated workflow tools
-   * Total: 9 tools for clear entry points and reduced AI cognitive load
-   *
-   * Project tools removed - use context({ action: "init" }) + workflow-init instead
-   *
-   * NOTE: repoPath is now determined dynamically via getRepoPath() at runtime,
-   * which uses smart initialization and client path caching.
+   * Register tools for the active MCP profile.
    */
   private registerGatewayTools(): void {
     const wrap = <TParams>(
       toolName: string,
       handler: (params: TParams) => Promise<MCPToolResponse>
     ) => this.wrapWithActionLogging(toolName, handler);
+    let registeredCount = 0;
 
-    // Gateway 1: explore - File and code exploration
-    this.server.registerTool('explore', {
-      description: `File and code exploration. Actions:
-- read: Read file contents (params: filePath, encoding?)
-- list: List files matching pattern (params: pattern, cwd?, ignore?)
-- analyze: Analyze symbols in a file (params: filePath, symbolTypes?)
-- search: Search code with regex (params: pattern, fileGlob?, maxResults?, cwd?)
-- getStructure: Get directory structure (params: rootPath?, maxDepth?, includePatterns?)`,
-      inputSchema: {
-        action: z.enum(['read', 'list', 'analyze', 'search', 'getStructure'])
-          .describe('Action to perform'),
-        filePath: z.string().optional()
-          .describe('(read, analyze) File path to read or analyze'),
-        pattern: z.string().optional()
-          .describe('(list, search) Glob pattern for list, regex pattern for search'),
-        cwd: z.string().optional()
-          .describe('(list, search) Working directory'),
-        encoding: z.enum(['utf-8', 'ascii', 'binary']).optional()
-          .describe('(read) File encoding'),
-        ignore: z.array(z.string()).optional()
-          .describe('(list) Patterns to ignore'),
-        symbolTypes: z.array(z.enum(['class', 'interface', 'function', 'type', 'enum'])).optional()
-          .describe('(analyze) Types of symbols to extract'),
-        fileGlob: z.string().optional()
-          .describe('(search) Glob pattern to filter files'),
-        maxResults: z.number().optional()
-          .describe('(search) Maximum results to return'),
-        rootPath: z.string().optional()
-          .describe('(getStructure) Root path for structure'),
-        maxDepth: z.number().optional()
-          .describe('(getStructure) Maximum directory depth'),
-        includePatterns: z.array(z.string()).optional()
-          .describe('(getStructure) Include patterns'),
-      }
-    }, wrap('explore', async (params): Promise<MCPToolResponse> => {
-      // explore uses cwd for file operations, not repoPath for context resolution
-      return handleExplore(params as ExploreParams, { repoPath: this.getRepoPath() });
-    }));
+    if (this.hasTool('explore')) {
+      this.server.registerTool('explore', {
+        description: 'Explore code and files: read, list, analyze, search, getStructure.',
+        inputSchema: {
+          action: z.enum(['read', 'list', 'analyze', 'search', 'getStructure']).describe('Action'),
+          filePath: z.string().optional().describe('File path'),
+          pattern: z.string().optional().describe('Pattern'),
+          cwd: z.string().optional().describe('Working dir'),
+          encoding: z.enum(['utf-8', 'ascii', 'binary']).optional().describe('Encoding'),
+          ignore: z.array(z.string()).optional().describe('Ignore globs'),
+          symbolTypes: z.array(z.enum(['class', 'interface', 'function', 'type', 'enum'])).optional().describe('Symbol kinds'),
+          fileGlob: z.string().optional().describe('File glob'),
+          maxResults: z.number().optional().describe('Max results'),
+          rootPath: z.string().optional().describe('Root path'),
+          maxDepth: z.number().optional().describe('Max depth'),
+          includePatterns: z.array(z.string()).optional().describe('Include globs'),
+        }
+      }, wrap('explore', async (params): Promise<MCPToolResponse> => {
+        return handleExplore(params as ExploreParams, { repoPath: this.getRepoPath() });
+      }));
+      registeredCount++;
+    }
 
-    // Gateway 2: context - Context scaffolding and semantic context
-    this.server.registerTool('context', {
-      description: `Context scaffolding and semantic context. Actions:
-- check: Check if .context scaffolding exists (params: repoPath?)
-- init: Initialize .context scaffolding (params: repoPath?, type?, outputDir?, semantic?, autoFill?, skipContentGeneration?)
-- fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?)
-- fillSingle: Fill a single scaffold file (params: repoPath?, filePath)
-- listToFill: List files that need filling (params: repoPath?, outputDir?, target?)
-- getMap: Get codebase map section (params: repoPath?, section?)
-- buildSemantic: Build semantic context (params: repoPath?, contextType?, targetFile?, options?)
-- scaffoldPlan: Create a plan template (params: planName, repoPath?, title?, summary?, autoFill?)
+    if (this.hasTool('context')) {
+      this.server.registerTool('context', {
+        description: 'Scaffold and fetch context: check, init, fill, fillSingle, listToFill, getMap, buildSemantic, scaffoldPlan.',
+        inputSchema: {
+          action: z.enum(['check', 'init', 'fill', 'fillSingle', 'listToFill', 'getMap', 'buildSemantic', 'scaffoldPlan']).describe('Action'),
+          repoPath: z.string().optional().describe('Repo path'),
+          verbose: z.boolean().optional().describe('Verbose mode'),
+          includeGuidance: z.boolean().optional().describe('Include guidance'),
+          includeContent: z.boolean().optional().describe('Include inline content'),
+          outputDir: z.string().optional().describe('Output dir'),
+          type: z.enum(['docs', 'agents', 'both']).optional().describe('Scaffold type'),
+          semantic: z.boolean().optional().describe('Use semantic analysis'),
+          include: z.array(z.string()).optional().describe('Include globs'),
+          exclude: z.array(z.string()).optional().describe('Exclude globs'),
+          autoFill: z.boolean().optional().describe('Auto-fill'),
+          skipContentGeneration: z.boolean().optional().describe('Skip content'),
+          target: z.enum(['docs', 'agents', 'plans', 'all']).optional().describe('Target'),
+          offset: z.number().optional().describe('Offset'),
+          limit: z.number().optional().describe('Limit'),
+          filePath: z.string().optional().describe('File path'),
+          section: z.enum([
+            'all', 'stack', 'structure', 'architecture', 'symbols',
+            'symbols.classes', 'symbols.interfaces', 'symbols.functions',
+            'symbols.types', 'symbols.enums', 'publicAPI', 'dependencies', 'stats',
+            'keyFiles', 'navigation'
+          ]).optional().describe('Map section'),
+          contextType: z.enum(['documentation', 'playbook', 'plan', 'compact']).optional().describe('Context type'),
+          targetFile: z.string().optional().describe('Target file'),
+          options: z.object({
+            useLSP: z.boolean().optional(),
+            maxContextLength: z.number().optional(),
+            includeDocumentation: z.boolean().optional(),
+            includeSignatures: z.boolean().optional()
+          }).optional().describe('Builder options'),
+          planName: z.string().optional().describe('Plan name'),
+          title: z.string().optional().describe('Title'),
+          summary: z.string().optional().describe('Summary'),
+        }
+      }, wrap('context', async (params): Promise<MCPToolResponse> => {
+        return handleContext(params as ContextParams, { repoPath: this.getRepoPath((params as ContextParams).repoPath), contextBuilder: this.contextBuilder });
+      }));
+      registeredCount++;
+    }
 
-**Important:** Agents should provide repoPath on the FIRST call, then it will be cached:
-1. First call: context({ action: "check", repoPath: "/path/to/project" })
-2. Subsequent calls can omit repoPath - it will use cached value from step 1
-3. After context init, call fillSingle for each pending file
-4. Call workflow-init to enable PREVC workflow (unless trivial change)`,
-      inputSchema: {
-        action: z.enum(['check', 'init', 'fill', 'fillSingle', 'listToFill', 'getMap', 'buildSemantic', 'scaffoldPlan'])
-          .describe('Action to perform'),
-        repoPath: z.string().optional()
-          .describe('Repository path (defaults to cwd)'),
-        outputDir: z.string().optional()
-          .describe('Output directory (default: ./.context)'),
-        type: z.enum(['docs', 'agents', 'both']).optional()
-          .describe('(init) Type of scaffolding to create'),
-        semantic: z.boolean().optional()
-          .describe('(init, scaffoldPlan) Enable semantic analysis'),
-        include: z.array(z.string()).optional()
-          .describe('(init) Include patterns'),
-        exclude: z.array(z.string()).optional()
-          .describe('(init) Exclude patterns'),
-        autoFill: z.boolean().optional()
-          .describe('(init, scaffoldPlan) Auto-fill with codebase content'),
-        skipContentGeneration: z.boolean().optional()
-          .describe('(init) Skip pre-generating content'),
-        target: z.enum(['docs', 'agents', 'plans', 'all']).optional()
-          .describe('(fill, listToFill) Which scaffolding to target'),
-        offset: z.number().optional()
-          .describe('(fill) Skip first N files'),
-        limit: z.number().optional()
-          .describe('(fill) Max files to return'),
-        filePath: z.string().optional()
-          .describe('(fillSingle) Absolute path to scaffold file'),
-        section: z.enum([
-          'all', 'stack', 'structure', 'architecture', 'symbols',
-          'symbols.classes', 'symbols.interfaces', 'symbols.functions',
-          'symbols.types', 'symbols.enums', 'publicAPI', 'dependencies', 'stats'
-        ]).optional()
-          .describe('(getMap) Section to retrieve'),
-        contextType: z.enum(['documentation', 'playbook', 'plan', 'compact']).optional()
-          .describe('(buildSemantic) Type of context to build'),
-        targetFile: z.string().optional()
-          .describe('(buildSemantic) Target file for focused context'),
-        options: z.object({
-          useLSP: z.boolean().optional(),
-          maxContextLength: z.number().optional(),
-          includeDocumentation: z.boolean().optional(),
-          includeSignatures: z.boolean().optional()
-        }).optional()
-          .describe('(buildSemantic) Builder options'),
-        planName: z.string().optional()
-          .describe('(scaffoldPlan) Name of the plan'),
-        title: z.string().optional()
-          .describe('(scaffoldPlan) Plan title'),
-        summary: z.string().optional()
-          .describe('(scaffoldPlan) Plan summary/goal'),
-      }
-    }, wrap('context', async (params): Promise<MCPToolResponse> => {
-      return handleContext(params as ContextParams, { repoPath: this.getRepoPath((params as ContextParams).repoPath), contextBuilder: this.contextBuilder });
-    }));
-
-    // Dedicated Workflow Tools (split from consolidated workflow gateway)
-
-    // Tool 3a: workflow-init - Initialize PREVC workflow
     this.server.registerTool('workflow-init', {
-      description: `Initialize a PREVC workflow for structured development.
-
-**What it does:**
-- Creates .context/workflow/ folder (automatically, if it doesn't exist)
-- Initializes workflow status file with phase tracking
-- Detects project scale and configures gates
-- Sets up PREVC phases (Plan → Review → Execute → Verify → Complete)
-
-**Prerequisites:**
-- .context/ folder must exist (use context with action "init" first)
-- Scaffolding files should be filled (use context with action "fillSingle")
-
-**When to use:**
-- Starting a new feature or bug fix after scaffolding is set up
-- Need structured, phase-gated development
-- Working on non-trivial changes
-
-**Don't use if:**
-- Making trivial changes (typo fixes, single-line edits)
-- Just exploring/researching code
-- User explicitly wants to skip workflow`,
+      description: 'Initialize a PREVC workflow.',
       inputSchema: {
-        name: z.string().describe('Workflow/feature name (required)'),
-        description: z.string().optional()
-          .describe('Task description for scale detection'),
-        scale: z.enum(['QUICK', 'SMALL', 'MEDIUM', 'LARGE']).optional()
-          .describe(`Project scale - AI should evaluate based on task characteristics:
-
-SCALE EVALUATION CRITERIA:
-• QUICK: Single file changes, bug fixes, typos (~5 min)
-  - Phases: E → V only
-  - Example: "Fix typo in button text"
-
-• SMALL: Simple features, no architecture changes (~15 min)
-  - Phases: P → E → V
-  - Example: "Add email validation to form"
-
-• MEDIUM: Regular features with design decisions (~30 min)
-  - Phases: P → R → E → V
-  - Example: "Implement user profile page"
-
-• LARGE: Complex features, systems, compliance (~1+ hour)
-  - Phases: P → R → E → V → C (full workflow)
-  - Examples: "Build OAuth system", "Add GDPR compliance"
-
-GUIDANCE:
-- Analyze task complexity, architectural impact, and review needs
-- Use LARGE for security/compliance requirements
-- When uncertain, prefer MEDIUM
-- Omit scale only if unable to evaluate (auto-detect fallback)`),
-        autonomous: z.boolean().optional()
-          .describe('Skip all workflow gates (default: scale-dependent)'),
-        require_plan: z.boolean().optional()
-          .describe('Require plan before P→R'),
-        require_approval: z.boolean().optional()
-          .describe('Require approval before R→E'),
-        archive_previous: z.boolean().optional()
-          .describe('Archive existing workflow'),
+        name: z.string().describe('Workflow name'),
+        description: z.string().optional().describe('Task summary'),
+        scale: z.enum(['QUICK', 'SMALL', 'MEDIUM', 'LARGE']).optional().describe('Scale'),
+        autonomous: z.boolean().optional().describe('Bypass gates'),
+        require_plan: z.boolean().optional().describe('Require plan'),
+        require_approval: z.boolean().optional().describe('Require approval'),
+        archive_previous: z.boolean().optional().describe('Archive current workflow'),
+        verbose: z.boolean().optional().describe('Verbose mode'),
+        includeGuidance: z.boolean().optional().describe('Include guidance'),
+        includeOrchestration: z.boolean().optional().describe('Include bundle'),
+        includeLegacy: z.boolean().optional().describe('Legacy payload'),
+        profile: z.enum(['standalone', 'planning', 'execution', 'codex', 'claude-code']).optional().describe('Client profile'),
       }
     }, wrap('workflow-init', async (params): Promise<MCPToolResponse> => {
       return handleWorkflowInit(params as WorkflowInitParams, { repoPath: this.getRepoPath((params as WorkflowInitParams).repoPath) });
     }));
+    registeredCount++;
 
-    // Tool 3b: workflow-status - Get current workflow status
     this.server.registerTool('workflow-status', {
-      description: `Get current PREVC workflow status including phase, gates, and linked plans.
-
-Returns: Current phase, all phase statuses, gate settings, linked plans, agent activity.`,
+      description: 'Get PREVC workflow status.',
       inputSchema: {
-        // No required parameters
+        revision: z.string().optional().describe('Last revision'),
+        verbose: z.boolean().optional().describe('Verbose mode'),
+        includeGuidance: z.boolean().optional().describe('Include guidance'),
+        includeOrchestration: z.boolean().optional().describe('Include bundle'),
+        includeLegacy: z.boolean().optional().describe('Legacy payload'),
+        profile: z.enum(['standalone', 'planning', 'execution', 'codex', 'claude-code']).optional().describe('Client profile'),
       }
     }, wrap('workflow-status', async (params): Promise<MCPToolResponse> => {
       return handleWorkflowStatus(params as WorkflowStatusParams, { repoPath: this.getRepoPath((params as WorkflowStatusParams).repoPath) });
     }));
+    registeredCount++;
 
-    // Tool 3c: workflow-advance - Advance to next phase
     this.server.registerTool('workflow-advance', {
-      description: `Advance workflow to the next PREVC phase (P→R→E→V→C).
-
-Enforces gates:
-- P→R: Requires plan if require_plan=true
-- R→E: Requires approval if require_approval=true
-
-Use force=true to bypass gates, or use workflow-manage({ action: 'setAutonomous' }).`,
+      description: 'Advance the PREVC workflow to the next phase.',
       inputSchema: {
-        outputs: z.array(z.string()).optional()
-          .describe('Artifact paths produced in current phase'),
-        force: z.boolean().optional()
-          .describe('Force advancement even if gates block'),
+        outputs: z.array(z.string()).optional().describe('Artifacts'),
+        force: z.boolean().optional().describe('Bypass gates'),
+        verbose: z.boolean().optional().describe('Verbose mode'),
+        includeGuidance: z.boolean().optional().describe('Include guidance'),
+        includeOrchestration: z.boolean().optional().describe('Include bundle'),
+        includeLegacy: z.boolean().optional().describe('Legacy payload'),
+        profile: z.enum(['standalone', 'planning', 'execution', 'codex', 'claude-code']).optional().describe('Client profile'),
       }
     }, wrap('workflow-advance', async (params): Promise<MCPToolResponse> => {
       return handleWorkflowAdvance(params as WorkflowAdvanceParams, { repoPath: this.getRepoPath((params as WorkflowAdvanceParams).repoPath) });
     }));
+    registeredCount++;
 
-    // Tool 3d: workflow-manage - Manage workflow operations
     this.server.registerTool('workflow-manage', {
-      description: `Manage workflow operations: handoffs, collaboration, documents, gates, approvals.
-
-Actions:
-- handoff: Transfer work between agents (params: from, to, artifacts)
-- collaborate: Start collaboration session (params: topic, participants?)
-- createDoc: Create workflow document (params: type, docName)
-- getGates: Check gate status
-- approvePlan: Approve linked plan (params: planSlug?, approver?, notes?)
-- setAutonomous: Toggle autonomous mode (params: enabled, reason?)`,
+      description: 'Manage workflow handoffs, approvals, docs, and gates.',
       inputSchema: {
-        action: z.enum(['handoff', 'collaborate', 'createDoc', 'getGates', 'approvePlan', 'setAutonomous'])
-          .describe('Action to perform'),
-        from: z.string().optional()
-          .describe('(handoff) Agent handing off (e.g., feature-developer)'),
-        to: z.string().optional()
-          .describe('(handoff) Agent receiving (e.g., code-reviewer)'),
-        artifacts: z.array(z.string()).optional()
-          .describe('(handoff) Artifacts to hand off'),
-        topic: z.string().optional()
-          .describe('(collaborate) Collaboration topic'),
-        participants: z.array(z.enum(PREVC_ROLES as unknown as [string, ...string[]])).optional()
-          .describe('(collaborate) Participating roles'),
-        type: z.enum(['prd', 'tech-spec', 'architecture', 'adr', 'test-plan', 'changelog']).optional()
-          .describe('(createDoc) Document type'),
-        docName: z.string().optional()
-          .describe('(createDoc) Document name'),
-        planSlug: z.string().optional()
-          .describe('(approvePlan) Plan to approve'),
-        approver: z.enum(PREVC_ROLES as unknown as [string, ...string[]]).optional()
-          .describe('(approvePlan) Approving role'),
-        notes: z.string().optional()
-          .describe('(approvePlan) Approval notes'),
-        enabled: z.boolean().optional()
-          .describe('(setAutonomous) Enable/disable'),
-        reason: z.string().optional()
-          .describe('(setAutonomous) Reason for change'),
+        action: z.enum(['handoff', 'collaborate', 'createDoc', 'getGates', 'approvePlan', 'setAutonomous']).describe('Action'),
+        from: z.string().optional().describe('From agent'),
+        to: z.string().optional().describe('To agent'),
+        artifacts: z.array(z.string()).optional().describe('Artifacts'),
+        topic: z.string().optional().describe('Topic'),
+        participants: z.array(z.enum(PREVC_ROLES as unknown as [string, ...string[]])).optional().describe('Roles'),
+        type: z.enum(['prd', 'tech-spec', 'architecture', 'adr', 'test-plan', 'changelog']).optional().describe('Doc type'),
+        docName: z.string().optional().describe('Doc name'),
+        planSlug: z.string().optional().describe('Plan slug'),
+        approver: z.enum(PREVC_ROLES as unknown as [string, ...string[]]).optional().describe('Approver'),
+        notes: z.string().optional().describe('Notes'),
+        enabled: z.boolean().optional().describe('Enabled'),
+        reason: z.string().optional().describe('Reason'),
+        verbose: z.boolean().optional().describe('Verbose mode'),
+        includeGuidance: z.boolean().optional().describe('Include guidance'),
+        includeLegacy: z.boolean().optional().describe('Legacy payload'),
+        profile: z.enum(['standalone', 'planning', 'execution', 'codex', 'claude-code']).optional().describe('Client profile'),
       }
     }, wrap('workflow-manage', async (params): Promise<MCPToolResponse> => {
       return handleWorkflowManage(params as WorkflowManageParams, { repoPath: this.getRepoPath((params as WorkflowManageParams).repoPath) });
     }));
+    registeredCount++;
 
-    // Gateway 5: sync - Import/export synchronization
-    this.server.registerTool('sync', {
-      description: `Import/export synchronization with AI tools. Actions:
-- exportRules: Export rules to AI tools (params: preset?, force?, dryRun?)
-- exportDocs: Export docs to AI tools (params: preset?, indexMode?, force?, dryRun?)
-- exportAgents: Export agents to AI tools (params: preset?, mode?, force?, dryRun?)
-- exportContext: Export all context (params: preset?, skipDocs?, skipAgents?, skipSkills?, docsIndexMode?, agentMode?, force?, dryRun?)
-- exportSkills: Export skills to AI tools (params: preset?, includeBuiltIn?, force?)
-- reverseSync: Import from AI tools to .context/ (params: skipRules?, skipAgents?, skipSkills?, mergeStrategy?, dryRun?, force?, addMetadata?)
-- importDocs: Import docs from AI tools (params: autoDetect?, force?, dryRun?)
-- importAgents: Import agents from AI tools (params: autoDetect?, force?, dryRun?)
-- importSkills: Import skills from AI tools (params: autoDetect?, mergeStrategy?, force?, dryRun?)`,
-      inputSchema: {
-        action: z.enum(['exportRules', 'exportDocs', 'exportAgents', 'exportContext', 'exportSkills', 'reverseSync', 'importDocs', 'importAgents', 'importSkills'])
-          .describe('Action to perform'),
-        preset: z.string().optional()
-          .describe('Target AI tool preset'),
-        force: z.boolean().optional()
-          .describe('Overwrite existing files'),
-        dryRun: z.boolean().optional()
-          .describe('Preview without writing'),
-        indexMode: z.enum(['readme', 'all']).optional()
-          .describe('(exportDocs) Index mode'),
-        mode: z.enum(['symlink', 'markdown']).optional()
-          .describe('(exportAgents) Sync mode'),
-        skipDocs: z.boolean().optional()
-          .describe('(exportContext) Skip docs'),
-        skipAgents: z.boolean().optional()
-          .describe('(exportContext, reverseSync) Skip agents'),
-        skipSkills: z.boolean().optional()
-          .describe('(exportContext, reverseSync) Skip skills'),
-        skipRules: z.boolean().optional()
-          .describe('(reverseSync) Skip rules'),
-        docsIndexMode: z.enum(['readme', 'all']).optional()
-          .describe('(exportContext) Docs index mode'),
-        agentMode: z.enum(['symlink', 'markdown']).optional()
-          .describe('(exportContext) Agent sync mode'),
-        includeBuiltInSkills: z.boolean().optional()
-          .describe('(exportContext) Include built-in skills'),
-        includeBuiltIn: z.boolean().optional()
-          .describe('(exportSkills) Include built-in skills'),
-        mergeStrategy: z.enum(['skip', 'overwrite', 'merge', 'rename']).optional()
-          .describe('(reverseSync, importSkills) Conflict handling'),
-        autoDetect: z.boolean().optional()
-          .describe('(import*) Auto-detect files'),
-        addMetadata: z.boolean().optional()
-          .describe('(reverseSync) Add frontmatter metadata'),
-        repoPath: z.string().optional()
-          .describe('Repository path'),
-      }
-    }, wrap('sync', async (params): Promise<MCPToolResponse> => {
-      return handleSync(params as SyncParams, { repoPath: this.getRepoPath((params as SyncParams).repoPath) });
-    }));
+    if (this.hasTool('sync')) {
+      this.server.registerTool('sync', {
+        description: 'Sync docs, agents, skills, and rules with AI tools.',
+        inputSchema: {
+          action: z.enum(['exportRules', 'exportDocs', 'exportAgents', 'exportContext', 'exportSkills', 'reverseSync', 'importDocs', 'importAgents', 'importSkills']).describe('Action'),
+          preset: z.string().optional().describe('Preset'),
+          force: z.boolean().optional().describe('Overwrite'),
+          dryRun: z.boolean().optional().describe('Preview only'),
+          indexMode: z.enum(['readme', 'all']).optional().describe('Doc index'),
+          mode: z.enum(['symlink', 'markdown']).optional().describe('Sync mode'),
+          skipDocs: z.boolean().optional().describe('Skip docs'),
+          skipAgents: z.boolean().optional().describe('Skip agents'),
+          skipSkills: z.boolean().optional().describe('Skip skills'),
+          skipRules: z.boolean().optional().describe('Skip rules'),
+          docsIndexMode: z.enum(['readme', 'all']).optional().describe('Context doc index'),
+          agentMode: z.enum(['symlink', 'markdown']).optional().describe('Agent mode'),
+          includeBuiltInSkills: z.boolean().optional().describe('Include built-in skills'),
+          includeBuiltIn: z.boolean().optional().describe('Include built-ins'),
+          mergeStrategy: z.enum(['skip', 'overwrite', 'merge', 'rename']).optional().describe('Merge strategy'),
+          autoDetect: z.boolean().optional().describe('Auto-detect'),
+          addMetadata: z.boolean().optional().describe('Add metadata'),
+          repoPath: z.string().optional().describe('Repo path'),
+        }
+      }, wrap('sync', async (params): Promise<MCPToolResponse> => {
+        return handleSync(params as SyncParams, { repoPath: this.getRepoPath((params as SyncParams).repoPath) });
+      }));
+      registeredCount++;
+    }
 
-    // Gateway 6: plan - Plan management and execution tracking
     this.server.registerTool('plan', {
-      description: `Plan management and execution tracking. Actions:
-- link: Link plan to workflow (params: planSlug)
-- getLinked: Get all linked plans
-- getDetails: Get detailed plan info (params: planSlug)
-- getForPhase: Get plans for PREVC phase (params: phase)
-- updatePhase: Update plan phase status (params: planSlug, phaseId, status)
-- recordDecision: Record a decision (params: planSlug, title, description, phase?, alternatives?)
-- updateStep: Update step status (params: planSlug, phaseId, stepIndex, status, output?, notes?)
-- getStatus: Get plan execution status (params: planSlug)
-- syncMarkdown: Sync tracking to markdown (params: planSlug)
-- commitPhase: Create git commit for completed phase (params: planSlug, phaseId, coAuthor?, stagePatterns?, dryRun?)`,
+      description: 'Track plans and PREVC execution state.',
       inputSchema: {
-        action: z.enum(['link', 'getLinked', 'getDetails', 'getForPhase', 'updatePhase', 'recordDecision', 'updateStep', 'getStatus', 'syncMarkdown', 'commitPhase'])
-          .describe('Action to perform'),
-        planSlug: z.string().optional()
-          .describe('Plan slug/identifier'),
-        phaseId: z.string().optional()
-          .describe('(updatePhase, updateStep, commitPhase) Phase ID'),
-        status: z.enum(['pending', 'in_progress', 'completed', 'skipped']).optional()
-          .describe('(updatePhase, updateStep) New status'),
-        phase: z.enum(['P', 'R', 'E', 'V', 'C']).optional()
-          .describe('(getForPhase, recordDecision) PREVC phase'),
-        title: z.string().optional()
-          .describe('(recordDecision) Decision title'),
-        description: z.string().optional()
-          .describe('(recordDecision) Decision description'),
-        alternatives: z.array(z.string()).optional()
-          .describe('(recordDecision) Considered alternatives'),
-        stepIndex: z.number().optional()
-          .describe('(updateStep) Step number (1-based)'),
-        output: z.string().optional()
-          .describe('(updateStep) Step output artifact'),
-        notes: z.string().optional()
-          .describe('(updateStep) Execution notes'),
-        coAuthor: z.string().optional()
-          .describe('(commitPhase) Agent name for Co-Authored-By footer'),
-        stagePatterns: z.array(z.string()).optional()
-          .describe('(commitPhase) Patterns for files to stage (default: [".context/**"])'),
-        dryRun: z.boolean().optional()
-          .describe('(commitPhase) Preview without committing'),
+        action: z.enum(['link', 'getLinked', 'getDetails', 'getForPhase', 'updatePhase', 'recordDecision', 'updateStep', 'getStatus', 'syncMarkdown', 'commitPhase']).describe('Action'),
+        planSlug: z.string().optional().describe('Plan slug'),
+        phaseId: z.string().optional().describe('Phase id'),
+        status: z.enum(['pending', 'in_progress', 'completed', 'skipped']).optional().describe('Status'),
+        phase: z.enum(['P', 'R', 'E', 'V', 'C']).optional().describe('PREVC phase'),
+        title: z.string().optional().describe('Title'),
+        description: z.string().optional().describe('Description'),
+        alternatives: z.array(z.string()).optional().describe('Alternatives'),
+        stepIndex: z.number().optional().describe('Step index'),
+        output: z.string().optional().describe('Output'),
+        notes: z.string().optional().describe('Notes'),
+        coAuthor: z.string().optional().describe('Co-author'),
+        stagePatterns: z.array(z.string()).optional().describe('Stage patterns'),
+        dryRun: z.boolean().optional().describe('Preview only'),
       }
     }, wrap('plan', async (params): Promise<MCPToolResponse> => {
       return handlePlan(params as PlanParams, { repoPath: this.getRepoPath() });
     }));
+    registeredCount++;
 
-    // Gateway 7: agent - Agent orchestration and discovery
-    this.server.registerTool('agent', {
-      description: `Agent orchestration and discovery. Actions:
-- discover: Discover all agents (built-in + custom)
-- getInfo: Get agent details (params: agentType)
-- orchestrate: Select agents for task/phase/role (params: task?, phase?, role?)
-- getSequence: Get agent handoff sequence (params: task, includeReview?, phases?)
-- getDocs: Get agent documentation (params: agent)
-- getPhaseDocs: Get phase documentation (params: phase)
-- listTypes: List all agent types`,
-      inputSchema: {
-        action: z.enum(['discover', 'getInfo', 'orchestrate', 'getSequence', 'getDocs', 'getPhaseDocs', 'listTypes'])
-          .describe('Action to perform'),
-        agentType: z.string().optional()
-          .describe('(getInfo) Agent type identifier'),
-        task: z.string().optional()
-          .describe('(orchestrate, getSequence) Task description'),
-        phase: z.enum(['P', 'R', 'E', 'V', 'C']).optional()
-          .describe('(orchestrate, getPhaseDocs) PREVC phase'),
-        role: z.enum(PREVC_ROLES as unknown as [string, ...string[]]).optional()
-          .describe('(orchestrate) PREVC role'),
-        includeReview: z.boolean().optional()
-          .describe('(getSequence) Include code review'),
-        phases: z.array(z.enum(['P', 'R', 'E', 'V', 'C'])).optional()
-          .describe('(getSequence) Phases to include'),
-        agent: z.enum(AGENT_TYPES as unknown as [string, ...string[]]).optional()
-          .describe('(getDocs) Agent type for docs'),
-      }
-    }, wrap('agent', async (params): Promise<MCPToolResponse> => {
-      return handleAgent(params as AgentParams, { repoPath: this.getRepoPath() });
-    }));
+    if (this.hasTool('agent')) {
+      this.server.registerTool('agent', {
+        description: 'Discover agents and orchestration sequences.',
+        inputSchema: {
+          action: z.enum(['discover', 'getInfo', 'orchestrate', 'getSequence', 'getDocs', 'getPhaseDocs', 'listTypes']).describe('Action'),
+          verbose: z.boolean().optional().describe('Verbose mode'),
+          includeDocs: z.boolean().optional().describe('Include docs'),
+          agentType: z.string().optional().describe('Agent type'),
+          task: z.string().optional().describe('Task'),
+          phase: z.enum(['P', 'R', 'E', 'V', 'C']).optional().describe('Phase'),
+          role: z.enum(PREVC_ROLES as unknown as [string, ...string[]]).optional().describe('Role'),
+          includeReview: z.boolean().optional().describe('Include review'),
+          phases: z.array(z.enum(['P', 'R', 'E', 'V', 'C'])).optional().describe('Phase list'),
+          agent: z.enum(AGENT_TYPES as unknown as [string, ...string[]]).optional().describe('Agent'),
+        }
+      }, wrap('agent', async (params): Promise<MCPToolResponse> => {
+        return handleAgent(params as AgentParams, { repoPath: this.getRepoPath() });
+      }));
+      registeredCount++;
+    }
 
-    // Gateway 8: skill - Skill management
-    this.server.registerTool('skill', {
-      description: `Skill management for on-demand expertise. Actions:
-- list: List all skills (params: includeContent?)
-- getContent: Get skill content (params: skillSlug)
-- getForPhase: Get skills for PREVC phase (params: phase)
-- scaffold: Generate skill files (params: skills?, force?)
-- export: Export skills to AI tools (params: preset?, includeBuiltIn?, force?)
-- fill: Fill skills with codebase content (params: skills?, force?)`,
-      inputSchema: {
-        action: z.enum(['list', 'getContent', 'getForPhase', 'scaffold', 'export', 'fill'])
-          .describe('Action to perform'),
-        skillSlug: z.string().optional()
-          .describe('(getContent) Skill identifier'),
-        phase: z.enum(['P', 'R', 'E', 'V', 'C']).optional()
-          .describe('(getForPhase) PREVC phase'),
-        skills: z.array(z.string()).optional()
-          .describe('(scaffold, fill) Specific skills to process'),
-        includeContent: z.boolean().optional()
-          .describe('(list) Include full content'),
-        includeBuiltIn: z.boolean().optional()
-          .describe('(export, fill) Include built-in skills'),
-        preset: z.enum(['claude', 'gemini', 'codex', 'antigravity', 'all']).optional()
-          .describe('(export) Target AI tool'),
-        force: z.boolean().optional()
-          .describe('(scaffold, export) Overwrite existing'),
-      }
-    }, wrap('skill', async (params): Promise<MCPToolResponse> => {
-      return handleSkill(params as SkillParams, { repoPath: this.getRepoPath() });
-    }));
+    if (this.hasTool('skill')) {
+      this.server.registerTool('skill', {
+        description: 'List, read, scaffold, or export skills.',
+        inputSchema: {
+          action: z.enum(['list', 'getContent', 'getForPhase', 'scaffold', 'export', 'fill']).describe('Action'),
+          skillSlug: z.string().optional().describe('Skill slug'),
+          phase: z.enum(['P', 'R', 'E', 'V', 'C']).optional().describe('Phase'),
+          skills: z.array(z.string()).optional().describe('Skills'),
+          includeContent: z.boolean().optional().describe('Include content'),
+          includeBuiltIn: z.boolean().optional().describe('Include built-ins'),
+          preset: z.enum(['claude', 'gemini', 'codex', 'antigravity', 'all']).optional().describe('Preset'),
+          force: z.boolean().optional().describe('Overwrite'),
+        }
+      }, wrap('skill', async (params): Promise<MCPToolResponse> => {
+        return handleSkill(params as SkillParams, { repoPath: this.getRepoPath() });
+      }));
+      registeredCount++;
+    }
 
-    this.log('Registered 9 tools (5 consolidated gateways + 4 dedicated workflow tools)');
+    this.log(`Registered ${registeredCount} MCP tools for ${this.profile} profile`);
   }
 
   /**
@@ -540,7 +387,7 @@ Actions:
       'codebase-context',
       `context://codebase/{contextType}`,
       {
-        description: 'Semantic context for the codebase. Use contextType: documentation, playbook, plan, or compact',
+        description: 'Codebase context: documentation, playbook, plan, compact.',
         mimeType: 'text/markdown'
       },
       async (uri) => {
@@ -589,7 +436,7 @@ Actions:
       'file-content',
       `file://{path}`,
       {
-        description: 'Read file contents from the repository',
+        description: 'Read a repository file.',
         mimeType: 'text/plain'
       },
       async (uri) => {
@@ -613,7 +460,7 @@ Actions:
       }
     );
 
-    this.log('Registered 2 resource templates');
+    this.log('Registered base MCP resources');
 
     // Register PREVC workflow resources
     this.registerWorkflowResources();
@@ -631,7 +478,7 @@ Actions:
       'workflow-status',
       'workflow://status',
       {
-        description: 'Current PREVC workflow status including phases, roles, and progress',
+        description: 'Current PREVC workflow status.',
         mimeType: 'application/json'
       },
       async () => {
@@ -643,7 +490,7 @@ Actions:
               contents: [{
                 uri: 'workflow://status',
                 mimeType: 'application/json',
-                text: JSON.stringify({ error: 'No workflow found' }, null, 2)
+                text: JSON.stringify({ error: 'No workflow found' })
               }]
             };
           }
@@ -663,7 +510,7 @@ Actions:
                 isComplete: summary.isComplete,
                 phases: status.phases,
                 roles: status.roles,
-              }, null, 2)
+              })
             }]
           };
         } catch (error) {
@@ -673,14 +520,36 @@ Actions:
               mimeType: 'application/json',
               text: JSON.stringify({
                 error: error instanceof Error ? error.message : String(error)
-              }, null, 2)
+              })
             }]
           };
         }
       }
     );
 
-    this.log('Registered 1 workflow resource');
+    this.server.registerResource(
+      'workflow-guide',
+      'workflow://guide/{topic}',
+      {
+        description: 'Workflow help topics: overview, profiles, workflow-init, workflow-status, workflow-advance, workflow-manage.',
+        mimeType: 'text/markdown'
+      },
+      async (uri) => {
+        const match = uri.pathname.match(/\/([^/]+)$/);
+        const topic = (match?.[1] || 'overview') as HelpTopic;
+        const safeTopic = (HELP_TOPICS as readonly string[]).includes(topic) ? topic : 'overview';
+
+        return {
+          contents: [{
+            uri: uri.href,
+            mimeType: 'text/markdown',
+            text: this.buildWorkflowGuide(safeTopic)
+          }]
+        };
+      }
+    );
+
+    this.log('Registered workflow resources');
   }
 
   /**
@@ -772,6 +641,75 @@ Actions:
     const cwd = process.cwd();
     this.log(`Using fallback cwd: ${cwd}`);
     return cwd;
+  }
+
+  private hasTool(toolName: string): boolean {
+    return PROFILE_TOOLSETS[this.profile].has(toolName);
+  }
+
+  private buildWorkflowGuide(topic: HelpTopic): string {
+    const intro = `# dotcontext Workflow Help\n\nProfile: \`${this.profile}\`\n`;
+
+    switch (topic) {
+      case 'profiles':
+        return `${intro}
+## Profiles
+
+- \`standalone\`: full tool surface, including sync and onboarding helpers
+- \`planning\`: trims sync, keeps planning/orchestration tools
+- \`execution\`: lean PREVC loop for status, advance, manage, and plan updates
+
+Set \`DOTCONTEXT_MCP_PROFILE\` or pass \`profile\` to the server constructor to switch profiles.`;
+      case 'workflow-init':
+        return `${intro}
+## workflow-init
+
+Use this after context scaffolding exists.
+
+- Required: \`name\`
+- Common options: \`description\`, \`scale\`, \`autonomous\`
+- Next step: call \`workflow-status\` or \`workflow-advance\``;
+      case 'workflow-status':
+        return `${intro}
+## workflow-status
+
+Poll the active PREVC workflow.
+
+- Use it to inspect the current phase and progress
+- Read \`workflow://status\` when you want the resource form
+- In execution mode this is part of the hot path`;
+      case 'workflow-advance':
+        return `${intro}
+## workflow-advance
+
+Moves the workflow to the next PREVC phase.
+
+- Optional: \`outputs\` for artifacts from the current phase
+- Optional: \`force\` to bypass gates
+- If blocked, inspect gates with \`workflow-manage\``;
+      case 'workflow-manage':
+        return `${intro}
+## workflow-manage
+
+Use for handoffs, approvals, docs, and gate checks.
+
+- \`handoff\`: move work between agents
+- \`getGates\`: inspect blockers
+- \`approvePlan\`: unlock review to execution
+- \`setAutonomous\`: bypass gates temporarily`;
+      case 'overview':
+      default:
+        return `${intro}
+## Runtime Surface
+
+Normal runtime payloads are meant to stay compact. Use these resources when you need extra guidance instead of relying on verbose tool responses.
+
+- \`workflow://guide/profiles\`
+- \`workflow://guide/workflow-init\`
+- \`workflow://guide/workflow-status\`
+- \`workflow://guide/workflow-advance\`
+- \`workflow://guide/workflow-manage\``;
+    }
   }
 
   private wrapWithActionLogging<TParams>(

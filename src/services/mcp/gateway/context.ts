@@ -25,6 +25,7 @@ import type { ContextParams } from './types';
 import type { MCPToolResponse } from './response';
 import { createJsonResponse, createErrorResponse, createTextResponse, createScaffoldResponse } from './response';
 import { toolContext } from './shared';
+import { createHelpResourceRef, resolveResponsePreferences } from './runtime';
 
 export interface ContextOptions {
   repoPath: string;
@@ -38,7 +39,8 @@ export async function handleContext(
   params: ContextParams,
   options: ContextOptions
 ): Promise<MCPToolResponse> {
-   const repoPath = params.repoPath || options.repoPath;
+  const repoPath = params.repoPath || options.repoPath;
+  const responsePrefs = resolveResponsePreferences(params);
 
   try {
     switch (params.action) {
@@ -89,6 +91,8 @@ Skip workflow-init ONLY if making trivial changes (typos, single-line edits).`;
               'RECOMMENDED: Call workflow-init with name parameter after filling files',
               'OPTIONAL: Skip workflow-init only for trivial changes (typos, single edits)'
             ],
+            mode: responsePrefs.mode,
+            helpRef: createHelpResourceRef('scaffolding'),
             repoPath,
           });
         }
@@ -111,6 +115,8 @@ Skip ONLY for trivial changes (typos, single-line edits).`;
             'RECOMMENDED: Call workflow-init with name parameter to enable PREVC phases',
             'OPTIONAL: Skip workflow-init only for trivial changes'
           ],
+          mode: responsePrefs.mode,
+          helpRef: createHelpResourceRef('scaffolding'),
         });
       }
 
@@ -121,7 +127,8 @@ Skip ONLY for trivial changes (typos, single-line edits).`;
             outputDir: params.outputDir,
             target: params.target,
             offset: params.offset,
-            limit: params.limit
+            limit: params.limit,
+            includeContext: params.includeContent,
           },
           toolContext
         );
@@ -130,7 +137,11 @@ Skip ONLY for trivial changes (typos, single-line edits).`;
 
       case 'fillSingle': {
         const result = await fillSingleFileTool.execute!(
-          { repoPath, filePath: params.filePath! },
+          {
+            repoPath,
+            filePath: params.filePath!,
+            includeContext: params.includeContent,
+          },
           toolContext
         );
         return createJsonResponse(result);
@@ -195,7 +206,9 @@ Skip ONLY for trivial changes (typos, single-line edits).`;
             title: params.title,
             summary: params.summary,
             semantic: params.semantic,
-            autoFill: params.autoFill
+            autoFill: params.autoFill,
+            includeContent: params.includeContent,
+            includeInstructions: responsePrefs.mode === 'verbose' || responsePrefs.includeGuidance,
           },
           toolContext
         );
@@ -208,6 +221,8 @@ Skip ONLY for trivial changes (typos, single-line edits).`;
             filesGenerated: 1,
             pendingFiles: [planPath],
             repoPath,
+            mode: responsePrefs.mode,
+            helpRef: createHelpResourceRef('planning'),
           });
         }
 

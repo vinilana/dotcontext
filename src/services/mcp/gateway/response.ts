@@ -24,11 +24,14 @@ export interface MCPToolResponse {
 /**
  * Creates a successful JSON response for MCP tool handlers.
  */
-export function createJsonResponse(data: unknown): MCPToolResponse {
+export function createJsonResponse(
+  data: unknown,
+  options: { pretty?: boolean } = {}
+): MCPToolResponse {
   return {
     content: [{
       type: 'text' as const,
-      text: JSON.stringify(data, null, 2)
+      text: JSON.stringify(data, null, options.pretty ? 2 : undefined)
     }]
   };
 }
@@ -36,14 +39,17 @@ export function createJsonResponse(data: unknown): MCPToolResponse {
 /**
  * Creates an error response for MCP tool handlers.
  */
-export function createErrorResponse(error: unknown): MCPToolResponse {
+export function createErrorResponse(
+  error: unknown,
+  options: { pretty?: boolean } = {}
+): MCPToolResponse {
   return {
     content: [{
       type: 'text' as const,
       text: JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : String(error)
-      }, null, 2)
+      }, null, options.pretty ? 2 : undefined)
     }],
     isError: true
   };
@@ -73,11 +79,27 @@ export function createScaffoldResponse(
     repoPath?: string;
     enhancementPrompt?: string;
     nextSteps?: string[];
+    mode?: 'compact' | 'verbose';
+    helpRef?: string;
   } = {}
 ): MCPToolResponse {
-  const { filesGenerated = 0, pendingFiles = [], repoPath, enhancementPrompt: customPrompt, nextSteps: customNextSteps } = options;
+  const {
+    filesGenerated = 0,
+    pendingFiles = [],
+    repoPath,
+    enhancementPrompt: customPrompt,
+    nextSteps: customNextSteps,
+    mode = 'compact',
+    helpRef,
+  } = options;
   const hasFilesToEnhance = filesGenerated > 0 || pendingFiles.length > 0;
   const hasCustomPrompt = customPrompt || customNextSteps;
+  const nextSteps = customNextSteps || [
+    'Call context({ action: "listToFill" }) to get files needing content',
+    'For each file, call context({ action: "fillSingle", filePath: "..." })',
+    'Generate content based on the semantic context returned',
+    'Write enhanced content using the Write tool',
+  ];
 
   // Build enhanced response with clear action signals
   const enhancedData = {
@@ -89,17 +111,12 @@ export function createScaffoldResponse(
       _actionRequired: true,
       _status: hasCustomPrompt && !hasFilesToEnhance ? 'ready' : 'incomplete',
       _warning: hasCustomPrompt && !hasFilesToEnhance ? 'ACTION SUGGESTED' : 'SCAFFOLDING REQUIRES ENHANCEMENT',
-
-      // Enhancement instructions
-      enhancementPrompt: customPrompt || buildEnhancementPrompt(pendingFiles, repoPath),
-
-      // Clear next steps
-      nextSteps: customNextSteps || [
-        'Call context({ action: "listToFill" }) to get files needing content',
-        'For each file, call context({ action: "fillSingle", filePath: "..." })',
-        'Generate content based on the semantic context returned',
-        'Write enhanced content using the Write tool',
-      ],
+      nextAction: nextSteps[0],
+      ...(helpRef ? { helpRef } : {}),
+      ...(mode === 'verbose' ? {
+        enhancementPrompt: customPrompt || buildEnhancementPrompt(pendingFiles, repoPath),
+        nextSteps,
+      } : {}),
 
       // Files needing enhancement
       ...(pendingFiles.length > 0 && {
@@ -112,7 +129,7 @@ export function createScaffoldResponse(
   return {
     content: [{
       type: 'text' as const,
-      text: JSON.stringify(enhancedData, null, 2)
+      text: JSON.stringify(enhancedData)
     }]
   };
 }

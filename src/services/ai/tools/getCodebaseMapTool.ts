@@ -20,7 +20,8 @@ export const getCodebaseMapTool = tool({
     }
     const repoPath = input.repoPath;
 
-    const section = input.section || 'all';
+    const section = input.section || 'architecture';
+    const defaultSectionApplied = input.section === undefined;
 
     try {
       const mapPath = path.join(repoPath, '.context', 'docs', 'codebase-map.json');
@@ -39,6 +40,10 @@ export const getCodebaseMapTool = tool({
       return {
         success: true,
         section,
+        defaultSectionApplied,
+        explicitAllHint: defaultSectionApplied
+          ? 'Request section: "all" only when you need the full map payload.'
+          : undefined,
         data,
         mapPath
       };
@@ -88,6 +93,6 @@ function extractSection(map: CodebaseMap, section: string): unknown {
     case 'navigation':
       return map.navigation ?? {};
     default:
-      return map;
+      return map.architecture;
   }
 }

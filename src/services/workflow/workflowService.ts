@@ -21,6 +21,7 @@ import {
   PlanApproval,
   GateCheckResult,
   PhaseOrchestration,
+  PhaseExecutionBundleData,
   getScaleName,
   getScaleFromName,
   PHASE_NAMES_PT,
@@ -282,6 +283,13 @@ export class WorkflowService {
    */
   async getPhaseOrchestration(phase: PrevcPhase): Promise<PhaseOrchestration> {
     return this.orchestrator.getPhaseOrchestration(phase);
+  }
+
+  /**
+   * Get the compact execution bundle for a phase.
+   */
+  async getPhaseExecutionBundle(phase: PrevcPhase): Promise<PhaseExecutionBundleData> {
+    return this.orchestrator.getPhaseExecutionBundle(phase);
   }
 
   /**

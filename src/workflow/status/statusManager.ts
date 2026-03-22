@@ -540,6 +540,12 @@ export class PrevcStatusManager {
    * - Initialize agents object for old workflows
    */
   private migrateStatus(status: PrevcStatus): PrevcStatus {
+    const migrationTimestamp =
+      status.phases['R']?.completed_at ||
+      status.phases['E']?.started_at ||
+      status.project.started ||
+      new Date().toISOString();
+
     // Add default settings if missing
     if (!status.project.settings) {
       status.project.settings = getDefaultSettings(status.project.scale);
@@ -561,13 +567,12 @@ export class PrevcStatusManager {
         // Auto-approve if already past R phase (grandfather clause)
         plan_approved: isPastReview,
         approved_by: isPastReview ? 'system-migration' : undefined,
-        approved_at: isPastReview ? new Date().toISOString() : undefined,
+        approved_at: isPastReview ? migrationTimestamp : undefined,
       };
     }
 
     // Initialize execution history if missing (migration from old workflows)
     if (!status.execution) {
-      const now = new Date().toISOString();
       const currentPhase = status.project.current_phase;
       const history: ExecutionHistoryEntry[] = [];
 
@@ -590,7 +595,7 @@ export class PrevcStatusManager {
         }
         if (phaseStatus.status === 'skipped') {
           history.push({
-            timestamp: now,
+            timestamp: migrationTimestamp,
             phase,
             action: 'phase_skipped',
           });
@@ -610,12 +615,12 @@ export class PrevcStatusManager {
 
       status.execution = {
         history: history.length > 0 ? history : [{
-          timestamp: status.project.started || now,
+          timestamp: status.project.started || migrationTimestamp,
           phase: currentPhase,
           action: 'started',
           description: 'Migrated from legacy workflow',
         }],
-        last_activity: history.length > 0 ? history[history.length - 1].timestamp : now,
+        last_activity: history.length > 0 ? history[history.length - 1].timestamp : migrationTimestamp,
         resume_context: resumeContext,
       };
     }

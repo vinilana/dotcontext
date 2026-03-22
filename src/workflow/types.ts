@@ -334,6 +334,21 @@ export interface SkillSuggestion {
 }
 
 /**
+ * Compact execution bundle for a workflow phase.
+ * Used by MCP execution-mode responses and bundle caching.
+ */
+export interface PhaseExecutionBundleData {
+  phase: PrevcPhase;
+  phaseName: string;
+  startWith: string;
+  agentIds: string[];
+  skillIds: string[];
+  docRefs: string[];
+  nextAction: string;
+  hint: string;
+}
+
+/**
  * Tool usage guidance for explicit agent orchestration
  */
 export interface ToolGuidance {

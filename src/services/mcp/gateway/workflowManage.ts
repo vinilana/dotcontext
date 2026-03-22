@@ -10,11 +10,20 @@ import {
   PHASE_NAMES_EN,
   ROLE_DISPLAY_NAMES,
   createPlanLinker,
+  getScaleName,
+  ProjectScale,
 } from '../../../workflow';
 
 import type { PrevcRole } from '../../../workflow';
 import type { MCPToolResponse } from './response';
 import { createJsonResponse, createErrorResponse } from './response';
+import {
+  compactActiveAgents,
+  compactPhaseStates,
+  createHelpResourceRef,
+  executionStateCache,
+  resolveResponsePreferences,
+} from './runtime';
 
 export interface WorkflowManageParams {
   action: 'handoff' | 'collaborate' | 'createDoc' | 'getGates' | 'approvePlan' | 'setAutonomous';
@@ -31,6 +40,10 @@ export interface WorkflowManageParams {
   enabled?: boolean;
   reason?: string;
   repoPath?: string;
+  verbose?: boolean;
+  includeGuidance?: boolean;
+  includeLegacy?: boolean;
+  profile?: string;
 }
 
 export interface WorkflowManageOptions {
@@ -45,6 +58,8 @@ export async function handleWorkflowManage(
   options: WorkflowManageOptions
 ): Promise<MCPToolResponse> {
   try {
+    const responsePrefs = resolveResponsePreferences(params);
+
     // Resolve repo path: use explicit param, then options
     // options.repoPath is guaranteed to be valid by MCP server initialization
     const repoPath = path.resolve(params.repoPath || options.repoPath);
@@ -74,17 +89,44 @@ export async function handleWorkflowManage(
 
         // Get next agent suggestion
         const nextSuggestion = service.getNextAgentSuggestion(params.to);
+        const summary = await service.getSummary();
+        const status = await service.getStatus();
 
-        return createJsonResponse({
+        const response: Record<string, unknown> = {
           success: true,
-          message: `Handoff complete: ${params.from} → ${params.to}`,
           handoff: {
             from: params.from,
             to: params.to,
             artifacts: params.artifacts || [],
           },
-          nextSuggestion,
-        });
+          activeAgent: params.to,
+          revision: executionStateCache.getRevision(repoPath, {
+            success: true,
+            name: summary.name,
+            scale: getScaleName(summary.scale as ProjectScale),
+            currentPhase: {
+              code: summary.currentPhase,
+              name: PHASE_NAMES_EN[summary.currentPhase],
+            },
+            progress: summary.progress,
+            isComplete: summary.isComplete,
+            phases: compactPhaseStates(status.phases),
+            activeAgents: compactActiveAgents(status.agents),
+          }),
+        };
+
+        if (nextSuggestion) {
+          response.nextAction = `Handoff to ${nextSuggestion.agent} when ${params.to} completes.`;
+          if (responsePrefs.includeGuidance || responsePrefs.includeLegacy) {
+            response.nextSuggestion = nextSuggestion;
+          }
+        }
+
+        if (responsePrefs.includeLegacy) {
+          response.message = `Handoff complete: ${params.from} → ${params.to}`;
+        }
+
+        return createJsonResponse(response);
       }
 
       case 'collaborate': {
@@ -94,16 +136,22 @@ export async function handleWorkflowManage(
         );
         const sessionStatus = session.getStatus();
 
-        return createJsonResponse({
+        const response: Record<string, unknown> = {
           success: true,
-          message: `Collaboration session started: ${params.topic}`,
           sessionId: sessionStatus.id,
           topic: sessionStatus.topic,
-          participants: sessionStatus.participants.map((p) => ({
+          participants: sessionStatus.participants,
+        };
+
+        if (responsePrefs.includeLegacy) {
+          response.message = `Collaboration session started: ${params.topic}`;
+          response.participants = sessionStatus.participants.map((p) => ({
             role: p,
             displayName: ROLE_DISPLAY_NAMES[p],
-          })),
-        });
+          }));
+        }
+
+        return createJsonResponse(response);
       }
 
       case 'createDoc': {
@@ -119,7 +167,6 @@ export async function handleWorkflowManage(
 
         return createJsonResponse({
           success: true,
-          message: `Document template ready: ${params.type}`,
           documentType: params.type,
           suggestedPath: docPath,
           name: params.docName,
@@ -140,28 +187,37 @@ export async function handleWorkflowManage(
         const approval = await service.getApproval();
         const summary = await service.getSummary();
 
-        return createJsonResponse({
+        const response: Record<string, unknown> = {
           success: true,
           currentPhase: {
             code: summary.currentPhase,
             name: PHASE_NAMES_EN[summary.currentPhase],
           },
           canAdvance: gateResult.canAdvance,
-          gates: gateResult.gates,
-          blockingReason: gateResult.blockingReason,
-          hint: gateResult.hint,
-          settings: {
+          ...(gateResult.blockingReason ? { blockingReason: gateResult.blockingReason } : {}),
+          ...(gateResult.hint ? { hint: gateResult.hint } : {}),
+          helpRef: createHelpResourceRef('gates'),
+        };
+
+        if (responsePrefs.includeGuidance || responsePrefs.includeLegacy) {
+          response.settings = {
             autonomous_mode: settings.autonomous_mode,
             require_plan: settings.require_plan,
             require_approval: settings.require_approval,
-          },
-          approval: approval ? {
+          };
+          response.approval = approval ? {
             plan_created: approval.plan_created,
             plan_approved: approval.plan_approved,
             approved_by: approval.approved_by,
             approved_at: approval.approved_at,
-          } : null,
-        });
+          } : null;
+        }
+
+        if (responsePrefs.includeLegacy) {
+          response.gates = gateResult.gates;
+        }
+
+        return createJsonResponse(response);
       }
 
       case 'approvePlan': {
@@ -200,9 +256,11 @@ export async function handleWorkflowManage(
 
         const gateResult = await service.checkGates();
 
+        const summary = await service.getSummary();
+        const status = await service.getStatus();
+
         return createJsonResponse({
           success: true,
-          message: 'Plan approved successfully',
           approval: {
             plan_approved: approval.plan_approved,
             approved_by: approval.approved_by,
@@ -210,6 +268,20 @@ export async function handleWorkflowManage(
             approval_notes: approval.approval_notes,
           },
           canAdvanceToExecution: gateResult.gates.approval_required.passed,
+          revision: executionStateCache.getRevision(repoPath, {
+            success: true,
+            name: summary.name,
+            scale: getScaleName(summary.scale as ProjectScale),
+            currentPhase: {
+              code: summary.currentPhase,
+              name: PHASE_NAMES_EN[summary.currentPhase],
+            },
+            progress: summary.progress,
+            isComplete: summary.isComplete,
+            phases: compactPhaseStates(status.phases),
+            activeAgents: compactActiveAgents(status.agents),
+          }),
+          ...(responsePrefs.includeLegacy ? { message: 'Plan approved successfully' } : {}),
         });
       }
 
@@ -224,17 +296,37 @@ export async function handleWorkflowManage(
 
         const settings = await service.setAutonomousMode(params.enabled!);
 
+        const summary = await service.getSummary();
+        const status = await service.getStatus();
+
         return createJsonResponse({
           success: true,
-          message: `Autonomous mode ${params.enabled ? 'enabled' : 'disabled'}${params.reason ? `: ${params.reason}` : ''}`,
           settings: {
             autonomous_mode: settings.autonomous_mode,
             require_plan: settings.require_plan,
             require_approval: settings.require_approval,
           },
-          effect: params.enabled
-            ? 'All workflow gates are now bypassed. Use workflow-advance() freely.'
-            : 'Workflow gates are now enforced based on settings.',
+          revision: executionStateCache.getRevision(repoPath, {
+            success: true,
+            name: summary.name,
+            scale: getScaleName(summary.scale as ProjectScale),
+            currentPhase: {
+              code: summary.currentPhase,
+              name: PHASE_NAMES_EN[summary.currentPhase],
+            },
+            progress: summary.progress,
+            isComplete: summary.isComplete,
+            phases: compactPhaseStates(status.phases),
+            activeAgents: compactActiveAgents(status.agents),
+          }),
+          ...(responsePrefs.includeGuidance || responsePrefs.includeLegacy ? {
+            effect: params.enabled
+              ? 'All workflow gates are now bypassed. Use workflow-advance() freely.'
+              : 'Workflow gates are now enforced based on settings.',
+          } : {}),
+          ...(responsePrefs.includeLegacy ? {
+            message: `Autonomous mode ${params.enabled ? 'enabled' : 'disabled'}${params.reason ? `: ${params.reason}` : ''}`,
+          } : {}),
         });
       }
 
