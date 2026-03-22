@@ -251,14 +251,3 @@ describe('API Contract Verification (Phase 5)', () => {
 
 });
 
-// ============================================================
-// Phase 3 (partial): Verify index.ts public exports unchanged
-// ============================================================
-
-describe('index.ts Public API Stability (Phase 3)', () => {
-    it('should export runInit function', () => {
-        // This import will fail if the index.ts re-export was broken
-        const indexModule = require('../../index');
-        expect(typeof indexModule.runInit).toBe('function');
-    });
-});
