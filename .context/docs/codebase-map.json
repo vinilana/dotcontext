@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generated": "2026-01-16T17:40:03.364Z",
+  "generated": "2026-03-18T21:32:49.263Z",
   "stack": {
     "primaryLanguage": "typescript",
     "languages": [
@@ -15,80 +15,43 @@
     "packageManager": "npm",
     "isMonorepo": false,
     "hasDocker": false,
-    "hasCI": true
+    "hasCI": true,
+    "nodeVersion": ">=20.0.0",
+    "runtimeEnvironment": "node"
   },
   "structure": {
-    "totalFiles": 210,
+    "totalFiles": 255,
+    "rootPath": ".",
     "topDirectories": [
       {
-        "name": "AGENTS.md",
-        "fileCount": 1
-      },
-      {
-        "name": "CHANGELOG.md",
-        "fileCount": 1
-      },
-      {
-        "name": "CLAUDE.md",
-        "fileCount": 1
-      },
-      {
-        "name": "CONTRIBUTING.md",
-        "fileCount": 1
-      },
-      {
         "name": "docs",
-        "fileCount": 1
-      },
-      {
-        "name": "example-documentation.ts",
-        "fileCount": 1
-      },
-      {
-        "name": "jest.config.js",
-        "fileCount": 1
-      },
-      {
-        "name": "LICENSE",
-        "fileCount": 1
-      },
-      {
-        "name": "package-lock.json",
-        "fileCount": 1
-      },
-      {
-        "name": "package.json",
-        "fileCount": 1
+        "fileCount": 1,
+        "description": "Documentation files"
       },
       {
         "name": "prompts",
-        "fileCount": 2
-      },
-      {
-        "name": "README.md",
-        "fileCount": 1
+        "fileCount": 2,
+        "description": "Prompt templates"
       },
       {
         "name": "scripts",
-        "fileCount": 1
+        "fileCount": 1,
+        "description": "Build and utility scripts"
       },
       {
         "name": "src",
-        "fileCount": 195
-      },
-      {
-        "name": "tsconfig.json",
-        "fileCount": 1
+        "fileCount": 240,
+        "description": "Source code root"
       }
     ],
     "languageDistribution": [
       {
         "extension": ".ts",
-        "count": 196
+        "count": 240
       },
       {
         "extension": ".md",
-        "count": 8
+        "count": 9
       },
       {
         "extension": ".json",
@@ -119,12 +82,17 @@
           "src/utils",
           "src/utils/prompts",
           "src/generators/shared",
-          "src/generators/documentation/templates"
+          "src/generators/shared/structures",
+          "src/generators/documentation/templates",
+          "src/generators/shared/structures/skills",
+          "src/generators/shared/structures/plans",
+          "src/generators/shared/structures/documentation",
+          "src/generators/shared/structures/agents"
         ],
-        "symbolCount": 66,
+        "symbolCount": 84,
         "dependsOn": [
           "Services",
-          "Controllers"
+          "Generators"
         ]
       },
       {
@@ -145,6 +113,7 @@
           "src/services/reverseSync",
           "src/services/report",
           "src/services/quickSync",
+          "src/services/qa",
           "src/services/plan",
           "src/services/passthrough",
           "src/services/mcp",
@@ -152,14 +121,17 @@
           "src/services/import",
           "src/services/fill",
           "src/services/export",
+          "src/services/autoFill",
           "src/services/ai",
+          "src/services/shared/__tests__",
           "src/services/semantic/treeSitter",
           "src/services/semantic/lsp",
+          "src/services/mcp/gateway",
           "src/services/ai/tools",
           "src/services/ai/prompts",
           "src/services/ai/agents"
         ],
-        "symbolCount": 382,
+        "symbolCount": 475,
         "dependsOn": [
           "Config",
           "Generators",
@@ -179,33 +151,12 @@
           "src/generators/documentation/templates",
           "src/generators/agents/templates"
         ],
-        "symbolCount": 75,
+        "symbolCount": 51,
         "dependsOn": [
           "Config",
           "Utils",
-          "Services",
-          "Controllers"
+          "Services"
         ]
-      },
-      {
-        "name": "Repositories",
-        "description": "Data access and persistence",
-        "directories": [
-          "src/generators/documentation/templates"
-        ],
-        "symbolCount": 3,
-        "dependsOn": [
-          "Controllers"
-        ]
-      },
-      {
-        "name": "Controllers",
-        "description": "Request handling and routing",
-        "directories": [
-          "src/generators/documentation/templates"
-        ],
-        "symbolCount": 1,
-        "dependsOn": []
       }
     ],
     "patterns": [
@@ -219,7 +170,7 @@
         "name": "Service Layer",
         "confidence": 0.85,
         "description": "Encapsulates business logic in service classes",
-        "occurrences": 19
+        "occurrences": 22
       },
       {
         "name": "Builder",
@@ -234,6 +185,7 @@
       "src/workflow/skills/index.ts",
       "src/workflow/plans/index.ts",
       "src/workflow/orchestration/index.ts",
+      "src/workflow/gates/index.ts",
       "src/workflow/agents/index.ts",
       "src/utils/prompts/index.ts",
       "src/services/workflow/index.ts",
@@ -248,10 +200,12 @@
       "src/services/reverseSync/index.ts",
       "src/services/report/index.ts",
       "src/services/quickSync/index.ts",
+      "src/services/qa/index.ts",
       "src/services/passthrough/index.ts",
       "src/services/mcp/index.ts",
       "src/services/import/index.ts",
       "src/services/export/index.ts",
+      "src/services/autoFill/index.ts",
       "src/services/ai/index.ts",
       "src/generators/skills/index.ts",
       "src/generators/shared/index.ts",
@@ -260,11 +214,66 @@
       "src/generators/agents/index.ts",
       "src/services/semantic/treeSitter/index.ts",
       "src/services/semantic/lsp/index.ts",
+      "src/services/mcp/gateway/index.ts",
       "src/services/ai/tools/index.ts",
       "src/services/ai/prompts/index.ts",
       "src/services/ai/agents/index.ts",
+      "src/generators/shared/structures/index.ts",
       "src/generators/documentation/templates/index.ts",
-      "src/generators/agents/templates/index.ts"
+      "src/generators/agents/templates/index.ts",
+      "src/generators/shared/structures/skills/index.ts",
+      "src/generators/shared/structures/plans/index.ts",
+      "src/generators/shared/structures/documentation/index.ts",
+      "src/generators/shared/structures/agents/index.ts"
+    ],
+    "mainEntryPoints": [
+      "src/index.ts"
+    ],
+    "moduleExports": [
+      "src/workflow/index.ts",
+      "src/workflow/skills/index.ts",
+      "src/workflow/plans/index.ts",
+      "src/workflow/orchestration/index.ts",
+      "src/workflow/gates/index.ts",
+      "src/workflow/agents/index.ts",
+      "src/utils/prompts/index.ts",
+      "src/services/workflow/index.ts",
+      "src/services/update/index.ts",
+      "src/services/sync/index.ts",
+      "src/services/state/index.ts",
+      "src/services/start/index.ts",
+      "src/services/stack/index.ts",
+      "src/services/shared/index.ts",
+      "src/services/serve/index.ts",
+      "src/services/semantic/index.ts",
+      "src/services/reverseSync/index.ts",
+      "src/services/report/index.ts",
+      "src/services/quickSync/index.ts",
+      "src/services/qa/index.ts",
+      "src/services/passthrough/index.ts",
+      "src/services/mcp/index.ts",
+      "src/services/import/index.ts",
+      "src/services/export/index.ts",
+      "src/services/autoFill/index.ts",
+      "src/services/ai/index.ts",
+      "src/generators/skills/index.ts",
+      "src/generators/shared/index.ts",
+      "src/generators/plans/index.ts",
+      "src/generators/documentation/index.ts",
+      "src/generators/agents/index.ts",
+      "src/services/semantic/treeSitter/index.ts",
+      "src/services/semantic/lsp/index.ts",
+      "src/services/mcp/gateway/index.ts",
+      "src/services/ai/tools/index.ts",
+      "src/services/ai/prompts/index.ts",
+      "src/services/ai/agents/index.ts",
+      "src/generators/shared/structures/index.ts",
+      "src/generators/documentation/templates/index.ts",
+      "src/generators/agents/templates/index.ts",
+      "src/generators/shared/structures/skills/index.ts",
+      "src/generators/shared/structures/plans/index.ts",
+      "src/generators/shared/structures/documentation/index.ts",
+      "src/generators/shared/structures/agents/index.ts"
     ]
   },
   "symbols": {
@@ -273,7 +282,7 @@
         "name": "AgentGenerator",
         "kind": "class",
         "file": "src/generators/agents/agentGenerator.ts",
-        "line": 58,
+        "line": 65,
         "exported": true
       },
       {
@@ -312,6 +321,13 @@
         "exported": true
       },
       {
+        "name": "AutoFillService",
+        "kind": "class",
+        "file": "src/services/autoFill/autoFillService.ts",
+        "line": 26,
+        "exported": true
+      },
+      {
         "name": "CLIInterface",
         "kind": "class",
         "file": "src/utils/cliUI.ts",
@@ -319,17 +335,10 @@
         "exported": true
       },
       {
-        "name": "CodebaseAnalyzer",
-        "kind": "class",
-        "file": "src/services/semantic/codebaseAnalyzer.ts",
-        "line": 33,
-        "exported": true
-      },
-      {
         "name": "CodebaseMapGenerator",
         "kind": "class",
         "file": "src/generators/documentation/codebaseMapGenerator.ts",
-        "line": 95,
+        "line": 192,
         "exported": true
       },
       {
@@ -378,7 +387,7 @@
         "name": "DocumentationGenerator",
         "kind": "class",
         "file": "src/generators/documentation/documentationGenerator.ts",
-        "line": 101,
+        "line": 63,
         "exported": true
       },
       {
@@ -420,7 +429,7 @@
         "name": "GitService",
         "kind": "class",
         "file": "src/utils/gitService.ts",
-        "line": 18,
+        "line": 24,
         "exported": true
       },
       {
@@ -448,7 +457,7 @@
         "name": "InitService",
         "kind": "class",
         "file": "src/services/init/initService.ts",
-        "line": 43,
+        "line": 52,
         "exported": true
       },
       {
@@ -466,157 +475,17 @@
         "exported": true
       },
       {
-        "name": "PlanAgent",
+        "name": "MCPInstallService",
         "kind": "class",
-        "file": "src/services/ai/agents/planAgent.ts",
-        "line": 42,
+        "file": "src/services/mcp/mcpInstallService.ts",
+        "line": 416,
         "exported": true
       },
       {
-        "name": "PlanGenerator",
+        "name": "NoPlanToApproveError",
         "kind": "class",
-        "file": "src/generators/plans/planGenerator.ts",
-        "line": 32,
-        "exported": true
-      },
-      {
-        "name": "PlanLinker",
-        "kind": "class",
-        "file": "src/workflow/plans/planLinker.ts",
-        "line": 32,
-        "exported": true
-      },
-      {
-        "name": "PlanService",
-        "kind": "class",
-        "file": "src/services/plan/planService.ts",
-        "line": 58,
-        "exported": true
-      },
-      {
-        "name": "PlaybookAgent",
-        "kind": "class",
-        "file": "src/services/ai/agents/playbookAgent.ts",
-        "line": 56,
-        "exported": true
-      },
-      {
-        "name": "PrevcOrchestrator",
-        "kind": "class",
-        "file": "src/workflow/orchestrator.ts",
-        "line": 24,
-        "exported": true
-      },
-      {
-        "name": "PrevcStatusManager",
-        "kind": "class",
-        "file": "src/workflow/status/statusManager.ts",
-        "line": 33,
-        "exported": true
-      },
-      {
-        "name": "QuickSyncService",
-        "kind": "class",
-        "file": "src/services/quickSync/quickSyncService.ts",
-        "line": 59,
-        "exported": true
-      },
-      {
-        "name": "ReportService",
-        "kind": "class",
-        "file": "src/services/report/reportService.ts",
-        "line": 86,
-        "exported": true
-      },
-      {
-        "name": "ReverseQuickSyncService",
-        "kind": "class",
-        "file": "src/services/reverseSync/reverseQuickSyncService.ts",
-        "line": 32,
-        "exported": true
-      },
-      {
-        "name": "RulesDetector",
-        "kind": "class",
-        "file": "src/services/import/rulesDetector.ts",
-        "line": 7,
-        "exported": true
-      },
-      {
-        "name": "SemanticContextBuilder",
-        "kind": "class",
-        "file": "src/services/semantic/contextBuilder.ts",
-        "line": 44,
-        "exported": true
-      },
-      {
-        "name": "ServeService",
-        "kind": "class",
-        "file": "src/services/serve/serveService.ts",
-        "line": 23,
-        "exported": true
-      },
-      {
-        "name": "SkillAgent",
-        "kind": "class",
-        "file": "src/services/ai/agents/skillAgent.ts",
-        "line": 53,
-        "exported": true
-      },
-      {
-        "name": "SkillExportService",
-        "kind": "class",
-        "file": "src/services/export/skillExportService.ts",
-        "line": 70,
-        "exported": true
-      },
-      {
-        "name": "SkillFillService",
-        "kind": "class",
-        "file": "src/services/fill/skillFillService.ts",
-        "line": 67,
-        "exported": true
-      },
-      {
-        "name": "SkillGenerator",
-        "kind": "class",
-        "file": "src/generators/skills/skillGenerator.ts",
-        "line": 44,
-        "exported": true
-      },
-      {
-        "name": "SkillRegistry",
-        "kind": "class",
-        "file": "src/workflow/skills/skillRegistry.ts",
-        "line": 26,
-        "exported": true
-      },
-      {
-        "name": "SkillsDetector",
-        "kind": "class",
-        "file": "src/services/reverseSync/skillsDetector.ts",
-        "line": 14,
-        "exported": true
-      },
-      {
-        "name": "StackDetector",
-        "kind": "class",
-        "file": "src/services/stack/stackDetector.ts",
-        "line": 180,
-        "exported": true
-      },
-      {
-        "name": "StartService",
-        "kind": "class",
-        "file": "src/services/start/startService.ts",
-        "line": 53,
-        "exported": true
-      },
-      {
-        "name": "StateDetector",
-        "kind": "class",
-        "file": "src/services/state/stateDetector.ts",
-        "line": 40,
+        "file": "src/workflow/errors.ts",
+        "line": 47,
         "exported": true
       }
     ],
@@ -633,6 +502,13 @@
         "kind": "interface",
         "file": "src/services/ai/agentEvents.ts",
         "line": 31,
+        "exported": true
+      },
+      {
+        "name": "AgentDefaultContent",
+        "kind": "interface",
+        "file": "src/generators/shared/structures/agents/factory.ts",
+        "line": 10,
         "exported": true
       },
       {
@@ -653,7 +529,7 @@
         "name": "AgentLineupEntry",
         "kind": "interface",
         "file": "src/workflow/plans/types.ts",
-        "line": 131,
+        "line": 137,
         "exported": true
       },
       {
@@ -661,6 +537,20 @@
         "kind": "interface",
         "file": "src/workflow/agents/agentRegistry.ts",
         "line": 36,
+        "exported": true
+      },
+      {
+        "name": "AgentOptions",
+        "kind": "interface",
+        "file": "src/services/mcp/gateway/agent.ts",
+        "line": 23,
+        "exported": true
+      },
+      {
+        "name": "AgentParams",
+        "kind": "interface",
+        "file": "src/services/mcp/gateway/types.ts",
+        "line": 113,
         "exported": true
       },
       {
@@ -678,10 +568,24 @@
         "exported": true
       },
       {
+        "name": "AgentSequenceStep",
+        "kind": "interface",
+        "file": "src/workflow/types.ts",
+        "line": 320,
+        "exported": true
+      },
+      {
         "name": "AgentStartEvent",
         "kind": "interface",
         "file": "src/services/ai/agentEvents.ts",
         "line": 7,
+        "exported": true
+      },
+      {
+        "name": "AgentStatus",
+        "kind": "interface",
+        "file": "src/workflow/types.ts",
+        "line": 114,
         "exported": true
       },
       {
@@ -696,6 +600,13 @@
         "kind": "interface",
         "file": "src/generators/agents/templates/types.ts",
         "line": 16,
+        "exported": true
+      },
+      {
+        "name": "AgentUpdate",
+        "kind": "interface",
+        "file": "src/workflow/types.ts",
+        "line": 281,
         "exported": true
       },
       {
@@ -716,14 +627,14 @@
         "name": "AnalyzerOptions",
         "kind": "interface",
         "file": "src/services/semantic/types.ts",
-        "line": 120,
+        "line": 187,
         "exported": true
       },
       {
         "name": "ArchitectureInfo",
         "kind": "interface",
         "file": "src/services/semantic/types.ts",
-        "line": 80,
+        "line": 147,
         "exported": true
       },
       {
@@ -738,6 +649,13 @@
         "kind": "interface",
         "file": "src/services/workflow/autoAdvance.ts",
         "line": 16,
+        "exported": true
+      },
+      {
+        "name": "AutoFillContext",
+        "kind": "interface",
+        "file": "src/services/autoFill/autoFillService.ts",
+        "line": 14,
         "exported": true
       },
       {
@@ -772,203 +690,14 @@
         "name": "CodebaseMap",
         "kind": "interface",
         "file": "src/generators/documentation/codebaseMapGenerator.ts",
-        "line": 27,
+        "line": 40,
         "exported": true
       },
       {
         "name": "CodebaseMapOptions",
         "kind": "interface",
         "file": "src/generators/documentation/codebaseMapGenerator.ts",
-        "line": 87,
-        "exported": true
-      },
-      {
-        "name": "CodebaseSnapshot",
-        "kind": "interface",
-        "file": "src/generators/plans/templates/types.ts",
-        "line": 11,
-        "exported": true
-      },
-      {
-        "name": "CollaborationStatus",
-        "kind": "interface",
-        "file": "src/workflow/types.ts",
-        "line": 187,
-        "exported": true
-      },
-      {
-        "name": "CollaborationSynthesis",
-        "kind": "interface",
-        "file": "src/workflow/types.ts",
-        "line": 198,
-        "exported": true
-      },
-      {
-        "name": "CommandRouterOptions",
-        "kind": "interface",
-        "file": "src/services/passthrough/commandRouter.ts",
-        "line": 98,
-        "exported": true
-      },
-      {
-        "name": "ConfigSummary",
-        "kind": "interface",
-        "file": "src/utils/prompts/types.ts",
-        "line": 28,
-        "exported": true
-      },
-      {
-        "name": "ContentType",
-        "kind": "interface",
-        "file": "src/services/shared/contentTypeRegistry.ts",
-        "line": 12,
-        "exported": true
-      },
-      {
-        "name": "ContextBuilderOptions",
-        "kind": "interface",
-        "file": "src/services/semantic/contextBuilder.ts",
-        "line": 18,
-        "exported": true
-      },
-      {
-        "name": "ContextExportOptions",
-        "kind": "interface",
-        "file": "src/services/export/contextExportService.ts",
-        "line": 21,
-        "exported": true
-      },
-      {
-        "name": "ContextExportResult",
-        "kind": "interface",
-        "file": "src/services/export/contextExportService.ts",
-        "line": 44,
-        "exported": true
-      },
-      {
-        "name": "ContextPaths",
-        "kind": "interface",
-        "file": "src/services/shared/pathHelpers.ts",
-        "line": 14,
-        "exported": true
-      },
-      {
-        "name": "Contribution",
-        "kind": "interface",
-        "file": "src/workflow/types.ts",
-        "line": 178,
-        "exported": true
-      },
-      {
-        "name": "CreateStatusOptions",
-        "kind": "interface",
-        "file": "src/workflow/status/templates.ts",
-        "line": 34,
-        "exported": true
-      },
-      {
-        "name": "DependencyInfo",
-        "kind": "interface",
-        "file": "src/services/semantic/types.ts",
-        "line": 75,
-        "exported": true
-      },
-      {
-        "name": "DetectedPattern",
-        "kind": "interface",
-        "file": "src/services/semantic/types.ts",
-        "line": 68,
-        "exported": true
-      },
-      {
-        "name": "DetectionResult",
-        "kind": "interface",
-        "file": "src/services/shared/types.ts",
-        "line": 57,
-        "exported": true
-      },
-      {
-        "name": "DetectionResult",
-        "kind": "interface",
-        "file": "src/services/import/types.ts",
-        "line": 79,
-        "exported": true
-      },
-      {
-        "name": "DirectoryStat",
-        "kind": "interface",
-        "file": "src/generators/documentation/templates/types.ts",
-        "line": 11,
-        "exported": true
-      },
-      {
-        "name": "DiscoveredAgents",
-        "kind": "interface",
-        "file": "src/workflow/agents/agentRegistry.ts",
-        "line": 48,
-        "exported": true
-      },
-      {
-        "name": "DiscoveredSkills",
-        "kind": "interface",
-        "file": "src/workflow/skills/types.ts",
-        "line": 59,
-        "exported": true
-      },
-      {
-        "name": "DocGuide",
-        "kind": "interface",
-        "file": "src/workflow/orchestration/documentLinker.ts",
-        "line": 29,
-        "exported": true
-      },
-      {
-        "name": "DocScaffoldFrontmatter",
-        "kind": "interface",
-        "file": "src/types/scaffoldFrontmatter.ts",
-        "line": 42,
-        "exported": true
-      },
-      {
-        "name": "DocTouchpoint",
-        "kind": "interface",
-        "file": "src/generators/agents/templates/types.ts",
-        "line": 4,
-        "exported": true
-      },
-      {
-        "name": "DocumentationAgentOptions",
-        "kind": "interface",
-        "file": "src/services/ai/agents/documentationAgent.ts",
-        "line": 14,
-        "exported": true
-      },
-      {
-        "name": "DocumentationAgentResult",
-        "kind": "interface",
-        "file": "src/services/ai/agents/documentationAgent.ts",
-        "line": 29,
-        "exported": true
-      },
-      {
-        "name": "DocumentationTemplateContext",
-        "kind": "interface",
-        "file": "src/generators/documentation/templates/types.ts",
-        "line": 16,
-        "exported": true
-      },
-      {
-        "name": "DryRunOptions",
-        "kind": "interface",
-        "file": "src/services/shared/types.ts",
-        "line": 65,
-        "exported": true
-      },
-      {
-        "name": "ErrorResponse",
-        "kind": "interface",
-        "file": "src/services/passthrough/protocol.ts",
-        "line": 127,
+        "line": 108,
         "exported": true
       }
     ],
@@ -1040,7 +769,7 @@
         "name": "cleanupSharedContext",
         "kind": "function",
         "file": "src/services/ai/tools/fillScaffoldingTool.ts",
-        "line": 37,
+        "line": 56,
         "exported": true
       },
       {
@@ -1055,6 +784,13 @@
         "kind": "function",
         "file": "src/workflow/agents/agentRegistry.ts",
         "line": 220,
+        "exported": true
+      },
+      {
+        "name": "createAgentStructure",
+        "kind": "function",
+        "file": "src/generators/shared/structures/agents/factory.ts",
+        "line": 44,
         "exported": true
       },
       {
@@ -1079,13 +815,6 @@
         "exported": true
       },
       {
-        "name": "createEnterpriseProjectStatus",
-        "kind": "function",
-        "file": "src/workflow/status/templates.ts",
-        "line": 165,
-        "exported": true
-      },
-      {
         "name": "createErrorResponse",
         "kind": "function",
         "file": "src/services/passthrough/protocol.ts",
@@ -1093,17 +822,38 @@
         "exported": true
       },
       {
+        "name": "createErrorResponse",
+        "kind": "function",
+        "file": "src/services/mcp/gateway/response.ts",
+        "line": 39,
+        "exported": true
+      },
+      {
+        "name": "createGateChecker",
+        "kind": "function",
+        "file": "src/workflow/gates/gateChecker.ts",
+        "line": 252,
+        "exported": true
+      },
+      {
         "name": "createInitialStatus",
         "kind": "function",
         "file": "src/workflow/status/templates.ts",
-        "line": 44,
+        "line": 97,
+        "exported": true
+      },
+      {
+        "name": "createJsonResponse",
+        "kind": "function",
+        "file": "src/services/mcp/gateway/response.ts",
+        "line": 27,
         "exported": true
       },
       {
         "name": "createLargeProjectStatus",
         "kind": "function",
         "file": "src/workflow/status/templates.ts",
-        "line": 153,
+        "line": 192,
         "exported": true
       },
       {
@@ -1117,7 +867,7 @@
         "name": "createMediumProjectStatus",
         "kind": "function",
         "file": "src/workflow/status/templates.ts",
-        "line": 141,
+        "line": 180,
         "exported": true
       },
       {
@@ -1125,13 +875,6 @@
         "kind": "function",
         "file": "src/types/scaffoldFrontmatter.ts",
         "line": 198,
-        "exported": true
-      },
-      {
-        "name": "createPlanLinker",
-        "kind": "function",
-        "file": "src/workflow/plans/planLinker.ts",
-        "line": 577,
         "exported": true
       },
       {
@@ -1152,7 +895,7 @@
         "name": "createQuickFlowStatus",
         "kind": "function",
         "file": "src/workflow/status/templates.ts",
-        "line": 117,
+        "line": 156,
         "exported": true
       },
       {
@@ -1168,168 +911,21 @@
         "file": "src/services/reverseSync/reverseQuickSyncService.ts",
         "line": 288,
         "exported": true
-      },
-      {
-        "name": "createSkillFrontmatter",
-        "kind": "function",
-        "file": "src/types/scaffoldFrontmatter.ts",
-        "line": 171,
-        "exported": true
-      },
-      {
-        "name": "createSkillGenerator",
-        "kind": "function",
-        "file": "src/generators/skills/skillGenerator.ts",
-        "line": 197,
-        "exported": true
-      },
-      {
-        "name": "createSkillRegistry",
-        "kind": "function",
-        "file": "src/workflow/skills/skillRegistry.ts",
-        "line": 261,
-        "exported": true
-      },
-      {
-        "name": "createSmallProjectStatus",
-        "kind": "function",
-        "file": "src/workflow/status/templates.ts",
-        "line": 129,
-        "exported": true
-      },
-      {
-        "name": "createStdinReader",
-        "kind": "function",
-        "file": "src/services/passthrough/stdinReader.ts",
-        "line": 130,
-        "exported": true
-      },
-      {
-        "name": "createSuccessResponse",
-        "kind": "function",
-        "file": "src/services/passthrough/protocol.ts",
-        "line": 211,
-        "exported": true
-      },
-      {
-        "name": "createSymlinks",
-        "kind": "function",
-        "file": "src/services/sync/symlinkHandler.ts",
-        "line": 5,
-        "exported": true
-      },
-      {
-        "name": "createToolCallNotification",
-        "kind": "function",
-        "file": "src/services/passthrough/protocol.ts",
-        "line": 248,
-        "exported": true
-      },
-      {
-        "name": "createToolResultNotification",
-        "kind": "function",
-        "file": "src/services/passthrough/protocol.ts",
-        "line": 261,
-        "exported": true
-      },
-      {
-        "name": "createUnfilledFrontMatter",
-        "kind": "function",
-        "file": "src/utils/frontMatter.ts",
-        "line": 157,
-        "exported": true
-      },
-      {
-        "name": "deduplicatePaths",
-        "kind": "function",
-        "file": "src/services/shared/pathHelpers.ts",
-        "line": 118,
-        "exported": true
-      },
-      {
-        "name": "detectCLILibraries",
-        "kind": "function",
-        "file": "src/services/stack/projectTypeClassifier.ts",
-        "line": 275,
-        "exported": true
-      },
-      {
-        "name": "detectProjectScale",
-        "kind": "function",
-        "file": "src/workflow/scaling.ts",
-        "line": 138,
-        "exported": true
-      },
-      {
-        "name": "detectProviderFromEnv",
-        "kind": "function",
-        "file": "src/services/ai/providerFactory.ts",
-        "line": 89,
-        "exported": true
-      },
-      {
-        "name": "detectSmartDefaults",
-        "kind": "function",
-        "file": "src/utils/prompts/smartDefaults.ts",
-        "line": 15,
-        "exported": true
-      },
-      {
-        "name": "displayConfigSummary",
-        "kind": "function",
-        "file": "src/utils/prompts/configSummary.ts",
-        "line": 8,
-        "exported": true
-      },
-      {
-        "name": "displayOperationSummary",
-        "kind": "function",
-        "file": "src/services/shared/uiHelpers.ts",
-        "line": 67,
-        "exported": true
-      },
-      {
-        "name": "displayPhaseIndicator",
-        "kind": "function",
-        "file": "src/services/shared/uiHelpers.ts",
-        "line": 144,
-        "exported": true
-      },
-      {
-        "name": "displayProgressBar",
-        "kind": "function",
-        "file": "src/services/shared/uiHelpers.ts",
-        "line": 111,
-        "exported": true
-      },
-      {
-        "name": "ensureDirectory",
-        "kind": "function",
-        "file": "src/services/shared/pathHelpers.ts",
-        "line": 59,
-        "exported": true
-      },
-      {
-        "name": "ensureParentDirectory",
-        "kind": "function",
-        "file": "src/services/shared/pathHelpers.ts",
-        "line": 66,
-        "exported": true
-      },
-      {
-        "name": "extractFinalContent",
-        "kind": "function",
-        "file": "src/utils/contentSanitizer.ts",
-        "line": 276,
-        "exported": true
       }
     ],
     "types": [
       {
+        "name": "AgentAction",
+        "kind": "type",
+        "file": "src/services/mcp/gateway/types.ts",
+        "line": 20,
+        "exported": true
+      },
+      {
         "name": "AgentPlaybook",
         "kind": "type",
         "file": "src/services/ai/schemas.ts",
-        "line": 433,
+        "line": 439,
         "exported": true
       },
       {
@@ -1371,14 +967,14 @@
         "name": "AnalyzeSymbolsInput",
         "kind": "type",
         "file": "src/services/ai/schemas.ts",
-        "line": 424,
+        "line": 430,
         "exported": true
       },
       {
         "name": "AnalyzeSymbolsOutput",
         "kind": "type",
         "file": "src/services/ai/schemas.ts",
-        "line": 425,
+        "line": 431,
         "exported": true
       },
       {
@@ -1413,14 +1009,21 @@
         "name": "CheckScaffoldingInput",
         "kind": "type",
         "file": "src/services/ai/schemas.ts",
-        "line": 414,
+        "line": 420,
         "exported": true
       },
       {
         "name": "CheckScaffoldingOutput",
         "kind": "type",
         "file": "src/services/ai/schemas.ts",
-        "line": 415,
+        "line": 421,
+        "exported": true
+      },
+      {
+        "name": "ContextAction",
+        "kind": "type",
+        "file": "src/services/mcp/gateway/types.ts",
+        "line": 17,
         "exported": true
       },
       {
@@ -1441,14 +1044,14 @@
         "name": "ContextFormat",
         "kind": "type",
         "file": "src/services/semantic/contextBuilder.ts",
-        "line": 29,
+        "line": 30,
         "exported": true
       },
       {
         "name": "DevelopmentPlan",
         "kind": "type",
         "file": "src/services/ai/schemas.ts",
-        "line": 434,
+        "line": 440,
         "exported": true
       },
       {
@@ -1462,7 +1065,7 @@
         "name": "DocumentationOutput",
         "kind": "type",
         "file": "src/services/ai/schemas.ts",
-        "line": 432,
+        "line": 438,
         "exported": true
       },
       {
@@ -1470,6 +1073,20 @@
         "kind": "type",
         "file": "src/services/passthrough/protocol.ts",
         "line": 284,
+        "exported": true
+      },
+      {
+        "name": "ExecutionAction",
+        "kind": "type",
+        "file": "src/workflow/types.ts",
+        "line": 166,
+        "exported": true
+      },
+      {
+        "name": "ExploreAction",
+        "kind": "type",
+        "file": "src/services/mcp/gateway/types.ts",
+        "line": 16,
         "exported": true
       },
       {
@@ -1483,196 +1100,28 @@
         "name": "FillScaffoldingInput",
         "kind": "type",
         "file": "src/services/ai/tools/fillScaffoldingTool.ts",
-        "line": 234,
+        "line": 265,
         "exported": true
       },
       {
         "name": "FillSingleFileInput",
         "kind": "type",
         "file": "src/services/ai/tools/fillScaffoldingTool.ts",
-        "line": 158,
+        "line": 177,
         "exported": true
       },
       {
-        "name": "GetCodebaseMapInput",
+        "name": "FunctionalPatternType",
         "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 430,
+        "file": "src/services/semantic/types.ts",
+        "line": 79,
         "exported": true
       },
       {
-        "name": "GetCodebaseMapOutput",
-        "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 431,
-        "exported": true
-      },
-      {
-        "name": "GetFileStructureInput",
-        "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 426,
-        "exported": true
-      },
-      {
-        "name": "GetFileStructureOutput",
-        "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 427,
-        "exported": true
-      },
-      {
-        "name": "ImportAction",
-        "kind": "type",
-        "file": "src/services/reverseSync/types.ts",
-        "line": 169,
-        "exported": true
-      },
-      {
-        "name": "ImportContentType",
-        "kind": "type",
-        "file": "src/services/reverseSync/types.ts",
-        "line": 174,
-        "exported": true
-      },
-      {
-        "name": "ImportFormat",
-        "kind": "type",
-        "file": "src/services/import/types.ts",
-        "line": 16,
-        "exported": true
-      },
-      {
-        "name": "InitializeContextInput",
-        "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 416,
-        "exported": true
-      },
-      {
-        "name": "InitializeContextOutput",
-        "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 417,
-        "exported": true
-      },
-      {
-        "name": "InteractiveMode",
-        "kind": "type",
-        "file": "src/utils/prompts/types.ts",
-        "line": 3,
-        "exported": true
-      },
-      {
-        "name": "ListFilesInput",
-        "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 422,
-        "exported": true
-      },
-      {
-        "name": "ListFilesOutput",
-        "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 423,
-        "exported": true
-      },
-      {
-        "name": "ListFilesToFillInput",
-        "kind": "type",
-        "file": "src/services/ai/tools/fillScaffoldingTool.ts",
-        "line": 56,
-        "exported": true
-      },
-      {
-        "name": "MergeStrategy",
-        "kind": "type",
-        "file": "src/services/reverseSync/types.ts",
-        "line": 16,
-        "exported": true
-      },
-      {
-        "name": "Notification",
-        "kind": "type",
-        "file": "src/services/passthrough/protocol.ts",
-        "line": 182,
-        "exported": true
-      },
-      {
-        "name": "PresetName",
-        "kind": "type",
-        "file": "src/services/sync/types.ts",
-        "line": 6,
-        "exported": true
-      },
-      {
-        "name": "PrevcPhase",
+        "name": "GateType",
         "kind": "type",
         "file": "src/workflow/types.ts",
-        "line": 15,
-        "exported": true
-      },
-      {
-        "name": "PrevcRole",
-        "kind": "type",
-        "file": "src/workflow/types.ts",
-        "line": 20,
-        "exported": true
-      },
-      {
-        "name": "ProjectState",
-        "kind": "type",
-        "file": "src/services/state/stateDetector.ts",
-        "line": 16,
-        "exported": true
-      },
-      {
-        "name": "ProjectType",
-        "kind": "type",
-        "file": "src/services/stack/projectTypeClassifier.ts",
-        "line": 22,
-        "exported": true
-      },
-      {
-        "name": "ProjectTypeSchema",
-        "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 295,
-        "exported": true
-      },
-      {
-        "name": "PromptSource",
-        "kind": "type",
-        "file": "src/utils/promptLoader.ts",
-        "line": 8,
-        "exported": true
-      },
-      {
-        "name": "ProviderInstance",
-        "kind": "type",
-        "file": "src/services/ai/providerFactory.ts",
-        "line": 6,
-        "exported": true
-      },
-      {
-        "name": "ReadFileInput",
-        "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 420,
-        "exported": true
-      },
-      {
-        "name": "ReadFileOutput",
-        "kind": "type",
-        "file": "src/services/ai/schemas.ts",
-        "line": 421,
-        "exported": true
-      },
-      {
-        "name": "ReportServiceDependencies",
-        "kind": "type",
-        "file": "src/services/report/reportService.ts",
-        "line": 25,
+        "line": 145,
         "exported": true
       }
     ],
@@ -1709,10 +1158,24 @@
       "exported": true
     },
     {
+      "name": "AgentAction",
+      "kind": "type",
+      "file": "src/services/mcp/gateway/types.ts",
+      "line": 20,
+      "exported": true
+    },
+    {
       "name": "AgentCompleteEvent",
       "kind": "interface",
       "file": "src/services/ai/agentEvents.ts",
       "line": 31,
+      "exported": true
+    },
+    {
+      "name": "AgentDefaultContent",
+      "kind": "interface",
+      "file": "src/generators/shared/structures/agents/factory.ts",
+      "line": 10,
       "exported": true
     },
     {
@@ -1733,14 +1196,14 @@
       "name": "AgentGenerator",
       "kind": "class",
       "file": "src/generators/agents/agentGenerator.ts",
-      "line": 58,
+      "line": 65,
       "exported": true
     },
     {
       "name": "AgentLineupEntry",
       "kind": "interface",
       "file": "src/workflow/plans/types.ts",
-      "line": 131,
+      "line": 137,
       "exported": true
     },
     {
@@ -1751,6 +1214,13 @@
       "exported": true
     },
     {
+      "name": "AgentOptions",
+      "kind": "interface",
+      "file": "src/services/mcp/gateway/agent.ts",
+      "line": 23,
+      "exported": true
+    },
+    {
       "name": "AgentOrchestrator",
       "kind": "class",
       "file": "src/workflow/orchestration/agentOrchestrator.ts",
@@ -1758,10 +1228,17 @@
       "exported": true
     },
     {
+      "name": "AgentParams",
+      "kind": "interface",
+      "file": "src/services/mcp/gateway/types.ts",
+      "line": 113,
+      "exported": true
+    },
+    {
       "name": "AgentPlaybook",
       "kind": "type",
       "file": "src/services/ai/schemas.ts",
-      "line": 433,
+      "line": 439,
       "exported": true
     },
     {
@@ -1800,10 +1277,24 @@
       "exported": true
     },
     {
+      "name": "AgentSequenceStep",
+      "kind": "interface",
+      "file": "src/workflow/types.ts",
+      "line": 320,
+      "exported": true
+    },
+    {
       "name": "AgentStartEvent",
       "kind": "interface",
       "file": "src/services/ai/agentEvents.ts",
       "line": 7,
+      "exported": true
+    },
+    {
+      "name": "AgentStatus",
+      "kind": "interface",
+      "file": "src/workflow/types.ts",
+      "line": 114,
       "exported": true
     },
     {
@@ -1842,289 +1333,301 @@
       "exported": true
     },
     {
+      "name": "AgentUpdate",
+      "kind": "interface",
+      "file": "src/workflow/types.ts",
+      "line": 281,
+      "exported": true
+    },
+    {
       "name": "AIDependencies",
       "kind": "interface",
       "file": "src/services/shared/types.ts",
       "line": 23,
-      "exported": true
-    },
-    {
-      "name": "AIProvider",
-      "kind": "type",
-      "file": "src/types.ts",
-      "line": 25,
-      "exported": true
-    },
-    {
-      "name": "AISdkClient",
-      "kind": "class",
-      "file": "src/services/ai/aiSdkClient.ts",
-      "line": 8,
-      "exported": true
-    },
-    {
-      "name": "AnalysisOptions",
-      "kind": "interface",
-      "file": "src/utils/prompts/types.ts",
-      "line": 38,
-      "exported": true
-    },
-    {
-      "name": "AnalyzerOptions",
-      "kind": "interface",
-      "file": "src/services/semantic/types.ts",
-      "line": 120,
-      "exported": true
-    },
-    {
-      "name": "AnalyzeSymbolsInput",
-      "kind": "type",
-      "file": "src/services/ai/schemas.ts",
-      "line": 424,
-      "exported": true
-    },
-    {
-      "name": "AnalyzeSymbolsOutput",
-      "kind": "type",
-      "file": "src/services/ai/schemas.ts",
-      "line": 425,
-      "exported": true
-    },
-    {
-      "name": "ArchitectureInfo",
-      "kind": "interface",
-      "file": "src/services/semantic/types.ts",
-      "line": 80,
-      "exported": true
-    },
-    {
-      "name": "ArchitectureLayer",
-      "kind": "interface",
-      "file": "src/services/semantic/types.ts",
-      "line": 60,
-      "exported": true
-    },
-    {
-      "name": "AutoAdvanceDetector",
-      "kind": "class",
-      "file": "src/services/workflow/autoAdvance.ts",
-      "line": 78,
-      "exported": true
-    },
-    {
-      "name": "AutoAdvanceResult",
-      "kind": "interface",
-      "file": "src/services/workflow/autoAdvance.ts",
-      "line": 16,
-      "exported": true
-    },
-    {
-      "name": "BaseDependencies",
-      "kind": "interface",
-      "file": "src/services/shared/types.ts",
-      "line": 14,
-      "exported": true
-    },
-    {
-      "name": "BaseRequest",
-      "kind": "type",
-      "file": "src/services/passthrough/protocol.ts",
-      "line": 19,
-      "exported": true
-    },
-    {
-      "name": "BaseScaffoldFrontmatter",
-      "kind": "interface",
-      "file": "src/types/scaffoldFrontmatter.ts",
-      "line": 24,
-      "exported": true
-    },
-    {
-      "name": "buildDocumentMapTable",
-      "kind": "function",
-      "file": "src/generators/documentation/templates/common.ts",
-      "line": 57,
-      "exported": true
-    },
-    {
-      "name": "buildExtensionPattern",
-      "kind": "function",
-      "file": "src/services/shared/globPatterns.ts",
-      "line": 124,
-      "exported": true
-    },
-    {
-      "name": "buildSymbolList",
-      "kind": "function",
-      "file": "src/generators/documentation/templates/common.ts",
-      "line": 168,
-      "exported": true
-    },
-    {
-      "name": "buildSymbolTable",
-      "kind": "function",
-      "file": "src/generators/documentation/templates/common.ts",
-      "line": 125,
-      "exported": true
-    },
-    {
-      "name": "BuiltInAgentType",
-      "kind": "type",
-      "file": "src/workflow/agents/agentRegistry.ts",
-      "line": 31,
-      "exported": true
-    },
-    {
-      "name": "BuiltInSkillType",
-      "kind": "type",
-      "file": "src/workflow/skills/types.ts",
-      "line": 81,
-      "exported": true
-    },
-    {
-      "name": "CapabilitiesData",
-      "kind": "interface",
-      "file": "src/services/passthrough/protocol.ts",
-      "line": 198,
-      "exported": true
-    },
-    {
-      "name": "CapabilitiesRequest",
-      "kind": "type",
-      "file": "src/services/passthrough/protocol.ts",
-      "line": 98,
-      "exported": true
-    },
-    {
-      "name": "checkForUpdates",
-      "kind": "function",
-      "file": "src/utils/versionChecker.ts",
-      "line": 31,
-      "exported": true
-    },
-    {
-      "name": "CheckScaffoldingInput",
-      "kind": "type",
-      "file": "src/services/ai/schemas.ts",
-      "line": 414,
-      "exported": true
-    },
-    {
-      "name": "CheckScaffoldingOutput",
-      "kind": "type",
-      "file": "src/services/ai/schemas.ts",
-      "line": 415,
-      "exported": true
-    },
-    {
-      "name": "checkSymlinkSupport",
-      "kind": "function",
-      "file": "src/services/sync/symlinkHandler.ts",
-      "line": 83,
-      "exported": true
-    },
-    {
-      "name": "classifyProject",
-      "kind": "function",
-      "file": "src/services/stack/projectTypeClassifier.ts",
-      "line": 122,
-      "exported": true
-    },
-    {
-      "name": "cleanupSharedContext",
-      "kind": "function",
-      "file": "src/services/ai/tools/fillScaffoldingTool.ts",
-      "line": 37,
       "exported": true
     }
   ],
   "dependencies": {
     "mostImported": [
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/types.ts",
-        "importedBy": 26
+        "file": "src/types.ts",
+        "importedBy": 26,
+        "description": "Type definitions"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/utils/i18n.ts",
-        "importedBy": 25
+        "file": "src/utils/i18n.ts",
+        "importedBy": 25,
+        "description": "Shared utilities and helpers"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/workflow/types.ts",
-        "importedBy": 19
+        "file": "src/workflow/types.ts",
+        "importedBy": 21,
+        "description": "Type definitions"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/utils/cliUI.ts",
-        "importedBy": 19
+        "file": "src/utils/cliUI.ts",
+        "importedBy": 20,
+        "description": "Shared utilities and helpers"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/services/ai/schemas.ts",
-        "importedBy": 16
+        "file": "src/services/mcp/gateway/response.ts",
+        "importedBy": 20
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/utils/theme.ts",
-        "importedBy": 15
+        "file": "src/generators/shared/structures/types.ts",
+        "importedBy": 19,
+        "description": "Type definitions"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/generators/documentation/templates/common.ts",
-        "importedBy": 14
+        "file": "src/services/ai/schemas.ts",
+        "importedBy": 16,
+        "description": "AI/LLM integration"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/services/semantic/index.ts",
-        "importedBy": 13
+        "file": "src/utils/theme.ts",
+        "importedBy": 15,
+        "description": "Shared utilities and helpers"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/services/ai/agentEvents.ts",
-        "importedBy": 12
+        "file": "src/workflow/index.ts",
+        "importedBy": 13,
+        "description": "workflow module exports"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/generators/agents/agentTypes.ts",
-        "importedBy": 11
+        "file": "src/services/ai/agentEvents.ts",
+        "importedBy": 12,
+        "description": "AI/LLM integration"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/services/import/types.ts",
-        "importedBy": 9
+        "file": "src/services/semantic/index.ts",
+        "importedBy": 12,
+        "description": "semantic module exports"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/services/ai/providerFactory.ts",
-        "importedBy": 8
+        "file": "src/services/semantic/types.ts",
+        "importedBy": 11,
+        "description": "Type definitions"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/services/shared/index.ts",
-        "importedBy": 8
+        "file": "src/generators/agents/agentTypes.ts",
+        "importedBy": 10,
+        "description": "AI agent definitions"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/generators/documentation/templates/types.ts",
-        "importedBy": 8
+        "file": "src/services/ai/tools/index.ts",
+        "importedBy": 9,
+        "description": "Module exports"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/utils/fileMapper.ts",
-        "importedBy": 7
+        "file": "src/services/shared/index.ts",
+        "importedBy": 9,
+        "description": "shared module exports"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/services/ai/tools/index.ts",
-        "importedBy": 6
+        "file": "src/services/import/types.ts",
+        "importedBy": 9,
+        "description": "Type definitions"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/services/semantic/types.ts",
-        "importedBy": 6
+        "file": "src/services/ai/providerFactory.ts",
+        "importedBy": 8,
+        "description": "AI/LLM integration"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/workflow/skills/index.ts",
-        "importedBy": 6
+        "file": "src/utils/fileMapper.ts",
+        "importedBy": 7,
+        "description": "Shared utilities and helpers"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/utils/contentSanitizer.ts",
-        "importedBy": 5
+        "file": "src/workflow/skills/index.ts",
+        "importedBy": 7,
+        "description": "skills module exports"
       },
       {
-        "file": "/home/aicoders/workspace/ai-coders-context/src/services/sync/types.ts",
-        "importedBy": 5
+        "file": "src/services/workflow/index.ts",
+        "importedBy": 7,
+        "description": "workflow module exports"
       }
     ]
   },
   "stats": {
-    "totalSymbols": 664,
-    "exportedSymbols": 541,
-    "analysisTimeMs": 868
+    "totalSymbols": 773,
+    "exportedSymbols": 650,
+    "analysisTimeMs": 1165
+  },
+  "keyFiles": [
+    {
+      "path": "src/index.ts",
+      "description": "Main library entry point",
+      "category": "entrypoint"
+    },
+    {
+      "path": "src/workflow/agents/index.ts",
+      "description": "agents module exports",
+      "category": "entrypoint"
+    },
+    {
+      "path": "src/workflow/gates/index.ts",
+      "description": "Module exports",
+      "category": "entrypoint"
+    },
+    {
+      "path": "src/workflow/index.ts",
+      "description": "workflow module exports",
+      "category": "entrypoint"
+    },
+    {
+      "path": "src/workflow/orchestration/index.ts",
+      "description": "Module exports",
+      "category": "entrypoint"
+    },
+    {
+      "path": "src/workflow/plans/index.ts",
+      "description": "plans module exports",
+      "category": "entrypoint"
+    },
+    {
+      "path": "src/workflow/skills/index.ts",
+      "description": "skills module exports",
+      "category": "entrypoint"
+    },
+    {
+      "path": "jest.config.js",
+      "description": "Tool configuration",
+      "category": "config"
+    },
+    {
+      "path": "package.json",
+      "description": "Package manifest",
+      "category": "config"
+    },
+    {
+      "path": "tsconfig.json",
+      "description": "TypeScript configuration",
+      "category": "config"
+    },
+    {
+      "path": "src/generators/agents/templates/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/generators/documentation/templates/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/generators/plans/templates/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/generators/shared/structures/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/services/import/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/services/mcp/gateway/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/services/reverseSync/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/services/semantic/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/services/shared/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/services/sync/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/utils/prompts/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/workflow/plans/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/workflow/skills/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/workflow/types.ts",
+      "description": "Type definitions",
+      "category": "types"
+    },
+    {
+      "path": "src/services/ai/agents/index.ts",
+      "description": "agents module exports",
+      "category": "service"
+    },
+    {
+      "path": "src/services/ai/index.ts",
+      "description": "ai module exports",
+      "category": "service"
+    },
+    {
+      "path": "src/services/ai/prompts/index.ts",
+      "description": "prompts module exports",
+      "category": "service"
+    },
+    {
+      "path": "src/services/ai/tools/index.ts",
+      "description": "Module exports",
+      "category": "service"
+    },
+    {
+      "path": "src/services/autoFill/autoFillService.ts",
+      "description": "Service class",
+      "category": "service"
+    }
+  ],
+  "navigation": {
+    "tests": "**/__tests__/**/*.ts",
+    "config": [
+      "package.json",
+      "tsconfig.json",
+      "jest.config.js"
+    ],
+    "types": [
+      "src/types.ts",
+      "src/workflow/types.ts",
+      "src/workflow/skills/types.ts",
+      "src/workflow/plans/types.ts",
+      "src/utils/prompts/types.ts",
+      "src/services/sync/types.ts",
+      "src/services/shared/types.ts",
+      "src/services/semantic/types.ts",
+      "src/services/reverseSync/types.ts",
+      "src/services/import/types.ts"
+    ],
+    "mainLogic": [
+      "src/services"
+    ]
   }
 }

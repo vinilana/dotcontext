@@ -30,7 +30,6 @@ export class ImportRulesService {
   async run(rawOptions: ImportRulesCommandFlags, repoPath: string = process.cwd()): Promise<void> {
     const options = await this.resolveOptions(rawOptions, repoPath);
 
-    this.ui.displayWelcome(this.version);
     this.displayConfig(options);
 
     // Detect rules

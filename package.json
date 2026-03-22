@@ -1,10 +1,10 @@
 {
-  "name": "@ai-coders/context",
-  "version": "0.7.1",
-  "description": "CLI tool for generating codebase documentation and AI agent prompts",
+  "name": "@dotcontext/cli",
+  "version": "0.8.0",
+  "description": "MCP-first toolkit for AI context workflow, sync, imports, and orchestration",
   "main": "dist/index.js",
   "bin": {
-    "ai-context": "dist/index.js"
+    "dotcontext": "dist/index.js"
   },
   "files": [
     "dist/**/*",
@@ -16,7 +16,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "jest",
@@ -32,11 +32,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vinilana/ai-coders-context.git"
+    "url": "git+https://github.com/vinilana/dotcontext.git"
   },
-  "homepage": "https://github.com/vinilana/ai-coders-context#readme",
+  "homepage": "https://github.com/vinilana/dotcontext#readme",
   "bugs": {
-    "url": "https://github.com/vinilana/ai-coders-context/issues"
+    "url": "https://github.com/vinilana/dotcontext/issues"
   },
   "keywords": [
     "cli",
@@ -57,10 +57,10 @@
     "chalk": "^4.1.2",
     "cli-progress": "^3.12.0",
     "commander": "^14.0.1",
-    "dotenv": "^17.2.2",
     "figures": "^3.2.0",
     "fs-extra": "^11.3.2",
     "glob": "^10.4.5",
+    "ignore": "^7.0.5",
     "inquirer": "^12.6.3",
     "ora": "^5.4.1",
     "semver": "^7.6.3",

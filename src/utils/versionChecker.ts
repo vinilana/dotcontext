@@ -17,7 +17,7 @@ interface VersionCheckOptions {
 
 const DEFAULT_TIMEOUT_MS = 2000;
 
-const DISABLE_ENV_FLAGS = ['AI_CONTEXT_DISABLE_UPDATE_CHECK', 'NO_UPDATE_NOTIFIER'];
+const DISABLE_ENV_FLAGS = ['DOTCONTEXT_DISABLE_UPDATE_CHECK', 'NO_UPDATE_NOTIFIER'];
 
 async function fetchLatestVersion(packageName: string, timeoutMs: number): Promise<string> {
   const url = `https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`;

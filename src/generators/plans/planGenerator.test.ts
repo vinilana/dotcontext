@@ -14,7 +14,7 @@ describe('PlanGenerator', () => {
   let generator: PlanGenerator;
 
   beforeEach(async () => {
-    tempDir = await createTempOutput('ai-context-plans-');
+    tempDir = await createTempOutput('dotcontext-plans-');
     outputDir = path.join(tempDir, '.context');
     generator = new PlanGenerator();
   });

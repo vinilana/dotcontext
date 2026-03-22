@@ -29,7 +29,6 @@ export class ImportAgentsService {
   async run(rawOptions: ImportAgentsCommandFlags, repoPath: string = process.cwd()): Promise<void> {
     const options = await this.resolveOptions(rawOptions, repoPath);
 
-    this.ui.displayWelcome(this.version);
     this.displayConfig(options);
 
     // Detect agents

@@ -18,7 +18,6 @@ export interface QuickSyncServiceDependencies {
   ui: CLIInterface;
   t: TranslateFn;
   version: string;
-  defaultModel?: string;
 }
 
 export interface QuickSyncOptions {
@@ -60,13 +59,11 @@ export class QuickSyncService {
   private readonly ui: CLIInterface;
   private readonly t: TranslateFn;
   private readonly version: string;
-  private readonly defaultModel: string;
 
   constructor(deps: QuickSyncServiceDependencies) {
     this.ui = deps.ui;
     this.t = deps.t;
     this.version = deps.version;
-    this.defaultModel = deps.defaultModel || 'anthropic/claude-sonnet-4';
   }
 
   /**

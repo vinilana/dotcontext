@@ -92,19 +92,22 @@ export const typography = {
 } as const;
 
 // Inquirer prompt theme configuration
+// Compatible with @inquirer/core Theme interface
 export const promptTheme = {
   prefix: {
     idle: colors.accent(symbols.pointer),
     done: colors.success(symbols.success),
   },
-  pointer: colors.accent(symbols.pointer),
   style: {
-    answer: colors.primary,
-    message: colors.primary,
-    error: colors.error,
-    defaultAnswer: colors.secondaryDim,
-    help: colors.secondaryDim,
-    highlight: colors.accent,
-    key: colors.accent,
+    answer: (text: string) => colors.primary(text),
+    message: (text: string, _status: string) => colors.primary(text),
+    error: (text: string) => colors.error(text),
+    defaultAnswer: (text: string) => colors.secondaryDim(text),
+    help: (text: string) => colors.secondaryDim(text),
+    highlight: (text: string) => colors.accent(text),
+    key: (text: string) => colors.accent(text),
   },
-} as const;
+  icon: {
+    cursor: colors.accent(symbols.pointer),
+  },
+};

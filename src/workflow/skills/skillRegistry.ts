@@ -23,6 +23,9 @@ import { PrevcPhase } from '../types';
 /** Default skills directory path */
 const SKILLS_DIR = '.context/skills';
 
+/** Secondary skills directory (cross-client interoperability) */
+const AGENTS_SKILLS_DIR = '.agents/skills';
+
 export class SkillRegistry {
   private readonly repoPath: string;
   private readonly contextPath: string;
@@ -117,40 +120,62 @@ export class SkillRegistry {
   }
 
   /**
-   * Discover custom skills from .context/skills/
+   * Discover custom skills from .context/skills/ and .agents/skills/
+   *
+   * Skills from .context/skills/ take precedence over .agents/skills/
+   * on name collisions (project-level skills override cross-client ones).
    */
   private discoverCustomSkills(): Skill[] {
     const skills: Skill[] = [];
+    const discoveredSlugs = new Set<string>();
 
-    if (!fs.existsSync(this.contextPath)) {
-      return skills;
+    // 1. Discover from .context/skills/ (highest priority)
+    this.discoverSkillsFromDirectory(this.contextPath, skills, discoveredSlugs);
+
+    // 2. Discover from .agents/skills/ (lower priority, skip collisions)
+    const agentsSkillsPath = path.join(this.repoPath, AGENTS_SKILLS_DIR);
+    this.discoverSkillsFromDirectory(agentsSkillsPath, skills, discoveredSlugs);
+
+    return skills;
+  }
+
+  /**
+   * Discover custom skills from a specific directory
+   */
+  private discoverSkillsFromDirectory(
+    dirPath: string,
+    skills: Skill[],
+    discoveredSlugs: Set<string>
+  ): void {
+    if (!fs.existsSync(dirPath)) {
+      return;
     }
 
     try {
-      const entries = fs.readdirSync(this.contextPath, { withFileTypes: true });
+      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
 
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
 
         const slug = entry.name;
 
-        // Skip built-in skills (already handled)
+        // Skip built-in skills (already handled) and already-discovered slugs
         if (isBuiltInSkill(slug)) continue;
+        if (discoveredSlugs.has(slug)) continue;
 
-        const skillPath = path.join(this.contextPath, slug, 'SKILL.md');
+        const skillPath = path.join(dirPath, slug, 'SKILL.md');
 
         if (fs.existsSync(skillPath)) {
           const skill = this.parseSkillFile(skillPath, slug, false);
           if (skill) {
             skills.push(skill);
+            discoveredSlugs.add(slug);
           }
         }
       }
     } catch (error) {
-      console.error('Failed to discover custom skills:', error);
+      console.error(`Failed to discover custom skills from ${dirPath}:`, error);
     }
-
-    return skills;
   }
 
   /**

@@ -69,7 +69,7 @@ describe('AgentGenerator', () => {
   const generator = new AgentGenerator();
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ai-context-agents-'));
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'dotcontext-agents-'));
     outputDir = path.join(tempDir, '.context');
   });
 
