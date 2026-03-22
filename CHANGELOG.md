@@ -55,6 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Irrelevant QA docs**: Removed `api-endpoints.md` (no REST API), `deployment.md` (npm package, not deployed service), and `testing.md` (redundant with `testing-strategy.md`).
 
+### Acknowledgements
+
+Special thanks to [@LorranHippolyte](https://github.com/LorranHippolyte) and [@jeansassi](https://github.com/jeansassi) for their massive contributions through pull requests.
+
 ## [0.7.1]
 
 ### Included Pull Requests
