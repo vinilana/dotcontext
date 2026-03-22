@@ -678,7 +678,7 @@ Match tasks to appropriate agents:
 
 ### Getting Help
 
-- [GitHub Issues](https://github.com/vinilana/ai-coders-context/issues)
+- [GitHub Issues](https://github.com/vinilana/dotcontext/issues)
 - Run `npx @dotcontext/cli --help` for CLI options
 
 ---

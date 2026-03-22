@@ -32,11 +32,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vinilana/ai-coders-context.git"
+    "url": "git+https://github.com/vinilana/dotcontext.git"
   },
-  "homepage": "https://github.com/vinilana/ai-coders-context#readme",
+  "homepage": "https://github.com/vinilana/dotcontext#readme",
   "bugs": {
-    "url": "https://github.com/vinilana/ai-coders-context/issues"
+    "url": "https://github.com/vinilana/dotcontext/issues"
   },
   "keywords": [
     "cli",

@@ -129,11 +129,11 @@ Special thanks to [@LorranHippolyte](https://github.com/LorranHippolyte) and [@j
 
 ### Included Pull Requests
 
-- [#31](https://github.com/vinilana/ai-coders-context/pull/31) - fix: exclude venv from semantic analysis
+- [#31](https://github.com/vinilana/dotcontext/pull/31) - fix: exclude venv from semantic analysis
   - Excludes `venv/` and `.venv/` from semantic analysis by default to avoid noisy Python environment paths.
   - Persists user-defined `exclude` patterns during `init`, so `fillSingle` uses project-specific exclusions.
   - Aligns semantic analysis to shared default exclude patterns for consistent behavior across tools.
-- [#23](https://github.com/vinilana/ai-coders-context/pull/23) - [Fix] Auto-fill files without LLMs
+- [#23](https://github.com/vinilana/dotcontext/pull/23) - [Fix] Auto-fill files without LLMs
   - Adds project-type-aware filtering so generated scaffolding better matches CLI, web, backend, and other stacks.
   - Introduces static `defaultContent` across docs, agents, and skills, enabling usable output without LLM enhancement.
   - Replaces placeholder scaffold content with practical starter templates.

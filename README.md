@@ -1,7 +1,7 @@
 # @dotcontext/cli
 
 [![npm version](https://badge.fury.io/js/@dotcontext%2Fcli.svg)](https://www.npmjs.com/package/@dotcontext/cli)
-[![CI](https://github.com/vinilana/ai-coders-context/actions/workflows/ci.yml/badge.svg)](https://github.com/vinilana/ai-coders-context/actions/workflows/ci.yml)
+[![CI](https://github.com/vinilana/dotcontext/actions/workflows/ci.yml/badge.svg)](https://github.com/vinilana/dotcontext/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Formerly `@ai-coders/context`.** Renamed to avoid confusion with Context7 and other "context" tools in the AI space. The `.context/` directory standard is unchanged. See [Migration Guide](#migration-from-ai-coderscontext).
