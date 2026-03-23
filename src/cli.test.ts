@@ -29,6 +29,12 @@ describe('CLI Commands', () => {
       expect(output).toMatch(/\d+\.\d+\.\d+/);
     });
 
+    it('should match version from package.json', () => {
+      const output = execSync(`node ${cliPath} --version`, { encoding: 'utf8' }).trim();
+      const packageJson = require('../package.json');
+      expect(output).toBe(packageJson.version);
+    });
+
     it('should render the splash preview command', () => {
       const output = execSync(
         `FORCE_COLOR=0 node ${cliPath} preview-splash --title "AI Coders CLI" --directory ${process.cwd()}`,
