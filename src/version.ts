@@ -12,10 +12,23 @@ type PackageMetadata = {
   name: string;
 };
 
+let cachedPackageMetadata: PackageMetadata | null = null;
+
 function loadPackageMetadata(): PackageMetadata {
-  const packageJsonPath = path.resolve(__dirname, '../package.json');
-  const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf8');
-  return JSON.parse(packageJsonContent) as PackageMetadata;
+  if (cachedPackageMetadata) {
+    return cachedPackageMetadata;
+  }
+
+  try {
+    const packageJsonPath = path.resolve(__dirname, '../package.json');
+    const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf8');
+    cachedPackageMetadata = JSON.parse(packageJsonContent) as PackageMetadata;
+    return cachedPackageMetadata;
+  } catch (error) {
+    throw new Error(
+      `Failed to load package metadata from package.json: ${(error as Error).message}`
+    );
+  }
 }
 
 const pkg = loadPackageMetadata();

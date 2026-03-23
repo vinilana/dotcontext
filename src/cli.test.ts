@@ -1,5 +1,6 @@
 import { execSync } from 'child_process';
 import * as path from 'path';
+import { VERSION } from './version';
 
 describe('CLI Commands', () => {
   const cliPath = path.join(__dirname, '../dist/index.js');
@@ -31,8 +32,7 @@ describe('CLI Commands', () => {
 
     it('should match version from package.json', () => {
       const output = execSync(`node ${cliPath} --version`, { encoding: 'utf8' }).trim();
-      const packageJson = require('../package.json');
-      expect(output).toBe(packageJson.version);
+      expect(output).toBe(VERSION);
     });
 
     it('should render the splash preview command', () => {
