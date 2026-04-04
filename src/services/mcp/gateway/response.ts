@@ -96,6 +96,7 @@ export function createScaffoldResponse(
       // Clear next steps
       nextSteps: customNextSteps || [
         'Call context({ action: "listToFill" }) to get files needing content',
+        'Follow required order: docs -> skills -> agents',
         'For each file, call context({ action: "fillSingle", filePath: "..." })',
         'Generate content based on the semantic context returned',
         'Write enhanced content using the Write tool',
@@ -132,9 +133,10 @@ Files to enhance:
 ${filesList}${moreFiles}
 
 REQUIRED WORKFLOW:
-1. Call context({ action: "fillSingle", filePath: "<file>" }) for each file
-2. Use the returned semantic context to generate rich content
-3. Write the enhanced content to the file
+1. Fill files in order: docs -> skills -> agents
+2. Call context({ action: "fillSingle", filePath: "<file>" }) for each file
+3. Use the returned semantic context to generate rich content
+4. Write the enhanced content to the file
 
 ${repoPath ? `Repository: ${repoPath}` : ''}
 

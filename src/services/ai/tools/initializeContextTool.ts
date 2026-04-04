@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import * as path from 'path';
 import * as fs from 'fs-extra';
+import { glob } from 'glob';
 import { InitializeContextInputSchema, type InitializeContextInput, type RequiredAction } from '../schemas';
 import { FileMapper } from '../../../utils/fileMapper';
 import { DocumentationGenerator } from '../../../generators/documentation/documentationGenerator';
@@ -176,7 +177,7 @@ The AI agent MUST then fill each generated file using the provided context and i
       interface FileInfo {
         path: string;
         relativePath: string;
-        type: 'doc' | 'agent';
+        type: 'doc' | 'skill' | 'agent';
         fillInstructions: string;
       }
       const generatedFiles: FileInfo[] = [];
@@ -206,6 +207,36 @@ The AI agent MUST then fill each generated file using the provided context and i
           });
         }
       }
+      if (generateSkills) {
+        const skillsDir = path.join(outputDir, 'skills');
+        if (await fs.pathExists(skillsDir)) {
+          const skillFiles = await glob('**/*.md', { cwd: skillsDir, absolute: true });
+          for (const skillFile of skillFiles) {
+            if (path.basename(skillFile).toLowerCase() === 'readme.md') continue;
+            const skillRelativePath = path.relative(skillsDir, skillFile).replace(/\\/g, '/');
+            const skillSlug = path.basename(path.dirname(skillFile));
+            generatedFiles.push({
+              path: skillFile,
+              relativePath: `skills/${skillRelativePath}`,
+              type: 'skill',
+              fillInstructions: getSkillFillInstructions(skillSlug),
+            });
+          }
+        }
+      }
+
+      generatedFiles.sort((a, b) => {
+        const phaseOrder: Record<FileInfo['type'], number> = {
+          doc: 1,
+          skill: 2,
+          agent: 3,
+        };
+
+        const phaseDiff = phaseOrder[a.type] - phaseOrder[b.type];
+        if (phaseDiff !== 0) return phaseDiff;
+
+        return a.relativePath.localeCompare(b.relativePath);
+      });
 
       // Build requiredActions - always return lightweight info, LLM will use fillSingleFile for context
       const requiredActions: RequiredAction[] = [];
@@ -251,8 +282,10 @@ You MUST fill each file with appropriate content based on the codebase.
 DO THIS NOW:
 ${generatedFiles.slice(0, 5).map((f, i) => `${i + 1}. Read and fill: ${f.relativePath}`).join('\n')}${generatedFiles.length > 5 ? `\n... and ${generatedFiles.length - 5} more files` : ''}
 
-Use fillSingleFile tool for each file to get AI-generated content suggestions.
-After getting suggestions, write the content using the Write tool.
+Follow this required order: docs -> skills -> agents.
+
+Use fillSingleFile tool for each file to get semantic context and scaffold guidance.
+Then generate the markdown content and write it using the Write tool.
 
 DO NOT say "initialization complete" until ALL files are filled.`
           : undefined;
@@ -278,7 +311,7 @@ DO NOT say "initialization complete" until ALL files are filled.`
 
           // Next step guidance
           nextStep: hasFilesToFill ? {
-            action: 'Call fillSingleFile for each file to get content, then Write to save',
+            action: 'Call fillSingleFile for each file in order docs -> skills -> agents, then Write to save',
             example: `fillSingleFile({ repoPath: "${resolvedRepoPath}", filePath: "${pendingWrites[0]?.filePath || ''}" })`,
           } : undefined,
 
@@ -325,6 +358,8 @@ You MUST fill each file with appropriate content based on the codebase.
 DO THIS NOW:
 ${requiredActions.slice(0, 5).map((a, i) => `${i + 1}. Call fillSingleFile for: ${a.filePath}`).join('\n')}${requiredActions.length > 5 ? `\n... and ${requiredActions.length - 5} more files` : ''}
 
+Follow this required order: docs -> skills -> agents.
+
 fillSingleFile returns semantic context and scaffold structure for intelligent content generation.
 After generating content, write it using the Write tool.
 
@@ -341,7 +376,7 @@ DO NOT say "initialization complete" until ALL files are filled.`
         complete: !hasActionsRequired,
         operationType: 'initialize_and_fill',
         completionCriteria: hasActionsRequired
-          ? 'Call fillSingleFile for each file, generate content using the returned context, then write to file'
+          ? 'Call fillSingleFile for each file in order docs -> skills -> agents, generate content using the returned context, then write to file'
           : undefined,
 
         // Fill instructions (the standard prompt for HOW to fill)
@@ -358,7 +393,7 @@ DO NOT say "initialization complete" until ALL files are filled.`
 
         // Explicit next step with example
         nextStep: hasActionsRequired ? {
-          action: 'Call fillSingleFile for each file to get context, generate content, then Write to save',
+          action: 'Call fillSingleFile for each file in order docs -> skills -> agents, generate content, then Write to save',
           example: `fillSingleFile({ repoPath: "${resolvedRepoPath}", filePath: "${requiredActions[0]?.filePath || ''}" })`,
         } : undefined,
 
@@ -441,6 +476,43 @@ function getDocFillInstructions(fileName: string): string {
   }
 
   return `Fill this documentation file with relevant content based on the codebase analysis. Focus on accuracy and usefulness for developers.`;
+}
+
+/**
+ * Get fill instructions for a skill file based on skill slug
+ */
+function getSkillFillInstructions(skillSlug: string): string {
+  const slug = skillSlug.toLowerCase();
+
+  if (slug.includes('code-review') || slug.includes('pr-review')) {
+    return `Fill this skill with:
+- Codebase-specific review checklist
+- High-risk areas and anti-patterns to inspect first
+- Required evidence for approvals (tests, logs, metrics)
+- Standard output format for findings`;
+  }
+
+  if (slug.includes('test')) {
+    return `Fill this skill with:
+- Test strategy for this repository
+- Test pyramid and required coverage areas
+- Fixture/mocking patterns used by the project
+- Commands and criteria for test validation`;
+  }
+
+  if (slug.includes('security')) {
+    return `Fill this skill with:
+- Security checks relevant to this stack
+- Authentication/authorization validation steps
+- Secrets and configuration hardening checks
+- Security regression verification workflow`;
+  }
+
+  return `Fill this skill with:
+- Clear trigger conditions for when to use this skill
+- Step-by-step workflow tailored to this codebase
+- Concrete examples from repository files and commands
+- Guardrails, pitfalls, and validation checklist`;
 }
 
 /**

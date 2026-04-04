@@ -48,7 +48,7 @@ Does .context/ folder exist?
 
 ```
 Do the template files have content?
-├─ No → For each file:
+├─ No → Fill in order docs -> skills -> agents:
 │   └─ Use context({ action: "fillSingle", filePath: "path" })
 │       ├─ Returns semantic context from codebase
 │       ├─ Returns scaffold structure with guidance
@@ -73,7 +73,7 @@ Do you need structured development?
 Simplified Flow:
   context({ action: "init" })
     └─ Returns: pendingFiles[]
-       └─ For each file:
+       └─ For each file in order docs -> skills -> agents:
           └─ context({ action: "fillSingle", filePath })
              └─ Write enhanced content
                 └─ workflow-init({ name: "feature" })
