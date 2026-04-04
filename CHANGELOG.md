@@ -4,16 +4,147 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [Unreleased]
+
+## [0.8.0] - 2026-03-21
+
+### Changed
+- **BREAKING: Renamed package from `@ai-coders/context` to `@dotcontext/cli`**
+  - CLI command changed from `ai-context` to `dotcontext`
+  - MCP server name changed from `ai-context` to `dotcontext`
+  - Why: The previous name caused frequent confusion with Context7 during
+    prompt-based installation and search. "context" is too generic in the
+    AI/LLM space. The new name "dotcontext" is unique, searchable, and
+    directly references the `.context/` directory convention that is the
+    core of this tool.
+  - Migration: Replace `ai-context` with `dotcontext` in your shell aliases
+    and MCP configurations. Re-run `npx dotcontext mcp:install` to
+    update all tool integrations.
+
+- **BREAKING: Standalone CLI no longer generates context or plans**
+  - Context creation, filling, and refresh are now MCP-only — your AI tool provides the LLM
+  - Plan initialization and management moved to MCP tools (`context` and `plan` gateways)
+  - The standalone CLI is now focused on workflow management, sync, reverse sync, imports, and MCP setup
+  - Migration: Run `npx dotcontext mcp:install` and use your MCP-connected AI tool for context and plan operations
+
+### Added
+
+- **Themed Inquirer Prompts**: Applied custom theme to all interactive prompts via new `themedPrompt.ts` wrappers (`themedSelect`, `themedConfirm`, `themedInput`, `themedPassword`, `themedCheckbox`), replacing raw inquirer calls with consistently styled interactions using the project's two-tone color scheme.
+
+- **"View Pending Files" Option**: When the CLI detects unfilled scaffold files, users can now see which specific files need content before deciding to fill them.
+
+- **Smart Defaults Transparency**: The interactive flow now displays detected project information on startup (e.g., "Detected: TypeScript project, openrouter provider configured") instead of silently using auto-detected values.
+
+- **API Key Format Validation**: Lightweight format checks warn users when an API key doesn't match the expected prefix for a provider (e.g., `sk-` for OpenAI, `sk-ant-` for Anthropic). Non-blocking warnings only.
+
+- **"Back" Navigation in Prompt Flows**: Added escape options in `promptAnalysisOptions()` and `promptLLMConfig()` so users can return to the previous menu instead of being forced through multi-step flows.
+
+- **Comprehensive .context Content**: Rewrote all scaffolding files with project-specific content:
+  - 4 documentation guides (project-overview, development-workflow, testing-strategy, tooling)
+  - 7 agent playbooks with codebase-specific workflows and file references
+  - 10 skill files (repurposed api-design to MCP Tool Design)
+  - 3 QA guides (getting-started, project-structure, error-handling)
+  - 1 development plan (simplify-interactive-cli)
+
+- **Skills System**: Full skill scaffolding exported to `.claude/skills/`, `.gemini/skills/`, `.codex/skills/`
+
+- **Multi-tool Context Export**: Context now syncs to Claude Code, Cursor, GitHub Copilot, Codex, Windsurf, and Gemini
+
+- **Codex MCP Install Support**: `mcp:install` now supports Codex CLI directly
+  - Writes MCP configuration to `.codex/config.toml`
+  - Uses the documented `[mcp_servers.dotcontext]` TOML configuration block
+  - Brings Codex in line with other first-class MCP install targets
+
+- **GitIgnore Integration in FileMapper**: Automatic `.gitignore` respect prevents stack overflow in large repositories
+  - New `GitIgnoreManager` class with spec-compliant `.gitignore` parsing via `ignore` npm package
+  - O(1) cached lookups with hierarchical `.gitignore` loading from repo root
+  - Graceful fallback to existing hardcoded excludes when no `.gitignore` found
+  - Integrated into `FileMapper.getRepoStructure()` before glob scanning
+
+- **Path Traversal Protection for MCP Server**: Security hardening for all file operations
+  - New `PathValidator` class with null byte, URL-encoding, and traversal detection
+  - `SecurityError` class with forensics metadata (attempted path, attack type)
+  - Validates `filePath`, `rootPath`, and `cwd` params in `wrapWithActionLogging()` before tool execution
+
+- **Semantic Context Cache**: In-memory caching for `SemanticContextBuilder` output
+  - TTL-based expiration (default 5 minutes) with directory mtime invalidation
+  - Per-repo and global invalidation methods
+  - Integrated into MCP `registerResources()` context handler
+
+- **CLI Modular Architecture**: Extracted command groups from monolithic `index.ts`
+  - New `CLIDependencies` interface for dependency injection
+  - Skill commands (5 subcommands) extracted to `src/cli/commands/skillCommands.ts`
+  - Workflow commands (6 subcommands) extracted to `src/cli/commands/workflowCommands.ts`
+  - `index.ts` reduced from 2818 to 2478 lines
+
+### Fixed
+
+- **`needsFill()` false positives**: Fixed bug where `needsFill()` matched `status: unfilled` in document body content (e.g., code examples in agent playbooks) instead of only checking the YAML frontmatter block. The function now parses only the frontmatter between `---` delimiters.
+
+- **`configSummary` i18n**: `displayConfigSummary()` now uses the `_t()` translation function instead of hardcoded English labels ("Config:", "Options:", "Yes", "No").
+
+- **Missing i18n key**: Added `agent.type.skill` translation key (en + pt-BR) that was referenced but undefined.
+
+- **Guide Consistency**: Updated the user guide to match the real CLI surface
+  - Clarifies that quick sync still exists in the interactive CLI
+  - Removes the mismatch where Codex was described as an MCP install target before it was actually supported
+
+- **Frontmatter-Safe Fill Pipeline**: 100% preservation of YAML frontmatter during fill operations
+  - `needsFill()` now reads 15 lines (was 3) to detect `status:` in v2 scaffold format
+  - `processTarget()` and `processTargetWithAgent()` now preserve frontmatter with `status: filled` update
+  - `collectTargets()` filters by `needsFill()` with `--force` override to prevent re-filling
+  - Added `force` option to `FillCommandFlags` and `ResolvedFillOptions`
+
+### Security
+
+- Path traversal attacks via `../`, URL encoding (`%2e%2e`), and null bytes now blocked in MCP tool handlers
+- Audit logging for security events with forensics metadata
+
+### Performance
+
+- Context generation 80-95% faster for unchanged files via semantic caching
+- Eliminated stack overflow crashes in repositories with large unignored directories
+
+### Technical Details
+
+#### New Files
+- `src/utils/gitignoreManager.ts` — GitIgnoreManager with hierarchical `.gitignore` loading
+- `src/utils/gitignoreManager.test.ts` — 18 tests
+- `src/utils/pathSecurity.ts` — PathValidator with comprehensive sanitization
+- `src/utils/pathSecurity.test.ts` — 18 tests
+- `src/services/semantic/contextCache.ts` — In-memory TTL cache with mtime invalidation
+- `src/services/semantic/contextCache.test.ts` — 13 tests
+- `src/cli/types.ts` — CLIDependencies interface
+- `src/cli/commands/index.ts` — Barrel export
+- `src/cli/commands/skillCommands.ts` — Extracted skill subcommands
+- `src/cli/commands/workflowCommands.ts` — Extracted workflow subcommands
+- `src/tests/integrity/postRefactoringIntegrity.test.ts` — 26 integration tests
+
+#### Modified Files
+- `src/utils/fileMapper.ts` — GitIgnoreManager integration
+- `src/utils/frontMatter.ts` — `needsFill()` increased to 15 lines
+- `src/services/fill/fillService.ts` — Frontmatter preservation, `force` option, `needsFill` filtering
+- `src/services/mcp/mcpServer.ts` — PathValidator + ContextCache integration
+- `src/index.ts` — Replaced inline skill/workflow commands with modular imports
+- `package.json` — Added `ignore` dependency
+
+### Removed
+
+- **Irrelevant QA docs**: Removed `api-endpoints.md` (no REST API), `deployment.md` (npm package, not deployed service), and `testing.md` (redundant with `testing-strategy.md`).
+
+### Acknowledgements
+
+Special thanks to [@LorranHippolyte](https://github.com/LorranHippolyte) and [@jeansassi](https://github.com/jeansassi) for their massive contributions through pull requests.
 
 ## [0.7.1]
 
 ### Included Pull Requests
 
-- [#31](https://github.com/vinilana/ai-coders-context/pull/31) - fix: exclude venv from semantic analysis
+- [#31](https://github.com/vinilana/dotcontext/pull/31) - fix: exclude venv from semantic analysis
   - Excludes `venv/` and `.venv/` from semantic analysis by default to avoid noisy Python environment paths.
   - Persists user-defined `exclude` patterns during `init`, so `fillSingle` uses project-specific exclusions.
   - Aligns semantic analysis to shared default exclude patterns for consistent behavior across tools.
-- [#23](https://github.com/vinilana/ai-coders-context/pull/23) - [Fix] Auto-fill files without LLMs
+- [#23](https://github.com/vinilana/dotcontext/pull/23) - [Fix] Auto-fill files without LLMs
   - Adds project-type-aware filtering so generated scaffolding better matches CLI, web, backend, and other stacks.
   - Introduces static `defaultContent` across docs, agents, and skills, enabling usable output without LLM enhancement.
   - Replaces placeholder scaffold content with practical starter templates.

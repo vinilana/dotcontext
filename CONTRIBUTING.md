@@ -1,4 +1,4 @@
-# Contributing to @ai-coders/context
+# Contributing to @dotcontext/cli
 
 We love your input! We want to make contributing to this project as easy and transparent as possible.
 
@@ -17,8 +17,8 @@ We use GitHub to host code, to track issues and feature requests, as well as acc
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/ai-coders-context.git
-cd ai-coders-context
+git clone https://github.com/YOUR_USERNAME/dotcontext.git
+cd dotcontext
 
 # Install dependencies
 npm install
@@ -45,7 +45,7 @@ When you submit code changes, your submissions are understood to be under the sa
 
 ## Report bugs using GitHub's issues
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/vinilana/ai-coders-context/issues/new).
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/vinilana/dotcontext/issues/new).
 
 ## Write bug reports with detail, background, and sample code
 

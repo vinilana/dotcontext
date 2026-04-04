@@ -7,7 +7,6 @@
 // Types
 export {
   BaseDependencies,
-  AIDependencies,
   OperationResult,
   OperationError,
   FileInfo,

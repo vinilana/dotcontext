@@ -11,10 +11,10 @@ import { PrevcPhase } from '../types';
 /**
  * Generate YAML frontmatter string from metadata
  */
-export function generateFrontmatter(metadata: SkillMetadata): string {
+export function generateFrontmatter(metadata: SkillMetadata, slug?: string): string {
   const lines: string[] = ['---'];
 
-  lines.push(`name: ${metadata.name}`);
+  lines.push(`name: ${slug ?? metadata.name}`);
   lines.push(`description: ${metadata.description}`);
 
   if (metadata.phases && metadata.phases.length > 0) {
@@ -37,8 +37,9 @@ export function generateFrontmatter(metadata: SkillMetadata): string {
 /**
  * Wrap content with frontmatter
  */
-export function wrapWithFrontmatter(metadata: SkillMetadata, content: string): string {
-  return `${generateFrontmatter(metadata)}\n\n${content}`;
+export function wrapWithFrontmatter(metadata: SkillMetadata, content: string, slug?: string): string {
+  const result = `${generateFrontmatter(metadata, slug)}\n\n${content}`;
+  return result.endsWith('\n') ? result : `${result}\n`;
 }
 
 /**

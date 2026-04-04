@@ -237,6 +237,19 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     description: 'Codex CLI skills directory',
   },
 
+  // Agent Skills (Cross-Client) - agentskills.io interoperability standard
+  {
+    id: 'agents',
+    displayName: 'Agent Skills (Cross-Client)',
+    directoryPrefix: '.agents',
+    capabilities: { rules: false, agents: false, skills: true },
+    paths: {
+      skillsExport: '.agents/skills',
+      skillsImport: ['**/.agents/skills/*/SKILL.md', '**/.agents/skills/**/*.md'],
+    },
+    description: 'Cross-client agent skills directory (agentskills.io)',
+  },
+
   // Aider
   {
     id: 'aider',
@@ -346,6 +359,26 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
     description: 'JetBrains IDEs MCP configuration',
+  },
+
+  // Kilo Code
+  {
+    id: 'kilo',
+    displayName: 'Kilo Code',
+    directoryPrefix: '.kilo',
+    capabilities: { rules: false, agents: false, skills: false },
+    paths: {},
+    description: 'Kilo Code MCP configuration',
+  },
+
+  // GitHub Copilot CLI
+  {
+    id: 'copilot-cli',
+    displayName: 'GitHub Copilot CLI',
+    directoryPrefix: '.copilot',
+    capabilities: { rules: false, agents: false, skills: false },
+    paths: {},
+    description: 'GitHub Copilot CLI MCP configuration',
   },
 ];
 

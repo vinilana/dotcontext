@@ -8,7 +8,7 @@ import { createSkillStructure, SkillDefaultContent } from './factory';
 // Default Content Definitions
 // ============================================================================
 
-const commitMessageContent: SkillDefaultContent = {
+export const commitMessageContent: SkillDefaultContent = {
   whenToUse: `Use this skill when:
 - Creating git commits after code changes
 - Writing commit messages for staged changes
@@ -50,7 +50,7 @@ Fixes #456
 - Don't end subject line with period`,
 };
 
-const prReviewContent: SkillDefaultContent = {
+export const prReviewContent: SkillDefaultContent = {
   whenToUse: `Use this skill when:
 - Reviewing a pull request before merge
 - Providing feedback on proposed changes
@@ -94,7 +94,7 @@ Please address these and I'll re-review.
 - Approve only when confident in the changes`,
 };
 
-const codeReviewContent: SkillDefaultContent = {
+export const codeReviewContent: SkillDefaultContent = {
   whenToUse: `Use this skill when:
 - Reviewing code changes for quality
 - Checking adherence to coding standards
@@ -141,7 +141,7 @@ db.query(query, [userId]);
 - Praise good patterns when you see them`,
 };
 
-const testGenerationContent: SkillDefaultContent = {
+export const testGenerationContent: SkillDefaultContent = {
   whenToUse: `Use this skill when:
 - Writing tests for new functionality
 - Adding tests for bug fixes (regression tests)
@@ -183,7 +183,7 @@ describe('calculateTotal', () => {
 - Aim for fast, reliable tests`,
 };
 
-const documentationContent: SkillDefaultContent = {
+export const documentationContent: SkillDefaultContent = {
   whenToUse: `Use this skill when:
 - Documenting new features or APIs
 - Updating docs for code changes
@@ -221,7 +221,7 @@ function calculateTotal(items: CartItem[]): number
 - Use consistent formatting and terminology`,
 };
 
-const refactoringContent: SkillDefaultContent = {
+export const refactoringContent: SkillDefaultContent = {
   whenToUse: `Use this skill when:
 - Improving code structure without changing behavior
 - Reducing code duplication
@@ -259,7 +259,7 @@ if (isValidEmail(email)) {
 - Keep the PR focused and reviewable`,
 };
 
-const bugInvestigationContent: SkillDefaultContent = {
+export const bugInvestigationContent: SkillDefaultContent = {
   whenToUse: `Use this skill when:
 - Investigating reported bugs
 - Diagnosing unexpected behavior
@@ -303,7 +303,7 @@ Update session middleware to return 401 when token expired.
 - Write a regression test with the fix`,
 };
 
-const featureBreakdownContent: SkillDefaultContent = {
+export const featureBreakdownContent: SkillDefaultContent = {
   whenToUse: `Use this skill when:
 - Planning new feature implementation
 - Breaking large tasks into smaller pieces
@@ -351,7 +351,7 @@ Task 3 requires Task 1
 - Consider parallel work opportunities`,
 };
 
-const apiDesignContent: SkillDefaultContent = {
+export const apiDesignContent: SkillDefaultContent = {
   whenToUse: `Use this skill when:
 - Designing new API endpoints
 - Restructuring existing APIs
@@ -403,7 +403,7 @@ GET    /api/v1/users/:id/posts    # Get user's posts
 - Consider rate limiting and caching`,
 };
 
-const securityAuditContent: SkillDefaultContent = {
+export const securityAuditContent: SkillDefaultContent = {
   whenToUse: `Use this skill when:
 - Reviewing code for security vulnerabilities
 - Assessing authentication/authorization

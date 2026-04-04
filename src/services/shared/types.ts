@@ -18,13 +18,6 @@ export interface BaseDependencies {
 }
 
 /**
- * Extended dependencies for services that use AI
- */
-export interface AIDependencies extends BaseDependencies {
-  defaultModel: string;
-}
-
-/**
  * Common result type for file operations (import, export, sync)
  */
 export interface OperationResult {

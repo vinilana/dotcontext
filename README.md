@@ -1,8 +1,10 @@
-# @ai-coders/context
+# @dotcontext/cli
 
-[![npm version](https://badge.fury.io/js/@ai-coders%2Fcontext.svg)](https://www.npmjs.com/package/@ai-coders/context)
-[![CI](https://github.com/vinilana/ai-coders-context/actions/workflows/ci.yml/badge.svg)](https://github.com/vinilana/ai-coders-context/actions/workflows/ci.yml)
+[![npm version](https://badge.fury.io/js/@dotcontext%2Fcli.svg)](https://www.npmjs.com/package/@dotcontext/cli)
+[![CI](https://github.com/vinilana/dotcontext/actions/workflows/ci.yml/badge.svg)](https://github.com/vinilana/dotcontext/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> **Formerly `@ai-coders/context`.** Renamed to avoid confusion with Context7 and other "context" tools in the AI space. The `.context/` directory standard is unchanged. See [Migration Guide](#migration-from-ai-coderscontext).
 
 **The Ultimate MCP for AI Agent Orchestration, Context Engineering, and Spec-Driven Development.**
 Context engineering for AI now is stupidly simple.
@@ -41,6 +43,266 @@ One `.context/` directory. Works everywhere.
 Export to any tool.
 **Write once. Use anywhere. No boilerplate.**
 
+> **Using GitHub Copilot, Cursor, Claude, or another AI tool?**
+> Just run `npx dotcontext mcp:install` — no API key needed!
+>
+> **Usando GitHub Copilot, Cursor, Claude ou outra ferramenta de IA?**
+> Execute `npx dotcontext mcp:install` — sem necessidade de API key!
+
+> **Note / Nota**
+> Standalone CLI generation is no longer supported. Use MCP-enabled AI tools to create, fill, or refresh context.
+> A geração na CLI standalone não é mais suportada. Use ferramentas com MCP para criar, preencher ou atualizar o contexto.
+
+## Getting Started / Como Começar
+
+### Path 1: MCP (Recommended / Recomendado) — no API key
+
+#### English
+
+1. Run `npx dotcontext mcp:install`
+2. Prompt your AI agent: `init the context`
+3. Then: `plan [YOUR TASK] using dotcontext`
+4. After planned: `start the workflow`
+
+**No API key needed.** Your AI tool provides the LLM.
+
+#### Português
+
+1. Execute `npx dotcontext mcp:install`
+2. Diga ao seu agente de IA: `init the context`
+3. Depois: `plan [SUA TAREFA] using dotcontext`
+4. Após o planejamento: `start the workflow`
+
+**Sem necessidade de API key.** Sua ferramenta de IA fornece o LLM.
+
+### Path 2: Standalone CLI — workflow, sync, imports, and MCP setup
+
+#### English
+
+1. Run `npx dotcontext`
+2. Use the interactive CLI for workflow, sync, reverse sync, and MCP setup
+3. When you need context creation or AI-generated content, use your MCP-connected AI tool
+
+#### Português
+
+1. Execute `npx dotcontext`
+2. Use a CLI interativa para workflow, sincronização, reverse sync e configuração MCP
+3. Quando precisar criar contexto ou gerar conteúdo com IA, use sua ferramenta conectada via MCP
+
+## MCP Server Setup
+
+This package includes an MCP (Model Context Protocol) server that provides AI coding assistants with powerful tools to analyze and document your codebase.
+
+### Quick Installation (v0.7.0+)
+
+Use the MCP Install command to automatically configure the MCP server:
+
+```bash
+npx dotcontext mcp:install
+```
+
+This interactive command:
+- Detects installed AI tools on your system
+- Configures dotcontext MCP server in each tool
+- Supports global (home directory) and local (project directory) installation
+- Merges with existing MCP configurations without overwriting
+- Includes dry-run mode to preview changes
+- Works with Claude Code, Cursor, Windsurf, Codex, Continue.dev, and more
+
+### Manual Configuration
+
+Alternatively, manually configure for your preferred tool.
+
+### Antigravity
+
+#### 1. Access Raw Config
+
+The visual interface only shows official partners, but the manual editing mode allows any local or remote executable.
+
+1. Open the **Agent** panel (usually in the sidebar or `Ctrl+L`).
+2. Click the options menu (three dots `...`) or the settings icon.
+3. Select **Manage MCP Servers**.
+4. At the top of this screen, look for a discreet button or link named **"View raw config"** or **"Edit JSON"**.
+
+> **Note:** If you cannot find the button in the UI, you can navigate directly through the file explorer and look for `.idx/mcp.json` or `mcp_config.json` in your workspace root.
+
+#### 2. Add Custom Server
+
+You will see a JSON file. You must add a new entry inside the `"mcpServers"` object.
+
+Here is the template to add a server (example using `npx` for a Node.js server or a local executable):
+
+```json
+{
+  "mcpServers": {
+    "dotcontext": {
+      "command": "npx",
+      "args": ["@dotcontext/cli", "mcp"]
+    }
+  }
+}
+```
+
+#### 3. Restart the Connection
+
+After saving the `mcp.json` file:
+
+1. Return to the **"Manage MCP Servers"** panel.
+2. Click the **Refresh** button or restart the Antigravity environment (*Reload Window*).
+3. The new server should appear in the list with a status indicator (usually a green light if connected successfully).
+
+### Claude Code (CLI)
+
+Add the MCP server using the Claude CLI:
+
+```bash
+claude mcp add dotcontext -- npx dotcontext mcp
+```
+
+Or configure manually in `~/.claude.json`:
+
+```json
+{
+  "mcpServers": {
+    "dotcontext": {
+      "command": "npx",
+      "args": ["@dotcontext/cli", "mcp"]
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS or `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+
+```json
+{
+  "mcpServers": {
+    "dotcontext": {
+      "command": "npx",
+      "args": ["@dotcontext/cli", "mcp"]
+    }
+  }
+}
+```
+
+### Cursor AI
+
+Create `.cursor/mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "dotcontext": {
+      "command": "npx",
+      "args": ["@dotcontext/cli", "mcp"]
+    }
+  }
+}
+```
+
+### Windsurf
+
+Add to your Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "dotcontext": {
+      "command": "npx",
+      "args": ["@dotcontext/cli", "mcp"]
+    }
+  }
+}
+```
+
+### Zed Editor
+
+Add to your Zed settings (`~/.config/zed/settings.json`):
+
+```json
+{
+  "context_servers": {
+    "dotcontext": {
+      "command": {
+        "path": "npx",
+        "args": ["@dotcontext/cli", "mcp"]
+      }
+    }
+  }
+}
+```
+
+### Cline (VS Code Extension)
+
+Configure in Cline settings (VS Code → Settings → Cline → MCP Servers):
+
+```json
+{
+  "mcpServers": {
+    "dotcontext": {
+      "command": "npx",
+      "args": ["@dotcontext/cli", "mcp"]
+    }
+  }
+}
+```
+
+### Codex CLI
+
+Add to your Codex CLI config (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.dotcontext]
+command = "npx"
+args = ["--yes", "@dotcontext/cli@latest", "mcp"]
+```
+
+### Google Antigravity
+
+Add to your Antigravity MCP config (`~/.gemini/mcp_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "dotcontext": {
+      "command": "npx",
+      "args": ["@dotcontext/cli", "mcp"]
+    }
+  }
+}
+```
+
+### Trae AI
+
+Add to your Trae AI MCP config (Settings > MCP Servers):
+
+```json
+{
+  "mcpServers": {
+    "dotcontext": {
+      "command": "npx",
+      "args": ["@dotcontext/cli", "mcp"]
+    }
+  }
+}
+```
+
+### Local Development
+
+For local development, point directly to the built distribution:
+
+```json
+{
+  "mcpServers": {
+    "dotcontext-dev": {
+      "command": "node",
+      "args": ["/path/to/dotcontext-cli/dist/index.js", "mcp"]
+    }
+  }
+}
+```
 
 ## Youtube video
 [![Watch the video](https://img.youtube.com/vi/p9uV3CeLaKY/0.jpg)](https://www.youtube.com/watch?v=p9uV3CeLaKY)
@@ -51,10 +313,12 @@ Built by [AI Coders Academy](http://aicoders.academy/) — Learn AI-assisted dev
 
 - [AI Coders Academy](http://aicoders.academy/) — Courses and resources for AI-powered coding
 - [YouTube Channel](https://www.youtube.com/@aicodersacademy) — Tutorials, demos, and best practices
-- [Connect with Vini](https://www.linkedin.com/in/viniciuslanadepaula/) — Creator of @ai-coders/context
+- [Connect with Vini](https://www.linkedin.com/in/viniciuslanadepaula/) — Creator of @dotcontext/cli
 
 
 ## Why PREVC?
+
+### English
 
 LLMs produce better results when they follow a structured process instead of generating code blindly. PREVC ensures:
 
@@ -63,20 +327,18 @@ LLMs produce better results when they follow a structured process instead of gen
 - **Human checkpoints** — Review and validate at each step, not just at the end
 - **Reproducible quality** — Same process, consistent results across projects
 
-## Usage
+### Português
 
-```bash
-npx @ai-coders/context
-```
+LLMs produzem melhores resultados quando seguem um processo estruturado em vez de gerar código cegamente. PREVC garante:
 
-That's it. The wizard detects what needs to be done.
+- **Especificações antes do código** — IA entende o que construir antes de construir
+- **Consciência de contexto** — Cada fase tem a documentação e o agente corretos
+- **Checkpoints humanos** — Revise e valide em cada etapa, não apenas no final
+- **Qualidade reproduzível** — Mesmo processo, resultados consistentes entre projetos
 
+## What it does / O que faz
 
-PT-BR Tutorial
-https://www.youtube.com/watch?v=5BPrfZAModk
-
-
-## What it does
+### English
 
 1. **Creates documentation** — Structured docs from your codebase (architecture, data flow, decisions)
 2. **Generates agent playbooks** — 14 specialized AI agents (code-reviewer, bug-fixer, architect, etc.)
@@ -88,23 +350,20 @@ https://www.youtube.com/watch?v=5BPrfZAModk
 8. **Tracks execution** — Step-level tracking with git integration for workflow phases
 9. **Keeps it updated** — Detects code changes and suggests documentation updates
 
-## Quick Start
+### Português
 
-1. Install the MCP
-2. Prompt to the agent:
-```bash
-init the context
-```
-3. This will setup the context and fill it according the the codebase
-4. With the context ready prompt
-```bash
-plan [YOUR TASK HERE] using ai-context
-```
-5. After planned, prompt
-```bash
-start the workflow
-```
-6. That's it!
+1. **Cria documentação** — Docs estruturados do seu codebase (arquitetura, fluxo de dados, decisões)
+2. **Gera playbooks de agentes** — 14 agentes de IA especializados (code-reviewer, bug-fixer, architect, etc.)
+3. **Filtragem inteligente de scaffold** — Detecta automaticamente o tipo de projeto e gera apenas conteúdo relevante
+4. **Útil de imediato** — Scaffolds incluem conteúdo prático, não placeholders vazios
+5. **Gerencia workflows** — Processo PREVC com detecção de escala, gates e histórico de execução
+6. **Fornece skills** — Expertise sob demanda (mensagens de commit, revisões de PR, auditorias de segurança)
+7. **Sincroniza em todos os lugares** — Exporte para Cursor, Claude, Copilot, Windsurf, Cline, Codex, Antigravity, Trae e mais
+8. **Rastreia execução** — Rastreamento por etapa com integração git para fases de workflow
+9. **Mantém atualizado** — Detecta mudanças no código e sugere atualizações de documentação
+
+PT-BR Tutorial
+https://www.youtube.com/watch?v=5BPrfZAModk
 
 ## PREVC Workflow System
 
@@ -170,237 +429,13 @@ The system automatically detects project scale and adjusts the workflow:
 | MEDIUM | P → R → E → V | Regular features |
 | LARGE | P → R → E → V → C | Complex systems, compliance |
 
-## Requirements for the CLI
+## CLI Reference
+
+### Requirements
 
 - Node.js 20+
-- API key from a supported provider (for AI features)
 
-**If you are using throught MCP you don't need to setup an API key from a supported provider, your AI agent will use it's own LLM.**
-
-
-## Supported Providers
-
-| Provider | Environment Variable |
-|----------|---------------------|
-| OpenRouter | `OPENROUTER_API_KEY` |
-| OpenAI | `OPENAI_API_KEY` |
-| Anthropic | `ANTHROPIC_API_KEY` |
-| Google | `GOOGLE_API_KEY` |
-
-## MCP Server Setup
-
-This package includes an MCP (Model Context Protocol) server that provides AI coding assistants with powerful tools to analyze and document your codebase.
-
-### Quick Installation (v0.7.0+)
-
-Use the new MCP Install command to automatically configure the MCP server:
-
-```bash
-npx @ai-coders/context mcp:install
-```
-
-This interactive command:
-- Detects installed AI tools on your system
-- Configures ai-context MCP server in each tool
-- Supports global (home directory) and local (project directory) installation
-- Merges with existing MCP configurations without overwriting
-- Includes dry-run mode to preview changes
-- Works with Claude Code, Cursor, Windsurf, Cline, Continue.dev, and more
-
-### Manual Configuration
-
-Alternatively, manually configure for your preferred tool.
-
-### Antigravity
-
-#### 1. Access Raw Config
-
-The visual interface only shows official partners, but the manual editing mode allows any local or remote executable.
-
-1. Open the **Agent** panel (usually in the sidebar or `Ctrl+L`).
-2. Click the options menu (three dots `...`) or the settings icon.
-3. Select **Manage MCP Servers**.
-4. At the top of this screen, look for a discreet button or link named **"View raw config"** or **"Edit JSON"**.
-
-> **Note:** If you cannot find the button in the UI, you can navigate directly through the file explorer and look for `.idx/mcp.json` or `mcp_config.json` in your workspace root.
-
-#### 2. Add Custom Server
-
-You will see a JSON file. You must add a new entry inside the `"mcpServers"` object.
-
-Here is the template to add a server (example using `npx` for a Node.js server or a local executable):
-
-```json
-{
-  "mcpServers": {
-    "ai-context": {
-      "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
-    }
-  }
-}
-```
-
-#### 3. Restart the Connection
-
-After saving the `mcp.json` file:
-
-1. Return to the **"Manage MCP Servers"** panel.
-2. Click the **Refresh** button or restart the Antigravity environment (*Reload Window*).
-3. The new server should appear in the list with a status indicator (usually a green light if connected successfully).
-
-### Claude Code (CLI)
-
-Add the MCP server using the Claude CLI:
-
-```bash
-claude mcp add ai-context -- npx @ai-coders/context mcp
-```
-
-Or configure manually in `~/.claude.json`:
-
-```json
-{
-  "mcpServers": {
-    "ai-context": {
-      "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
-    }
-  }
-}
-```
-
-### Claude Desktop
-
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS or `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
-
-```json
-{
-  "mcpServers": {
-    "ai-context": {
-      "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
-    }
-  }
-}
-```
-
-### Cursor AI
-
-Create `.cursor/mcp.json` in your project root:
-
-```json
-{
-  "mcpServers": {
-    "ai-context": {
-      "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
-    }
-  }
-}
-```
-
-### Windsurf
-
-Add to your Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "ai-context": {
-      "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
-    }
-  }
-}
-```
-
-### Zed Editor
-
-Add to your Zed settings (`~/.config/zed/settings.json`):
-
-```json
-{
-  "context_servers": {
-    "ai-context": {
-      "command": {
-        "path": "npx",
-        "args": ["@ai-coders/context", "mcp"]
-      }
-    }
-  }
-}
-```
-
-### Cline (VS Code Extension)
-
-Configure in Cline settings (VS Code → Settings → Cline → MCP Servers):
-
-```json
-{
-  "mcpServers": {
-    "ai-context": {
-      "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
-    }
-  }
-}
-```
-
-### Codex CLI
-
-Add to your Codex CLI config (`~/.codex/config.toml`):
-
-```toml
-[mcp_servers.ai-context]
-command = "npx"
-args = ["--yes", "@ai-coders/context@latest", "mcp"]
-```
-
-### Google Antigravity
-
-Add to your Antigravity MCP config (`~/.gemini/mcp_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "ai-context": {
-      "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
-    }
-  }
-}
-```
-
-### Trae AI
-
-Add to your Trae AI MCP config (Settings > MCP Servers):
-
-```json
-{
-  "mcpServers": {
-    "ai-context": {
-      "command": "npx",
-      "args": ["@ai-coders/context", "mcp"]
-    }
-  }
-}
-```
-
-### Local Development
-
-For local development, point directly to the built distribution:
-
-```json
-{
-  "mcpServers": {
-    "ai-context-dev": {
-      "command": "node",
-      "args": ["/path/to/ai-coders-context/dist/index.js", "mcp"]
-    }
-  }
-}
-```
+**Context creation, AI generation, and refresh are MCP-only.** Use `npx dotcontext mcp:install` and let your AI tool use its own LLM.
 
 ### Available MCP Tools
 
@@ -454,12 +489,11 @@ Skills are task-specific procedures that AI agents activate when needed:
 | `security-audit` | Security review checklist | R, V |
 
 ```bash
-npx @ai-coders/context skill init           # Initialize skills
-npx @ai-coders/context skill fill           # Fill skills with AI (project-specific content)
-npx @ai-coders/context skill list           # List available skills
-npx @ai-coders/context skill export         # Export to AI tools
-npx @ai-coders/context skill create my-skill # Create custom skill
+npx dotcontext skill list   # List available skills
+npx dotcontext skill export # Export to AI tools
 ```
+
+Use MCP tools from your AI assistant to scaffold, fill, or refresh skills and other context files.
 
 ### Agent Types
 
@@ -482,6 +516,50 @@ The orchestration system maps tasks to specialized agents:
 | `mobile-specialist` | Mobile applications |
 | `refactoring-specialist` | Code structure improvements |
 
+
+## Migration from @ai-coders/context
+
+### Why the rename?
+
+The previous name `@ai-coders/context` caused frequent confusion with **Context7** and other tools that use "context" in their name. In the AI/LLM tooling space, "context" is too generic. The new name **dotcontext** is unique, searchable, and directly references the `.context/` directory convention at the core of this tool.
+
+### What changed
+
+| Before | After |
+|--------|-------|
+| `npm install @ai-coders/context` | `npm install @dotcontext/cli` |
+| `npx @ai-coders/context` | `npx dotcontext` |
+| CLI command: `ai-context` | CLI command: `dotcontext` |
+| MCP server name: `"ai-context"` | MCP server name: `"dotcontext"` |
+| Env var: `AI_CONTEXT_LANG` | Env var: `DOTCONTEXT_LANG` |
+
+### What did NOT change
+
+- The `.context/` directory structure and all its contents
+- The PREVC workflow system
+- All MCP tool names and actions
+- All scaffold formats and frontmatter conventions
+- The MIT license
+
+### Step-by-step migration
+
+1. **Update your global install** (if applicable):
+   ```bash
+   npm uninstall -g @ai-coders/context
+   npm install -g @dotcontext/cli
+   ```
+
+2. **Update MCP configurations** -- re-run the installer:
+   ```bash
+   npx dotcontext mcp:install
+   ```
+   Or manually replace `"ai-context"` with `"dotcontext"` and `"@ai-coders/context"` with `"@dotcontext/cli"` in your MCP JSON configs.
+
+3. **Update shell aliases** -- replace `ai-context` with `dotcontext` in your `.bashrc`, `.zshrc`, or equivalent.
+
+4. **Update environment variables** -- rename `AI_CONTEXT_LANG` to `DOTCONTEXT_LANG` if you set it.
+
+5. **No changes to `.context/` needed** -- the directory, files, and frontmatter are all unchanged.
 
 ## License
 
