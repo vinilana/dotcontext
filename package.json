@@ -1,6 +1,6 @@
 {
   "name": "@dotcontext/cli",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "MCP-first toolkit for AI context workflow, sync, imports, and orchestration",
   "main": "dist/index.js",
   "bin": {
