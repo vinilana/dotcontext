@@ -79,13 +79,13 @@ Export to any tool.
 
 #### English
 
-1. Run `npx dotcontext`
+1. Run `npx @dotcontext/cli`
 2. Use the interactive CLI for workflow, sync, reverse sync, and MCP setup
 3. When you need context creation or AI-generated content, use your MCP-connected AI tool
 
 #### Português
 
-1. Execute `npx dotcontext`
+1. Execute `npx @dotcontext/cli`
 2. Use a CLI interativa para workflow, sincronização, reverse sync e configuração MCP
 3. Quando precisar criar contexto ou gerar conteúdo com IA, use sua ferramenta conectada via MCP
 
@@ -98,7 +98,7 @@ This package includes an MCP (Model Context Protocol) server that provides AI co
 Use the MCP Install command to automatically configure the MCP server:
 
 ```bash
-npx dotcontext mcp:install
+npx @dotcontext/cli mcp:install
 ```
 
 This interactive command:
@@ -156,7 +156,7 @@ After saving the `mcp.json` file:
 Add the MCP server using the Claude CLI:
 
 ```bash
-claude mcp add dotcontext -- npx dotcontext mcp
+claude mcp add dotcontext -- npx @dotcontext/cli mcp
 ```
 
 Or configure manually in `~/.claude.json`:
