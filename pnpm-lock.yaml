@@ -17,8 +17,11 @@ importers:
       '@ai-sdk/openai':
         specifier: ^3.0.7
         version: 3.0.52(zod@4.3.6)
+      '@inquirer/prompts':
+        specifier: ^7.10.1
+        version: 7.10.1(@types/node@24.12.2)
       '@modelcontextprotocol/sdk':
-        specifier: ^1.25.2
+        specifier: ^1.29.0
         version: 1.29.0(zod@4.3.6)
       ai:
         specifier: ^6.0.19
@@ -35,9 +38,6 @@ importers:
       commander:
         specifier: ^14.0.1
         version: 14.0.3
-      figures:
-        specifier: ^3.2.0
-        version: 3.2.0
       fs-extra:
         specifier: ^11.3.2
         version: 11.3.4
@@ -1243,10 +1243,6 @@ packages:
   escape-html@1.0.3:
     resolution: {integrity: sha512-NiSupZ4OeuGwr68lGIeym/ksIZMJodUGOSCZ/FSnTxcrekbvqrgdUxlJOMpijaKZVjAJrWrGs/6Jy8OMuyj9ow==}
 
-  escape-string-regexp@1.0.5:
-    resolution: {integrity: sha512-vbRorB5FUQWvla16U8R/qgaFIya2qGzwDrNmCZuYKrbdSUMG6I1ZCGQRefkRVhuOkIGVne7BQ35DSfo1qvJqFg==}
-    engines: {node: '>=0.8.0'}
-
   escape-string-regexp@2.0.0:
     resolution: {integrity: sha512-UpzcLCXolUWcNu5HtVMHYdXJjArjsF9C0aNnquZYY4uW/Vu0miy5YoWvbV345HauVvcAUnpRuhMMcqTcGOY2+w==}
     engines: {node: '>=8'}
@@ -1301,10 +1297,6 @@ packages:
 
   fb-watchman@2.0.2:
     resolution: {integrity: sha512-p5161BqbuCaSnB8jIbzQHOlpgsPmK5rJVDfDKO91Axs5NC1uu3HRQm6wt9cd9/+GtQQIO53JdGXXoyDpTAsgYA==}
-
-  figures@3.2.0:
-    resolution: {integrity: sha512-yaduQFRKLXYOGgEn6AZau90j3ggSOyiqXU0F9JZfeXYhNa+Jk4X+s45A2zg5jns87GAFa34BBm2kXw4XpNcbdg==}
-    engines: {node: '>=8'}
 
   finalhandler@2.1.1:
     resolution: {integrity: sha512-S8KoZgRZN+a5rNwqTxlZZePjT/4cnm0ROV70LedRHZ0p8u9fRID0hJUZQpkKLzro8LfmC8sx23bY6tVNxv8pQA==}
@@ -3468,8 +3460,6 @@ snapshots:
 
   escape-html@1.0.3: {}
 
-  escape-string-regexp@1.0.5: {}
-
   escape-string-regexp@2.0.0: {}
 
   esprima@4.0.1: {}
@@ -3552,10 +3542,6 @@ snapshots:
   fb-watchman@2.0.2:
     dependencies:
       bser: 2.1.1
-
-  figures@3.2.0:
-    dependencies:
-      escape-string-regexp: 1.0.5
 
   finalhandler@2.1.1:
     dependencies:
