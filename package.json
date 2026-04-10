@@ -1,6 +1,6 @@
 {
   "name": "@dotcontext/cli",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "MCP-first toolkit for AI context workflow, sync, imports, and orchestration",
   "main": "dist/index.js",
   "bin": {
@@ -52,7 +52,6 @@
     "@ai-sdk/openai": "^3.0.7",
     "@modelcontextprotocol/sdk": "^1.25.2",
     "ai": "^6.0.19",
-    "axios": "^1.12.2",
     "boxen": "^5.1.2",
     "chalk": "^4.1.2",
     "cli-progress": "^3.12.0",
