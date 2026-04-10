@@ -271,7 +271,7 @@ export const RequiredActionSchema = z.object({
   order: z.number().describe('Sequence order for this action'),
   actionType: z.enum(['WRITE_FILE', 'CALL_TOOL', 'VERIFY']).describe('Type of action to perform'),
   filePath: z.string().describe('Absolute path to the file'),
-  fileType: z.enum(['doc', 'agent']).describe('Type of scaffold file'),
+  fileType: z.enum(['doc', 'skill', 'agent']).describe('Type of scaffold file'),
   instructions: z.string().describe('Instructions for filling this file'),
   suggestedContent: z.string().optional().describe('Pre-generated content to write to the file'),
   status: ActionStatusEnum.describe('Current status of this action'),
@@ -357,11 +357,11 @@ export const InitializeContextOutputSchema = z.object({
 
   // Fill instructions (the UPDATE_SCAFFOLD_PROMPT)
   fillInstructions: z.string().optional()
-    .describe('Standard prompt with guidelines for HOW to fill the scaffolded files'),
+    .describe('Standard prompt with guidelines for HOW to fill the scaffolded files (order: docs -> skills -> agents)'),
 
   // Pending writes (renamed from requiredActions for clarity)
   pendingWrites: z.array(RequiredActionSchema).optional()
-    .describe('Files that MUST be written. Each has content ready to write.'),
+    .describe('Files that MUST be written in order. Each has content ready to write.'),
 
   // Legacy: requiredActions (kept for backwards compatibility)
   requiredActions: z.array(RequiredActionSchema).optional()

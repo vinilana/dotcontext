@@ -1,7 +1,7 @@
-export const UPDATE_SCAFFOLD_PROMPT_FALLBACK = `# Prompt: Update Repository Documentation and Agent Playbooks
+export const UPDATE_SCAFFOLD_PROMPT_FALLBACK = `# Prompt: Update Repository Docs, Skills, and Agent Playbooks
 
 ## Purpose
-You are an AI assistant responsible for refreshing the documentation (\`docs/\`) and agent playbooks (\`agents/\`). Your goal is to bring every guide up to date with the latest repository state and maintain cross-references between docs and agent instructions.
+You are an AI assistant responsible for refreshing documentation (\`docs/\`), skills (\`skills/\`), and agent playbooks (\`agents/\`). Your goal is to bring every guide up to date with the latest repository state and maintain cross-references.
 
 ## Context Gathering
 1. Review the repository structure and recent changes.
@@ -9,17 +9,26 @@ You are an AI assistant responsible for refreshing the documentation (\`docs/\`)
 3. Check \`docs/README.md\` for the current document map.
 
 ## Update Procedure
-1. **Update Documentation**
+1. **Update Documentation (docs/)**
    - Replace TODO placeholders with accurate, current information.
    - Verify that links between docs remain valid.
    - If you add new guides or sections, update \`docs/README.md\`.
 
-2. **Agent Playbook Alignment**
+2. **Update Skills (skills/)**
+   - Ensure each skill has codebase-specific activation rules and steps.
+   - Add concrete command/examples using repository conventions.
+   - Keep scope narrow and task-driven per skill.
+
+3. **Agent Playbook Alignment (agents/)**
    - For each change in \`docs/\`, adjust the related \`agents/*.md\` playbooks.
    - Update responsibilities, best practices, and documentation touchpoints.
 
+4. **Required Fill Order**
+   - Fill files in this exact order: \`docs -> skills -> agents\`.
+
 ## Acceptance Criteria
 - No unresolved TODO placeholders remain unless they require explicit human input.
+- Skills contain concrete, codebase-specific instructions.
 - Agent playbooks list accurate responsibilities and best practices.
 - Changes are self-contained, well-formatted Markdown.
 

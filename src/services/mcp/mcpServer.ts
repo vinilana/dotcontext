@@ -163,7 +163,7 @@ export class AIContextMCPServer {
 **Important:** Agents should provide repoPath on the FIRST call, then it will be cached:
 1. First call: context({ action: "check", repoPath: "/path/to/project" })
 2. Subsequent calls can omit repoPath - it will use cached value from step 1
-3. After context init, call fillSingle for each pending file
+3. After context init, call fillSingle for each pending file in order: docs -> skills -> agents
 4. Call workflow-init to enable PREVC workflow (unless trivial change)`,
       inputSchema: {
         action: z.enum(['check', 'init', 'fill', 'fillSingle', 'listToFill', 'getMap', 'buildSemantic', 'scaffoldPlan'])
@@ -184,7 +184,7 @@ export class AIContextMCPServer {
           .describe('(init, scaffoldPlan) Auto-fill with codebase content'),
         skipContentGeneration: z.boolean().optional()
           .describe('(init) Skip pre-generating content'),
-        target: z.enum(['docs', 'agents', 'plans', 'all']).optional()
+        target: z.enum(['docs', 'skills', 'agents', 'plans', 'all']).optional()
           .describe('(fill, listToFill) Which scaffolding to target'),
         offset: z.number().optional()
           .describe('(fill) Skip first N files'),

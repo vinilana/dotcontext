@@ -84,10 +84,11 @@ WORKFLOW:
 1. Call initializeContext - scaffolding is created
 2. Response has status: "incomplete" with pendingWrites[] array
 3. Read the fillInstructions field - it contains guidelines for HOW to fill
-4. For EACH file in pendingWrites:
+4. Fill in REQUIRED ORDER: docs -> skills -> agents
+5. For EACH file in pendingWrites:
    - Call fillSingleFile({ repoPath, filePath }) to get AI-generated content
    - Call Write({ file_path, content: suggestedContent }) to save
-5. ONLY after ALL writes succeed → report "initialization complete"
+6. ONLY after ALL writes succeed → report "initialization complete"
 
 IMPORTANT:
 - status: "incomplete" means you MUST complete the pendingWrites
@@ -121,6 +122,7 @@ IMPORTANT: After calling this, write each suggestedContent to its corresponding 
     description: 'List scaffold files that need to be filled. Returns only file paths (no content).',
     extendedDescription: `List scaffold files that need to be filled. Returns only file paths (no content).
 Use this first to get the list, then call fillSingleFile for each file.
+Required fill order is docs -> skills -> agents.
 This is more efficient than fillScaffolding for large projects.`
   },
 
@@ -129,6 +131,7 @@ This is more efficient than fillScaffolding for large projects.`
     description: 'Generate suggested content for a single scaffold file.',
     extendedDescription: `Generate suggested content for a single scaffold file.
 Call listFilesToFill first to get file paths, then call this for each file.
+If you choose files out of order, the tool returns a warning with the next required phase.
 This avoids output size limits by processing one file at a time.`
   }
 };

@@ -72,10 +72,11 @@ export async function handleContext(
 
 NEXT ACTIONS REQUIRED:
 1. Fill scaffold files with content using fillSingle for each pending file
+   Required order: docs -> skills -> agents
 2. Initialize a PREVC workflow to enable structured development
 
 WORKFLOW:
-Step 1: Use context with action "fillSingle" for each file in pendingFiles array
+Step 1: Use context with action "fillSingle" for each file in pendingFiles array, following docs -> skills -> agents
 Step 2: Use workflow-init with name parameter to create workflow (creates .context/workflow/)
 
 Skip workflow-init ONLY if making trivial changes (typos, single-line edits).`;
@@ -85,7 +86,7 @@ Skip workflow-init ONLY if making trivial changes (typos, single-line edits).`;
             pendingFiles: pendingWrites.map(p => p.filePath),
             enhancementPrompt,
             nextSteps: [
-              'REQUIRED: Call context with action "fillSingle" for each file in pendingFiles',
+              'REQUIRED: Call context with action "fillSingle" for each file in pendingFiles, in order docs -> skills -> agents',
               'RECOMMENDED: Call workflow-init with name parameter after filling files',
               'OPTIONAL: Skip workflow-init only for trivial changes (typos, single edits)'
             ],
