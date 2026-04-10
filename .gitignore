@@ -41,3 +41,22 @@ context-log.json
 *.tmp
 *.temp
 .cache/
+
+# Generated AI tool exports (output of export-rules/sync-agents)
+# Each user generates their own — don't commit these
+.agent/
+.claude/
+.cline/
+.codex/
+.continue/
+.cursor/
+.cursorrules
+.deepagent-desktop/
+.gemini/
+.github/agents/
+.github/copilot-instructions.md
+.trae/
+.windsurf/
+.zed/
+AGENTS.md
+CONVENTIONS.md

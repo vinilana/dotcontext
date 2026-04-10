@@ -90,6 +90,9 @@ function buildExportPresets(): Record<string, ExportTarget[]> {
  */
 export const EXPORT_PRESETS: Record<string, ExportTarget[]> = buildExportPresets();
 
+const MARKER_START = '<!-- GENERATED:AI-CONTEXT:START -->';
+const MARKER_END = '<!-- GENERATED:AI-CONTEXT:END -->';
+
 export class ExportRulesService {
   constructor(private deps: ExportRulesServiceDependencies) {}
 
@@ -172,8 +175,40 @@ export class ExportRulesService {
         return;
       }
 
-      // Check if target exists and force is not set
-      if (await pathExists(targetPath) && !options.force) {
+      const fileExists = await pathExists(targetPath);
+
+      // For single-format targets, check for marker-aware merge
+      if (target.format === 'single' && fileExists) {
+        const existingContent = await fs.readFile(targetPath, 'utf-8');
+        const hasMarkers = existingContent.includes(MARKER_START) && existingContent.includes(MARKER_END);
+
+        if (hasMarkers) {
+          // Safe merge: replace only the content between markers
+          const merged = this.mergeWithMarkers(existingContent, combinedContent);
+          await fs.writeFile(targetPath, merged, 'utf-8');
+
+          result.filesCreated++;
+          result.targets.push(targetPath);
+          this.deps.ui.updateSpinner(
+            this.deps.t('spinner.export.exported', { target: targetPath }),
+            'success'
+          );
+          this.deps.ui.stopSpinner();
+          return;
+        }
+
+        // File exists without markers — require force
+        if (!options.force) {
+          this.deps.ui.updateSpinner(
+            this.deps.t('spinner.export.skipped', { target: targetPath }),
+            'warn'
+          );
+          result.filesSkipped++;
+          this.deps.ui.stopSpinner();
+          return;
+        }
+      } else if (fileExists && !options.force) {
+        // Directory format or non-single: existing behavior
         this.deps.ui.updateSpinner(
           this.deps.t('spinner.export.skipped', { target: targetPath }),
           'warn'
@@ -186,7 +221,9 @@ export class ExportRulesService {
       // Export based on format
       if (target.format === 'single') {
         await ensureParentDirectory(targetPath);
-        await fs.writeFile(targetPath, combinedContent, 'utf-8');
+        // Wrap in markers so future exports can merge safely
+        const wrappedContent = this.wrapWithMarkers(combinedContent);
+        await fs.writeFile(targetPath, wrappedContent, 'utf-8');
       } else {
         await this.exportToDirectory(targetPath, rules);
       }
@@ -206,6 +243,37 @@ export class ExportRulesService {
     } finally {
       this.deps.ui.stopSpinner();
     }
+  }
+
+  /**
+   * Wrap generated content in markers for future safe merging.
+   */
+  private wrapWithMarkers(content: string): string {
+    return [
+      MARKER_START,
+      '<!-- Auto-generated from .context/docs — do not hand-edit this section. -->',
+      '',
+      content,
+      MARKER_END,
+    ].join('\n');
+  }
+
+  /**
+   * Replace only the content between markers, preserving everything else.
+   */
+  private mergeWithMarkers(existingContent: string, newGeneratedContent: string): string {
+    const startIdx = existingContent.indexOf(MARKER_START);
+    const endIdx = existingContent.indexOf(MARKER_END);
+
+    if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+      // Markers not found or malformed — fall back to full content with markers
+      return this.wrapWithMarkers(newGeneratedContent);
+    }
+
+    const before = existingContent.slice(0, startIdx);
+    const after = existingContent.slice(endIdx + MARKER_END.length);
+
+    return before + this.wrapWithMarkers(newGeneratedContent) + after;
   }
 
   /**
