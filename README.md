@@ -44,10 +44,10 @@ Export to any tool.
 **Write once. Use anywhere. No boilerplate.**
 
 > **Using GitHub Copilot, Cursor, Claude, or another AI tool?**
-> Just run `npx dotcontext mcp:install` — no API key needed!
+> Just run `npx @dotcontext/cli mcp:install` — no API key needed!
 >
 > **Usando GitHub Copilot, Cursor, Claude ou outra ferramenta de IA?**
-> Execute `npx dotcontext mcp:install` — sem necessidade de API key!
+> Execute `npx @dotcontext/cli mcp:install` — sem necessidade de API key!
 
 > **Note / Nota**
 > Standalone CLI generation is no longer supported. Use MCP-enabled AI tools to create, fill, or refresh context.
@@ -59,7 +59,7 @@ Export to any tool.
 
 #### English
 
-1. Run `npx dotcontext mcp:install`
+1. Run `npx @dotcontext/cli mcp:install`
 2. Prompt your AI agent: `init the context`
 3. Then: `plan [YOUR TASK] using dotcontext`
 4. After planned: `start the workflow`
@@ -68,7 +68,7 @@ Export to any tool.
 
 #### Português
 
-1. Execute `npx dotcontext mcp:install`
+1. Execute `npx @dotcontext/cli mcp:install`
 2. Diga ao seu agente de IA: `init the context`
 3. Depois: `plan [SUA TAREFA] using dotcontext`
 4. Após o planejamento: `start the workflow`
