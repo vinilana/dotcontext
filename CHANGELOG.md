@@ -103,6 +103,11 @@ That is why many of the changes below are structural. The value of `0.9.0` is no
   - Added explicit harness operations for replay, dataset building, and policy document management
   - Harness-related gateway handlers are thinner and delegate to transport-agnostic services
 
+- **Removed dormant standalone AI SDK internals**
+  - Removed the unused `src/services/ai` runtime, provider auto-detection, and the old standalone provider dependency path
+  - Moved the active scaffolding and explore helpers into `src/services/harness/contextTools.ts` to keep reusable execution logic inside the harness boundary
+  - Kept semantic analysis centered on the active `tree-sitter` and optional LSP pipeline instead of bundling unused provider SDK dependencies
+
 ### Fixed
 
 - **Policy enforcement consistency**

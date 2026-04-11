@@ -14,6 +14,23 @@ export {
   type HarnessContextPlanScaffoldResult,
   type HarnessBootstrapStatusResult,
 } from './contextService';
+export {
+  readFileTool,
+  listFilesTool,
+  analyzeSymbolsTool,
+  getFileStructureTool,
+  searchCodeTool,
+  checkScaffoldingTool,
+  initializeContextTool,
+  scaffoldPlanTool,
+  fillScaffoldingTool,
+  listFilesToFillTool,
+  fillSingleFileTool,
+  getCodebaseMapTool,
+  getOrBuildContext,
+  cleanupSharedContext,
+  type ToolName,
+} from './contextTools';
 export { HarnessSkillsService, type HarnessSkillsServiceOptions } from './skillsService';
 export {
   HarnessRuntimeStateService,

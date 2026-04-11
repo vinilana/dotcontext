@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import { VERSION } from '../../version';
 import { PHASE_NAMES_EN, type PrevcPhase } from '../../workflow';
-import { getOrBuildContext } from '../ai/tools';
+import { getOrBuildContext } from './contextTools';
 import { minimalUI, mockTranslate } from '../shared';
 
 export interface HarnessSkillsServiceOptions {

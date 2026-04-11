@@ -60,12 +60,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.9",
-    "@ai-sdk/google": "^3.0.6",
-    "@ai-sdk/openai": "^3.0.7",
     "@inquirer/prompts": "^7.10.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "ai": "^6.0.19",
     "boxen": "^5.1.2",
     "chalk": "^4.1.2",
     "cli-progress": "^3.12.0",

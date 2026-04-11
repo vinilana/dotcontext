@@ -13,7 +13,7 @@ import { z } from 'zod';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
-import { readFileTool } from '../ai/tools';
+import { readFileTool } from '../harness/contextTools';
 import { PathValidator, SecurityError } from '../../utils/pathSecurity';
 import { SemanticContextBuilder, type ContextFormat } from '../semantic/contextBuilder';
 import { ContextCache } from '../semantic/contextCache';

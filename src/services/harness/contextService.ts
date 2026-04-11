@@ -14,7 +14,7 @@ import {
   listFilesToFillTool,
   fillSingleFileTool,
   getCodebaseMapTool,
-} from '../ai/tools';
+} from './contextTools';
 import { SemanticContextBuilder, type ContextFormat } from '../semantic/contextBuilder';
 import { CodebaseAnalyzer } from '../semantic/codebaseAnalyzer';
 import { QAService } from '../qa';

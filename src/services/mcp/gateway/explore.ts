@@ -11,7 +11,7 @@ import {
   analyzeSymbolsTool,
   getFileStructureTool,
   searchCodeTool,
-} from '../../ai/tools';
+} from '../../harness/contextTools';
 
 import type { ExploreParams } from './types';
 import type { MCPToolResponse } from './response';
