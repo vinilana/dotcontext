@@ -275,7 +275,7 @@ Skip ONLY for trivial changes (typos, single-line edits).`,
   async fill(params: {
     repoPath?: string;
     outputDir?: string;
-    target?: 'docs' | 'agents' | 'skills' | 'plans' | 'all';
+    target?: 'docs' | 'agents' | 'skills' | 'plans' | 'sensors' | 'all';
     offset?: number;
     limit?: number;
   }): Promise<unknown> {
@@ -301,7 +301,7 @@ Skip ONLY for trivial changes (typos, single-line edits).`,
   async listToFill(params: {
     repoPath?: string;
     outputDir?: string;
-    target?: 'docs' | 'agents' | 'skills' | 'plans' | 'all';
+    target?: 'docs' | 'agents' | 'skills' | 'plans' | 'sensors' | 'all';
   }): Promise<unknown> {
     return listFilesToFillTool.execute!(
       {

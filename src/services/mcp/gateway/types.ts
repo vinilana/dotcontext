@@ -79,7 +79,7 @@ export interface ContextParams {
   autoFill?: boolean;
   skipContentGeneration?: boolean;
   generateQA?: boolean;
-  target?: 'docs' | 'agents' | 'skills' | 'plans' | 'all';
+  target?: 'docs' | 'agents' | 'skills' | 'plans' | 'sensors' | 'all';
   offset?: number;
   limit?: number;
   filePath?: string;

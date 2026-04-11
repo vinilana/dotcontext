@@ -42,8 +42,8 @@ function createInternalTool<TInput, TOutput>(
   return { description, execute };
 }
 
-type ScaffoldTarget = 'docs' | 'agents' | 'skills' | 'plans' | 'all';
-type ScaffoldFileType = 'doc' | 'agent' | 'skill' | 'plan';
+type ScaffoldTarget = 'docs' | 'agents' | 'skills' | 'plans' | 'sensors' | 'all';
+type ScaffoldFileType = 'doc' | 'agent' | 'skill' | 'plan' | 'sensor';
 
 interface ScaffoldFileInfo {
   path: string;
@@ -137,6 +137,18 @@ async function collectScaffoldFiles(
     }
   }
 
+  if (target === 'all' || target === 'sensors') {
+    const sensorsPath = path.join(outputDir, 'harness', 'sensors.json');
+    if (await fs.pathExists(sensorsPath) && await sensorCatalogNeedsFill(sensorsPath)) {
+      files.push({
+        path: sensorsPath,
+        relativePath: path.join('harness', 'sensors.json'),
+        type: 'sensor',
+        documentName: 'sensors',
+      });
+    }
+  }
+
   return files;
 }
 
@@ -173,6 +185,15 @@ function resolveScaffoldFileInfo(outputDir: string, filePath: string): ScaffoldF
     };
   }
 
+  if (segments[0] === 'harness' && segments[1] === 'sensors.json') {
+    return {
+      path: resolvedFilePath,
+      relativePath,
+      type: 'sensor',
+      documentName: 'sensors',
+    };
+  }
+
   return {
     path: resolvedFilePath,
     relativePath,
@@ -191,6 +212,19 @@ function getAgentFillInstructions(agentType: string): string {
 
 function getSkillFillInstructions(skillSlug: string): string {
   return `Fill the ${skillSlug} skill with project-specific guidance, examples, and references to real files and conventions from this repository.`;
+}
+
+function getSensorFillInstructions(): string {
+  return 'Review .context/harness/sensors.json and rewrite it as a project-specific sensor catalog. Keep the JSON schema valid, keep version at 1, set source to "manual", preserve stack metadata, and keep only commands that make sense for this repository.';
+}
+
+async function sensorCatalogNeedsFill(filePath: string): Promise<boolean> {
+  try {
+    const content = await fs.readJson(filePath) as { source?: string };
+    return content.source !== 'manual';
+  } catch {
+    return false;
+  }
 }
 
 async function hasContent(dirPath: string): Promise<boolean> {
@@ -703,6 +737,7 @@ export const initializeContextTool = createInternalTool<
       });
       const sensorCatalog = await sensorCatalogService.bootstrap();
       const sensorsGenerated = sensorCatalog.sensors.length;
+      const sensorsPath = sensorCatalogService.configPath;
 
       const policyService = new HarnessPolicyService({ repoPath: resolvedRepoPath });
       const policyPath = path.join(outputDir, 'harness', 'policy.json');
@@ -750,6 +785,15 @@ export const initializeContextTool = createInternalTool<
         }
       }
 
+      if (autoFill && await sensorCatalogNeedsFill(sensorsPath)) {
+        generatedFiles.push({
+          path: sensorsPath,
+          relativePath: path.relative(outputDir, sensorsPath),
+          type: 'sensor',
+          instructions: getSensorFillInstructions()
+        });
+      }
+
       const pendingWrites: RequiredAction[] = autoFill
         ? generatedFiles.map((file, index) => ({
             order: index + 1,
@@ -768,7 +812,11 @@ export const initializeContextTool = createInternalTool<
       const qaOutputDir = path.join(outputDir, 'docs', 'qa');
       const checklist = [
         ...pendingWrites.map((item) => `[ ] Fill ${path.relative(resolvedRepoPath, item.filePath)}`),
-        sensorsGenerated > 0 ? `[x] Bootstrapped ${sensorsGenerated} harness sensors` : '[ ] Generate harness sensors',
+        sensorsGenerated > 0
+          ? (await sensorCatalogNeedsFill(sensorsPath)
+              ? `[ ] Customize harness sensors in ${path.relative(resolvedRepoPath, sensorsPath)}`
+              : `[x] Loaded ${sensorsGenerated} project-specific harness sensors`)
+          : '[ ] Generate harness sensors',
         policyGenerated ? '[x] Created harness bootstrap policy' : '[x] Reused existing harness bootstrap policy',
         qaGenerated > 0 ? `[x] Generated ${qaGenerated} Q&A docs in ${qaOutputDir}` : '[ ] Generate Q&A docs',
       ];
@@ -976,7 +1024,28 @@ export const fillSingleFileTool = createInternalTool<
       const semanticContext = await getOrBuildContext(resolvedRepoPath);
       const currentContent = await fs.readFile(resolvedFilePath, 'utf-8');
       const fileInfo = resolveScaffoldFileInfo(path.join(resolvedRepoPath, '.context'), resolvedFilePath);
-      const structure = getScaffoldStructure(fileInfo.documentName);
+      const structure = fileInfo.type === 'sensor'
+        ? undefined
+        : getScaffoldStructure(fileInfo.documentName);
+
+      if (fileInfo.type === 'sensor') {
+        const sensorCatalogService = new HarnessSensorCatalogService({
+          repoPath: resolvedRepoPath,
+          contextPath: path.join(resolvedRepoPath, '.context'),
+        });
+        const currentCatalog = await sensorCatalogService.load();
+
+        return {
+          success: true,
+          filePath: resolvedFilePath,
+          fileType: fileInfo.type,
+          documentName: fileInfo.documentName,
+          semanticContext,
+          currentContent,
+          currentCatalog,
+          instructions: `Use semanticContext and currentContent to rewrite ${resolvedFilePath} as a complete JSON sensor catalog tailored to this repository. Keep version at 1, set source to "manual", preserve stack metadata, and keep only relevant sensors with real commands for this project.`
+        };
+      }
 
       return {
         success: true,
@@ -1039,12 +1108,15 @@ export const fillScaffoldingTool = createInternalTool<
       const files = await Promise.all(
         paginatedFiles.map(async (fileInfo) => {
           const currentContent = await fs.readFile(fileInfo.path, 'utf-8');
-          const structure = getScaffoldStructure(fileInfo.documentName);
+          const structure = fileInfo.type === 'sensor'
+            ? undefined
+            : getScaffoldStructure(fileInfo.documentName);
           return {
             path: fileInfo.path,
             relativePath: fileInfo.relativePath,
             type: fileInfo.type,
             documentName: fileInfo.documentName,
+            fillInstructions: fileInfo.type === 'sensor' ? getSensorFillInstructions() : undefined,
             scaffoldStructure: structure ? serializeStructureForAI(structure) : undefined,
             currentContent
           };

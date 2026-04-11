@@ -155,7 +155,7 @@ export class AIContextMCPServer {
 - check: Check if .context scaffolding exists (params: repoPath?)
 - bootstrapStatus: Summarize scaffold, workflow, and harness bootstrap readiness (params: repoPath?)
 - init: Initialize .context scaffolding (params: repoPath?, type?, outputDir?, semantic?, autoFill?, skipContentGeneration?, generateQA?)
-- fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?) Generated Q&A docs under .context/docs/qa are already populated and are not returned unless you add custom unfilled docs there.
+- fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?) Generated Q&A docs under .context/docs/qa are already populated and are not returned unless you add custom unfilled docs there. Bootstrap .context/harness/sensors.json is returned until customized.
 - fillSingle: Fill a single scaffold file (params: repoPath?, filePath)
 - listToFill: List files that need filling (params: repoPath?, outputDir?, target?)
 - getMap: Get codebase map section (params: repoPath?, section?)
@@ -192,8 +192,8 @@ export class AIContextMCPServer {
           .describe('(init) Skip pre-generating content'),
         generateQA: z.boolean().optional()
           .describe('(init) Generate Q&A docs under .context/docs/qa; these are pre-filled and do not require fillSingle'),
-        target: z.enum(['docs', 'agents', 'skills', 'plans', 'all']).optional()
-          .describe('(fill, listToFill) Which scaffolding to target, including nested skills'),
+        target: z.enum(['docs', 'agents', 'skills', 'plans', 'sensors', 'all']).optional()
+          .describe('(fill, listToFill) Which scaffolding to target, including nested skills and harness sensors'),
         offset: z.number().optional()
           .describe('(fill) Skip first N files'),
         limit: z.number().optional()

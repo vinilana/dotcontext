@@ -62,6 +62,7 @@ Do the template files have content?
 └─ Yes → Skip to Step 3
 
 Note: generated Q&A files in `.context/docs/qa/` are already populated by `context({ action: "init", generateQA: true })` and do not appear in `listToFill`/`fill` unless you create custom nested docs there with `status: unfilled`.
+Note: `.context/harness/sensors.json` is bootstrap-generated during `init` and can appear in `listToFill`/`fill` until it is customized for the project.
 ```
 
 ### Step 3: Initialize Workflow

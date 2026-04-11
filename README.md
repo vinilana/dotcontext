@@ -542,6 +542,8 @@ Once configured, your AI assistant will have access to 9 gateway tools with acti
 |---------|-------------|---------|
 | **explore** | File and code exploration | `read`, `list`, `analyze`, `search`, `getStructure` |
 | **context** | Context scaffolding, semantic context, and Q&A/flow utilities | `check`, `bootstrapStatus`, `init`, `fill`, `fillSingle`, `listToFill`, `getMap`, `buildSemantic`, `scaffoldPlan`, `searchQA`, `generateQA`, `getFlow`, `detectPatterns` |
+
+`context init` also bootstraps `.context/harness/sensors.json`. While that catalog is still in bootstrap form, `context listToFill`/`fill` can return it so the AI can customize project-specific quality sensors.
 | **plan** | Plan management and execution tracking | `link`, `getLinked`, `getDetails`, `getForPhase`, `updatePhase`, `recordDecision`, `updateStep`, `getStatus`, `syncMarkdown`, `commitPhase` |
 | **agent** | Agent orchestration and discovery | `discover`, `getInfo`, `orchestrate`, `getSequence`, `getDocs`, `getPhaseDocs`, `listTypes` |
 | **skill** | Skill management for on-demand expertise | `list`, `getContent`, `getForPhase`, `scaffold`, `export`, `fill` |
