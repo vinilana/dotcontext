@@ -1,4 +1,10 @@
-import { HarnessExecutionService } from '../../harness';
+import {
+  HarnessExecutionService,
+  HarnessReplayService,
+  HarnessDatasetService,
+  type HarnessPolicyEffect,
+  type HarnessPolicyTarget,
+} from '../../harness';
 
 import type { HarnessParams } from './types';
 import type { MCPToolResponse } from './response';
@@ -8,13 +14,59 @@ export interface HarnessOptions {
   repoPath: string;
 }
 
+function normalizePolicyEffect(effect?: string): HarnessPolicyEffect {
+  if (effect === 'allow' || effect === 'deny' || effect === 'require_approval') {
+    return effect;
+  }
+
+  if (effect === 'warn' || effect === 'review') {
+    return 'require_approval';
+  }
+
+  return 'allow';
+}
+
+function normalizePolicyTarget(target?: string, pathPattern?: string, risk?: string): HarnessPolicyTarget {
+  if (target === 'tool' || target === 'action' || target === 'path' || target === 'risk') {
+    return target;
+  }
+
+  if (pathPattern) {
+    return 'path';
+  }
+
+  if (risk) {
+    return 'risk';
+  }
+
+  return 'action';
+}
+
 export async function handleHarness(
   params: HarnessParams,
   options: HarnessOptions
 ): Promise<MCPToolResponse> {
   const service = new HarnessExecutionService({ repoPath: options.repoPath });
+  const replayService = new HarnessReplayService({ repoPath: options.repoPath });
+  const datasetService = new HarnessDatasetService({ repoPath: options.repoPath });
 
   try {
+    const inferPolicyAction = () => {
+      switch (params.scope) {
+        case 'artifact':
+          return 'addArtifact';
+        case 'sensor':
+          return 'runSensor';
+        case 'handoff':
+          return 'createHandoff';
+        case 'task':
+          return 'createTask';
+        case 'workflow':
+        default:
+          return 'workflow';
+      }
+    };
+
     switch (params.action) {
       case 'createSession':
         return createJsonResponse({
@@ -169,6 +221,93 @@ export async function handleHarness(
           success: true,
           handoffs: await service.listHandoffContracts(),
         });
+      case 'replaySession':
+        return createJsonResponse({
+          success: true,
+          replay: await replayService.replaySession(params.sessionId!, {
+            includePayloads: params.includePayloads,
+            maxEvents: params.maxEvents,
+          }),
+        });
+      case 'listReplays':
+        return createJsonResponse({
+          success: true,
+          replays: await replayService.listReplays(
+            params.sessionId ? { sessionId: params.sessionId } : undefined
+          ),
+        });
+      case 'getReplay':
+        return createJsonResponse({
+          success: true,
+          replay: await replayService.getReplay(params.replayId!),
+        });
+      case 'buildDataset':
+        return createJsonResponse({
+          success: true,
+          dataset: await datasetService.buildFailureDataset({
+            sessionIds: params.sessionIds,
+            includeSuccessfulSessions: params.includeSuccessfulSessions,
+          }),
+        });
+      case 'listDatasets':
+        return createJsonResponse({
+          success: true,
+          datasets: await datasetService.listDatasets(),
+        });
+      case 'getDataset':
+        return createJsonResponse({
+          success: true,
+          dataset: await datasetService.getDataset(params.datasetId!),
+        });
+      case 'getFailureClusters':
+        return createJsonResponse({
+          success: true,
+          clusters: await datasetService.getFailureClusters(params.datasetId!),
+        });
+      case 'registerPolicy':
+        if (!params.effect) {
+          return createErrorResponse('registerPolicy requires effect');
+        }
+        const effect: HarnessPolicyEffect = params.effect === 'allow' || params.effect === 'deny'
+          ? params.effect
+          : 'require_approval';
+        const target: HarnessPolicyTarget = params.target === 'tool'
+          || params.target === 'action'
+          || params.target === 'path'
+          || params.target === 'risk'
+          ? params.target
+          : params.pathPattern
+            ? 'path'
+            : params.risk
+              ? 'risk'
+              : 'action';
+        return createJsonResponse({
+          success: true,
+          rule: await service.registerPolicy({
+            id: params.name || `policy-${Date.now()}`,
+            effect,
+            target,
+            pattern: params.pattern || params.pathPattern || params.risk || inferPolicyAction(),
+            approvalRole: params.owner,
+            reason: params.description,
+          }),
+        });
+      case 'listPolicies':
+        return createJsonResponse({
+          success: true,
+          rules: await service.listPolicies(),
+        });
+      case 'evaluatePolicy':
+        return createJsonResponse({
+          success: true,
+          evaluation: await service.evaluatePolicy({
+            tool: params.scope === 'workflow' ? 'workflow' : 'harness',
+            action: params.target || inferPolicyAction(),
+            paths: params.path ? [params.path] : undefined,
+            risk: params.risk,
+            metadata: params.metadata,
+          }),
+        });
       default:
         return createErrorResponse(`Unknown harness action: ${params.action}`);
     }
@@ -176,4 +315,3 @@ export async function handleHarness(
     return createErrorResponse(error);
   }
 }
-

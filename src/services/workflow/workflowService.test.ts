@@ -82,5 +82,81 @@ describe('WorkflowService harness integration', () => {
     expect(harness?.completionCheck.blocked).toBe(false);
     expect(harness?.sensorRuns).toHaveLength(1);
   });
-});
 
+  it('enforces artifact policy rules during workflow execution', async () => {
+    await service.init({
+      name: 'policy-run',
+      scale: 'SMALL',
+      autonomous: true,
+    });
+
+    await fs.ensureDir(path.join(tempDir, '.context', 'harness'));
+    await fs.writeJson(
+      path.join(tempDir, '.context', 'harness', 'policy.json'),
+      {
+        version: 1,
+        defaultEffect: 'allow',
+        rules: [
+          {
+            id: 'deny-secret-artifacts',
+            effect: 'deny',
+            when: {
+              tools: ['workflow'],
+              actions: ['recordArtifact'],
+              paths: ['src/secrets/*'],
+            },
+            reason: 'secret paths blocked',
+          },
+        ],
+      },
+      { spaces: 2 }
+    );
+
+    await expect(service.recordHarnessArtifact({
+      name: 'secret-output',
+      kind: 'file',
+      path: 'src/secrets/creds.txt',
+    })).rejects.toThrow('Policy blocked workflow.recordArtifact');
+  });
+
+  it('enforces checkpoint and handoff policy rules during workflow execution', async () => {
+    await service.init({
+      name: 'policy-checkpoint-handoff',
+      scale: 'SMALL',
+      autonomous: true,
+    });
+
+    await fs.ensureDir(path.join(tempDir, '.context', 'harness'));
+    await fs.writeJson(
+      path.join(tempDir, '.context', 'harness', 'policy.json'),
+      {
+        version: 1,
+        defaultEffect: 'allow',
+        rules: [
+          {
+            id: 'deny-checkpoint',
+            effect: 'deny',
+            when: {
+              tools: ['workflow'],
+              actions: ['checkpoint'],
+            },
+            reason: 'checkpoint denied',
+          },
+          {
+            id: 'deny-handoff',
+            effect: 'deny',
+            when: {
+              tools: ['workflow'],
+              actions: ['handoff'],
+            },
+            reason: 'handoff denied',
+          },
+        ],
+      },
+      { spaces: 2 }
+    );
+
+    await expect(service.checkpointHarnessSession('manual checkpoint')).rejects.toThrow('Policy blocked workflow.checkpoint');
+    await expect(service.handoff('planner', 'executor', ['artifact.txt'])).rejects.toThrow('Policy blocked workflow.handoff');
+  });
+});

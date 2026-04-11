@@ -19,6 +19,7 @@ export {
   type HarnessSessionCheckpoint,
   type HarnessTraceRecord,
   type HarnessArtifactRecord,
+  type HarnessRuntimeStatePort,
   type CreateSessionInput,
   type AppendTraceInput,
   type AddArtifactInput,
@@ -49,3 +50,35 @@ export {
   type HarnessExecutionServiceOptions,
   type HarnessSessionQualitySnapshot,
 } from './executionService';
+export {
+  HarnessReplayService,
+  type HarnessReplayServiceOptions,
+  type HarnessReplayDependencies,
+  type HarnessReplayEvent,
+  type HarnessReplayEventSource,
+  type HarnessReplayRecord,
+  type ReplaySessionOptions,
+} from './replayService';
+export {
+  HarnessDatasetService,
+  type HarnessDatasetServiceOptions,
+  type HarnessDatasetDependencies,
+  type BuildHarnessDatasetOptions,
+  type HarnessFailureKind,
+  type HarnessFailureRecord,
+  type HarnessFailureCluster,
+  type HarnessFailureDataset,
+} from './datasetService';
+export {
+  HarnessPolicyService,
+  HarnessPolicyBlockedError,
+  type HarnessPolicyServiceOptions,
+  type HarnessPolicyTarget,
+  type HarnessPolicyScope,
+  type HarnessPolicyEffect,
+  type HarnessPolicyRisk,
+  type HarnessPolicyRule,
+  type CreateHarnessPolicyRuleInput,
+  type HarnessPolicyEvaluationInput,
+  type HarnessPolicyEvaluationResult,
+} from './policyService';

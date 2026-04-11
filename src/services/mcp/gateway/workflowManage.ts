@@ -11,6 +11,7 @@ import {
   ROLE_DISPLAY_NAMES,
   createPlanLinker,
 } from '../../../workflow';
+import { HarnessPolicyBlockedError } from '../../harness';
 
 import type { PrevcRole } from '../../../workflow';
 import type { MCPToolResponse } from './response';
@@ -376,6 +377,18 @@ export async function handleWorkflowManage(
         return createErrorResponse(`Unknown workflow manage action: ${params.action}`);
     }
   } catch (error) {
-    return createErrorResponse(error);
+    const caughtError = error instanceof Error ? error : new Error(String(error));
+
+    if (caughtError instanceof HarnessPolicyBlockedError) {
+      return createJsonResponse({
+        success: false,
+        error: caughtError.message,
+        blockedBy: 'policy',
+        reasons: caughtError.decision.reasons,
+        policy: caughtError.decision.policy,
+      });
+    }
+
+    return createErrorResponse(caughtError);
   }
 }

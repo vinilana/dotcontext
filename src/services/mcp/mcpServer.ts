@@ -583,7 +583,17 @@ Actions:
 - listTasks: List task contracts
 - evaluateTask: Evaluate task completion (params: taskId, sessionId?)
 - createHandoff: Create handoff contract (params: from, to, sessionId?, taskId?, artifacts?, evidence?)
-- listHandoffs: List handoff contracts`,
+- listHandoffs: List handoff contracts
+- replaySession: Replay a durable session timeline (params: sessionId, includePayloads?, maxEvents?)
+- listReplays: List generated replays (params: sessionId?)
+- getReplay: Get replay by id (params: replayId)
+- buildDataset: Build a failure dataset from sessions (params: sessionIds?, includeSuccessfulSessions?)
+- listDatasets: List failure datasets
+- getDataset: Get failure dataset by id (params: datasetId)
+- getFailureClusters: Get clusters for a dataset (params: datasetId)
+- registerPolicy: Register policy rule (params: scope, effect, target?, pattern?, pathPattern?, risk?, description?)
+- listPolicies: List policy rules
+- evaluatePolicy: Evaluate policy against runtime input (params: scope, target?, path?, risk?)`,
       inputSchema: {
         action: z.enum([
           'createSession',
@@ -604,6 +614,16 @@ Actions:
           'evaluateTask',
           'createHandoff',
           'listHandoffs',
+          'replaySession',
+          'listReplays',
+          'getReplay',
+          'buildDataset',
+          'listDatasets',
+          'getDataset',
+          'getFailureClusters',
+          'registerPolicy',
+          'listPolicies',
+          'evaluatePolicy',
         ]).describe('Action to perform'),
         sessionId: z.string().optional(),
         taskId: z.string().optional(),
@@ -642,6 +662,18 @@ Actions:
         from: z.string().optional(),
         to: z.string().optional(),
         artifacts: z.array(z.string()).optional(),
+        replayId: z.string().optional(),
+        includePayloads: z.boolean().optional(),
+        maxEvents: z.number().optional(),
+        datasetId: z.string().optional(),
+        sessionIds: z.array(z.string()).optional(),
+        includeSuccessfulSessions: z.boolean().optional(),
+        scope: z.enum(['sensor', 'artifact', 'handoff', 'workflow', 'task', 'risk']).optional(),
+        effect: z.enum(['allow', 'deny', 'require_approval']).optional(),
+        target: z.enum(['tool', 'action', 'path', 'risk']).optional(),
+        pattern: z.string().optional(),
+        pathPattern: z.string().optional(),
+        risk: z.enum(['low', 'medium', 'high', 'critical']).optional(),
       }
     }, wrap('harness', async (params): Promise<MCPToolResponse> => {
       return handleHarness(params as HarnessParams, { repoPath: this.getRepoPath() });

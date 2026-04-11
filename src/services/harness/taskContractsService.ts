@@ -10,7 +10,7 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import type {
   HarnessArtifactRecord,
-  HarnessRuntimeStateService,
+  HarnessRuntimeStatePort,
   HarnessTraceRecord,
 } from './runtimeStateService';
 import type { HarnessSensorRun } from './sensorsService';
@@ -65,7 +65,7 @@ export interface HarnessTaskCompletionResult {
 
 export interface HarnessTaskContractsServiceOptions {
   repoPath: string;
-  stateService: HarnessRuntimeStateService;
+  stateService: HarnessRuntimeStatePort;
 }
 
 export class HarnessTaskContractsService {

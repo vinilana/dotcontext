@@ -8,7 +8,7 @@
 import { randomUUID } from 'crypto';
 import type {
   AppendTraceInput,
-  HarnessRuntimeStateService,
+  HarnessRuntimeStatePort,
   HarnessTraceRecord,
 } from './runtimeStateService';
 
@@ -62,7 +62,7 @@ export interface HarnessBackpressureResult {
 }
 
 export interface HarnessSensorsServiceOptions {
-  stateService: HarnessRuntimeStateService;
+  stateService: HarnessRuntimeStatePort;
 }
 
 export class HarnessSensorsService {
@@ -156,4 +156,3 @@ export class HarnessSensorsService {
     };
   }
 }
-

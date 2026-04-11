@@ -65,6 +65,17 @@ export interface HarnessArtifactRecord {
   metadata?: Record<string, unknown>;
 }
 
+export interface HarnessRuntimeStatePort {
+  getSession(sessionId: string): Promise<HarnessSessionRecord>;
+  listSessions(): Promise<HarnessSessionRecord[]>;
+  appendTrace(sessionId: string, input: AppendTraceInput): Promise<HarnessTraceRecord>;
+  listTraces(sessionId: string): Promise<HarnessTraceRecord[]>;
+  addArtifact(sessionId: string, input: AddArtifactInput): Promise<HarnessArtifactRecord>;
+  listArtifacts(sessionId: string): Promise<HarnessArtifactRecord[]>;
+  checkpointSession(sessionId: string, input?: CheckpointInput): Promise<HarnessSessionRecord>;
+  listCheckpoints(sessionId: string): Promise<HarnessSessionCheckpoint[]>;
+}
+
 export interface CreateSessionInput {
   name: string;
   metadata?: Record<string, unknown>;
@@ -281,6 +292,11 @@ export class HarnessRuntimeStateService {
     });
 
     return artifact;
+  }
+
+  async listCheckpoints(sessionId: string): Promise<HarnessSessionCheckpoint[]> {
+    const session = await this.readSession(sessionId);
+    return [...session.checkpoints].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
   async listArtifacts(sessionId: string): Promise<HarnessArtifactRecord[]> {

@@ -32,6 +32,7 @@ import {
   HarnessRuntimeStateService,
   HarnessSensorsService,
   HarnessTaskContractsService,
+  HarnessPolicyService,
   type HarnessArtifactKind,
   type HarnessTaskContract,
   type HarnessHandoffContract,
@@ -55,6 +56,7 @@ export interface WorkflowHarnessStatus {
   sensorRuns: HarnessSensorRun[];
   taskContracts: HarnessTaskContract[];
   handoffs: HarnessHandoffContract[];
+  policyRules: number;
   completionCheck: {
     blocked: boolean;
     reasons: string[];
@@ -120,6 +122,7 @@ export class WorkflowService {
   private runtimeStateService: HarnessRuntimeStateService;
   private sensorsService: HarnessSensorsService;
   private taskContractsService: HarnessTaskContractsService;
+  private policyService: HarnessPolicyService;
   private deps: WorkflowServiceDependencies;
 
   constructor(
@@ -141,6 +144,7 @@ export class WorkflowService {
       repoPath: this.repoPath,
       stateService: this.runtimeStateService,
     });
+    this.policyService = new HarnessPolicyService({ repoPath: this.repoPath });
     this.deps = deps;
     this.registerDefaultSensors();
   }
@@ -166,6 +170,16 @@ export class WorkflowService {
    * Initialize a new workflow
    */
   async init(options: WorkflowInitOptions): Promise<PrevcStatus> {
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'init',
+      risk: options.archivePrevious ? 'high' : 'medium',
+      metadata: {
+        name: options.name,
+        scale: options.scale,
+      },
+    });
+
     // Ensure .context directory exists
     await fs.ensureDir(this.contextPath);
     await fs.ensureDir(path.join(this.contextPath, 'workflow'));
@@ -268,6 +282,16 @@ export class WorkflowService {
   async advance(outputs?: string[], options?: { force?: boolean }): Promise<PrevcPhase | null> {
     const currentPhase = await this.orchestrator.getCurrentPhase();
     if (!options?.force) {
+      const approval = await this.getApproval();
+      await this.policyService.authorize({
+        tool: 'workflow',
+        action: 'advance',
+        risk: 'high',
+        approval: approval?.plan_approved
+          ? { approvedBy: approval.approved_by, note: approval.approval_notes }
+          : undefined,
+      });
+
       const harnessStatus = await this.getHarnessStatus();
       if (harnessStatus?.completionCheck.blocked) {
         throw new HarnessWorkflowBlockedError(
@@ -314,6 +338,15 @@ export class WorkflowService {
    * Set workflow settings
    */
   async setSettings(settings: Partial<WorkflowSettings>): Promise<WorkflowSettings> {
+    const isHighRisk =
+      typeof settings.autonomous_mode === 'boolean' ||
+      typeof settings.require_approval === 'boolean';
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'setSettings',
+      risk: isHighRisk ? 'high' : 'medium',
+      metadata: settings as Record<string, unknown>,
+    });
     return this.orchestrator.setSettings(settings);
   }
 
@@ -328,6 +361,12 @@ export class WorkflowService {
    * Enable or disable autonomous mode
    */
   async setAutonomousMode(enabled: boolean): Promise<WorkflowSettings> {
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'setAutonomousMode',
+      risk: 'high',
+      metadata: { enabled },
+    });
     return this.orchestrator.setSettings({ autonomous_mode: enabled });
   }
 
@@ -335,6 +374,12 @@ export class WorkflowService {
    * Mark that a plan has been created/linked
    */
   async markPlanCreated(planSlug: string): Promise<void> {
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'markPlanCreated',
+      risk: 'medium',
+      metadata: { planSlug },
+    });
     return this.orchestrator.markPlanCreated(planSlug);
   }
 
@@ -342,6 +387,13 @@ export class WorkflowService {
    * Approve the plan
    */
   async approvePlan(approver: PrevcRole | string, notes?: string): Promise<PlanApproval> {
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'approvePlan',
+      risk: 'high',
+      approval: { approvedBy: String(approver), note: notes },
+      metadata: { approver, notes },
+    });
     return this.orchestrator.approvePlan(approver, notes);
   }
 
@@ -360,6 +412,21 @@ export class WorkflowService {
     to: string,
     artifacts: string[]
   ): Promise<void> {
+    const handoffRisk = artifacts.some((artifactPath) => /secret|token|key|password/i.test(artifactPath))
+      ? 'high'
+      : 'medium';
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'handoff',
+      paths: artifacts,
+      risk: handoffRisk,
+      metadata: {
+        from,
+        to,
+        artifactCount: artifacts.length,
+      },
+    });
+
     await this.orchestrator.handoff(from, to, artifacts);
     const binding = await this.loadHarnessBinding();
 
@@ -466,6 +533,12 @@ export class WorkflowService {
    * Update the current task
    */
   async updateTask(task: string): Promise<void> {
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'updateTask',
+      risk: 'medium',
+      metadata: { task },
+    });
     await this.orchestrator.updateCurrentTask(task);
   }
 
@@ -473,6 +546,12 @@ export class WorkflowService {
    * Start a role in the current phase
    */
   async startRole(role: PrevcRole): Promise<void> {
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'startRole',
+      risk: 'medium',
+      metadata: { role },
+    });
     await this.orchestrator.startRole(role);
     this.deps.ui?.displaySuccess(
       `Started role: ${ROLE_DISPLAY_NAMES[role]}`
@@ -483,6 +562,16 @@ export class WorkflowService {
    * Complete a role's work
    */
   async completeRole(role: PrevcRole, outputs: string[]): Promise<void> {
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'completeRole',
+      paths: outputs,
+      risk: outputs.some((output) => /secret|token|key|password/i.test(output)) ? 'high' : 'medium',
+      metadata: {
+        role,
+        outputCount: outputs.length,
+      },
+    });
     await this.orchestrator.completeRole(role, outputs);
     this.deps.ui?.displaySuccess(
       `Completed role: ${ROLE_DISPLAY_NAMES[role]}`
@@ -497,6 +586,7 @@ export class WorkflowService {
 
     const session = await this.runtimeStateService.getSession(binding.sessionId);
     const allSensorRuns = await this.sensorsService.getSessionSensorRuns(binding.sessionId);
+    const policyRules = await this.policyService.listRules();
     const latestRuns = new Map<string, HarnessSensorRun>();
     for (const run of allSensorRuns) {
       const current = latestRuns.get(run.sensorId);
@@ -524,6 +614,7 @@ export class WorkflowService {
       sensorRuns,
       taskContracts,
       handoffs,
+      policyRules: policyRules.length,
       completionCheck: {
         blocked: reasons.length > 0,
         reasons,
@@ -544,6 +635,16 @@ export class WorkflowService {
     pause?: boolean
   ): Promise<{ binding: WorkflowHarnessBinding; session: HarnessSessionRecord }> {
     const binding = await this.requireHarnessBinding();
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'checkpoint',
+      risk: pause ? 'high' : 'medium',
+      metadata: {
+        note,
+        pause: Boolean(pause),
+        artifactCount: artifactIds?.length ?? 0,
+      },
+    });
     const session = await this.runtimeStateService.checkpointSession(binding.sessionId, {
       note,
       data,
@@ -563,6 +664,13 @@ export class WorkflowService {
     metadata?: Record<string, unknown>;
   }) {
     const binding = await this.requireHarnessBinding();
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'recordArtifact',
+      paths: input.path ? [input.path] : [input.name],
+      risk: input.path?.includes('secret') ? 'critical' : 'medium',
+      metadata: input.metadata,
+    });
     const artifact = await this.runtimeStateService.addArtifact(binding.sessionId, input);
     binding.updatedAt = artifact.createdAt;
     await this.saveHarnessBinding(binding);
@@ -581,6 +689,15 @@ export class WorkflowService {
     metadata?: Record<string, unknown>;
   }): Promise<HarnessTaskContract> {
     const binding = await this.requireHarnessBinding();
+    await this.policyService.authorize({
+      tool: 'workflow',
+      action: 'defineTask',
+      risk: input.requiredSensors?.includes('deploy') ? 'high' : 'medium',
+      metadata: {
+        ...input.metadata,
+        title: input.title,
+      },
+    });
     const contract = await this.taskContractsService.createTaskContract({
       ...input,
       sessionId: binding.sessionId,
@@ -598,6 +715,12 @@ export class WorkflowService {
     const runs: HarnessSensorRun[] = [];
 
     for (const sensorId of sensorIds) {
+      await this.policyService.authorize({
+        tool: 'workflow',
+        action: 'runSensors',
+        risk: sensorId === 'deploy' ? 'high' : 'medium',
+        metadata,
+      });
       runs.push(await this.sensorsService.runSensor(sensorId, {
         sessionId: binding.sessionId,
         contractId: binding.activeTaskId,

@@ -37,7 +37,20 @@ export type HarnessAction =
   | 'listTasks'
   | 'evaluateTask'
   | 'createHandoff'
-  | 'listHandoffs';
+  | 'listHandoffs'
+  | 'replaySession'
+  | 'listReplays'
+  | 'getReplay'
+  | 'buildDataset'
+  | 'listDatasets'
+  | 'getDataset'
+  | 'getFailureClusters'
+  | 'registerPolicy'
+  | 'listPolicies'
+  | 'evaluatePolicy'
+  | 'getPolicy'
+  | 'setPolicy'
+  | 'resetPolicy';
 
 // Parameter interfaces for each gateway
 export interface ExploreParams {
@@ -189,4 +202,33 @@ export interface HarnessParams {
   from?: string;
   to?: string;
   artifacts?: string[];
+  replayId?: string;
+  includePayloads?: boolean;
+  maxEvents?: number;
+  datasetId?: string;
+  sessionIds?: string[];
+  includeSuccessfulSessions?: boolean;
+  scope?: 'sensor' | 'artifact' | 'handoff' | 'workflow' | 'task' | 'risk';
+  effect?: 'allow' | 'deny' | 'require_approval';
+  target?: 'tool' | 'action' | 'path' | 'risk';
+  pattern?: string;
+  pathPattern?: string;
+  approvalRole?: string;
+  approvedBy?: string;
+  approvalNote?: string;
+  risk?: 'low' | 'medium' | 'high' | 'critical';
+  policy?: {
+    defaultEffect?: 'allow' | 'deny';
+    rules?: Array<{
+      id?: string;
+      effect: 'allow' | 'deny' | 'require_approval';
+      target?: 'tool' | 'action' | 'path' | 'risk';
+      pattern?: string;
+      pathPattern?: string;
+      approvalRole?: string;
+      reason?: string;
+      description?: string;
+      scope?: 'sensor' | 'artifact' | 'handoff' | 'workflow' | 'task' | 'risk';
+    }>;
+  };
 }

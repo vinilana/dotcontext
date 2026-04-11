@@ -91,4 +91,63 @@ describe('workflow MCP harness integration', () => {
     expect(response.reasons).toContain('Missing required sensors: build');
     expect(response.reasons).toContain('Missing required artifacts: handoff-summary');
   });
+
+  it('returns structured policy blocking info from workflow-manage and workflow-advance', async () => {
+    await handleWorkflowInit({
+      name: 'zeta',
+      scale: 'SMALL',
+      autonomous: true,
+      repoPath: tempDir,
+    }, { repoPath: tempDir });
+
+    await fs.ensureDir(path.join(tempDir, '.context', 'harness'));
+    await fs.writeJson(
+      path.join(tempDir, '.context', 'harness', 'policy.json'),
+      {
+        version: 1,
+        defaultEffect: 'allow',
+        rules: [
+          {
+            id: 'deny-artifact-record',
+            effect: 'deny',
+            when: {
+              tools: ['workflow'],
+              actions: ['recordArtifact'],
+            },
+            reason: 'artifact writes blocked for test',
+          },
+          {
+            id: 'deny-advance',
+            effect: 'deny',
+            when: {
+              tools: ['workflow'],
+              actions: ['advance'],
+            },
+            reason: 'advance blocked for test',
+          },
+        ],
+      },
+      { spaces: 2 }
+    );
+
+    const artifactResponse = parseResponse(await handleWorkflowManage({
+      action: 'recordArtifact',
+      name: 'handoff-summary',
+      kind: 'text',
+      content: 'ready',
+      repoPath: tempDir,
+    }, { repoPath: tempDir }));
+
+    const advanceResponse = parseResponse(await handleWorkflowAdvance({
+      repoPath: tempDir,
+    }, { repoPath: tempDir }));
+
+    expect(artifactResponse.success).toBe(false);
+    expect(artifactResponse.blockedBy).toBe('policy');
+    expect(artifactResponse.reasons).toContain('artifact writes blocked for test');
+
+    expect(advanceResponse.success).toBe(false);
+    expect(advanceResponse.blockedBy).toBe('policy');
+    expect(advanceResponse.reasons).toContain('advance blocked for test');
+  });
 });
