@@ -13,5 +13,14 @@ export {
   type ContextBuilderOptions,
   type ContextFormat
 } from './contextBuilder';
+export {
+  SemanticSnapshotService,
+  type SemanticSnapshotManifest,
+  type SemanticSnapshotSection,
+  type SemanticSnapshotWriteOptions,
+  type SemanticSnapshotWriteResult,
+  type SemanticSnapshotReadOptions,
+  type SemanticSnapshotSectionResult,
+} from './semanticSnapshotService';
 
 export * from './types';

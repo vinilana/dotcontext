@@ -33,7 +33,7 @@ Understanding data flow helps with debugging, performance optimization, and main
 - **Services** → Data Access, External APIs
 - **Data Access** → Database, Cache
 
-*See [\`codebase-map.json\`](./codebase-map.json) for detailed dependency graphs.*`,
+*See [\`codebase-map.json\`](./codebase-map.json) for generated dependency hotspots and architecture summaries.*`,
     },
     {
       heading: 'Service Layer',
@@ -46,7 +46,7 @@ Understanding data flow helps with debugging, performance optimization, and main
 
 - **[ServiceName]** — [Purpose] (\`src/services/path.ts\`)
 
-*See [\`codebase-map.json\`](./codebase-map.json) for complete service listings.*`,
+Capture the main service modules here with links to their implementations.`,
     },
     {
       heading: 'High-level Flow',

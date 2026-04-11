@@ -8,7 +8,7 @@ import { FileMapper } from '../../utils/fileMapper';
 import { needsFill } from '../../utils/frontMatter';
 import { getScaffoldStructure, serializeStructureForAI } from '../../generators/shared/scaffoldStructures';
 import { DocumentationGenerator } from '../../generators/documentation/documentationGenerator';
-import type { CodebaseMap } from '../../generators/documentation';
+import { SemanticSnapshotService } from '../semantic';
 import { AgentGenerator } from '../../generators/agents/agentGenerator';
 import { SkillGenerator } from '../../generators/skills/skillGenerator';
 import { PlanGenerator } from '../../generators/plans/planGenerator';
@@ -1142,48 +1142,11 @@ export const fillScaffoldingTool = createInternalTool<
   }
 );
 
-function extractCodebaseMapSection(map: CodebaseMap, section: string): unknown {
-  switch (section) {
-    case 'all':
-      return map;
-    case 'stack':
-      return map.stack;
-    case 'structure':
-      return map.structure;
-    case 'architecture':
-      return map.architecture;
-    case 'symbols':
-      return map.symbols;
-    case 'symbols.classes':
-      return map.symbols.classes;
-    case 'symbols.interfaces':
-      return map.symbols.interfaces;
-    case 'symbols.functions':
-      return map.symbols.functions;
-    case 'symbols.types':
-      return map.symbols.types;
-    case 'symbols.enums':
-      return map.symbols.enums;
-    case 'publicAPI':
-      return map.publicAPI;
-    case 'dependencies':
-      return map.dependencies;
-    case 'stats':
-      return map.stats;
-    case 'keyFiles':
-      return map.keyFiles ?? [];
-    case 'navigation':
-      return map.navigation ?? {};
-    default:
-      return map;
-  }
-}
-
 export const getCodebaseMapTool = createInternalTool<
   { repoPath?: string; section?: string },
   Record<string, unknown>
 >(
-  'Get codebase map data from .context/docs/codebase-map.json',
+  'Get persisted semantic snapshot data and auto-refresh it on read',
   async (input) => {
     if (!input.repoPath) {
       throw new Error('repoPath is required for getCodebaseMap');
@@ -1191,21 +1154,19 @@ export const getCodebaseMapTool = createInternalTool<
 
     const section = input.section || 'all';
     try {
-      const mapPath = path.join(input.repoPath, '.context', 'docs', 'codebase-map.json');
-      if (!await fs.pathExists(mapPath)) {
-        return {
-          success: false,
-          section,
-          error: `Codebase map not found at ${mapPath}. Initialize context with semantic analysis first.`
-        };
-      }
-
-      const codebaseMap = await fs.readJson(mapPath) as CodebaseMap;
+      const snapshotService = new SemanticSnapshotService();
+      const result = await snapshotService.ensureFreshSection(input.repoPath, section as any);
       return {
         success: true,
         section,
-        data: extractCodebaseMapSection(codebaseMap, section),
-        mapPath
+        data: result.data,
+        mapPath: result.path,
+        source: result.source,
+        fresh: result.fresh,
+        refreshed: result.refreshed,
+        refreshReason: result.refreshReason,
+        generatedAt: result.manifest?.generatedAt ?? null,
+        schemaVersion: result.manifest?.schemaVersion ?? null,
       };
     } catch (error) {
       return {

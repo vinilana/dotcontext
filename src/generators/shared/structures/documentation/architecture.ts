@@ -17,7 +17,7 @@ export const architectureStructure: ScaffoldStructure = {
       headingLevel: 2,
       defaultContent: `This document describes the system architecture, design patterns, and key technical decisions.
 
-For complete symbol counts and dependency analysis, see [\`codebase-map.json\`](./codebase-map.json).`,
+For generated stack, architecture, key file, and dependency summaries, see [\`codebase-map.json\`](./codebase-map.json).`,
     },
     {
       heading: 'System Architecture Overview',
@@ -42,8 +42,8 @@ For complete symbol counts and dependency analysis, see [\`codebase-map.json\`](
       heading: 'Architectural Layers',
       order: 3,
       contentType: 'list',
-      guidance: 'List architecture layers with their purpose and key directories. Do NOT list symbol counts inline - reference codebase-map.json for detailed analysis.',
-      exampleContent: '- **Services**: Core business logic (`src/services/`)\n- **Generators**: Content generation (`src/generators/`)\n\n> See [`codebase-map.json`](./codebase-map.json) for complete symbol counts and dependency graphs.',
+      guidance: 'List architecture layers with their purpose and key directories. Reference codebase-map.json for generated architecture and dependency summaries.',
+      exampleContent: '- **Services**: Core business logic (`src/services/`)\n- **Generators**: Content generation (`src/generators/`)\n\n> See [`codebase-map.json`](./codebase-map.json) for generated architecture and dependency summaries.',
       required: true,
       headingLevel: 2,
       defaultContent: `- **Entry Points**: Application entry and initialization (\`src/\`)
@@ -51,7 +51,7 @@ For complete symbol counts and dependency analysis, see [\`codebase-map.json\`](
 - **Models/Types**: Data structures and type definitions (\`src/types/\`)
 - **Utilities**: Shared helper functions (\`src/utils/\`)
 
-> See [\`codebase-map.json\`](./codebase-map.json) for complete symbol counts and dependency graphs.`,
+> See [\`codebase-map.json\`](./codebase-map.json) for generated architecture and dependency summaries.`,
     },
     {
       heading: 'Detected Design Patterns',
@@ -87,8 +87,7 @@ For complete symbol counts and dependency analysis, see [\`codebase-map.json\`](
       defaultContent: `| Symbol | Type | Location |
 |--------|------|----------|
 | [ExportName] | class/function/type | \`src/path.ts\` |
-
-See [\`codebase-map.json\`](./codebase-map.json) for the complete public API listing.`,
+`,
     },
     {
       heading: 'Internal System Boundaries',

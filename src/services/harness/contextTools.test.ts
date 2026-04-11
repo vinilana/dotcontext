@@ -4,6 +4,7 @@ import * as path from 'path';
 
 import {
   fillSingleFileTool,
+  getCodebaseMapTool,
   initializeContextTool,
   listFilesToFillTool,
 } from './contextTools';
@@ -130,5 +131,54 @@ describe('contextTools sensors scaffolding', () => {
     ) as Record<string, any>;
 
     expect(listed.files).toEqual([]);
+  });
+
+  it('auto-builds and auto-refreshes semantic snapshot sections through getMap', async () => {
+    const legacySummaryPath = path.join(tempDir, '.context', 'docs', 'codebase-map.json');
+    await fs.ensureDir(path.dirname(legacySummaryPath));
+    await fs.writeJson(legacySummaryPath, {
+      legacy: true,
+      note: 'must be ignored when no snapshot manifest exists',
+    }, { spaces: 2 });
+
+    const missingResult = await getCodebaseMapTool.execute!(
+      {
+        repoPath: tempDir,
+        section: 'keyFiles',
+      },
+      toolExecutionContext
+    ) as Record<string, any>;
+
+    expect(missingResult.success).toBe(true);
+    expect(missingResult.source).toBe('snapshot');
+    expect(missingResult.fresh).toBe(true);
+    expect(missingResult.refreshed).toBe(true);
+    expect(missingResult.refreshReason).toBe('missing');
+    expect(Array.isArray(missingResult.data)).toBe(true);
+    expect(typeof missingResult.mapPath).toBe('string');
+    expect((missingResult.mapPath as string)).toMatch(
+      new RegExp(`\\.context${path.sep}cache${path.sep}semantic-index\\.v2${path.sep}versions${path.sep}.+${path.sep}key-files\\.json$`)
+    );
+    expect(await fs.pathExists(path.join(tempDir, '.context', 'cache', 'semantic-index.v2', 'manifest.json'))).toBe(true);
+
+    const beforeGeneratedAt = missingResult.generatedAt as string | null;
+    await fs.writeFile(path.join(tempDir, 'src', 'index.ts'), 'export const ok = false;\n', 'utf-8');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const staleResult = await getCodebaseMapTool.execute!(
+      {
+        repoPath: tempDir,
+        section: 'stats',
+      },
+      toolExecutionContext
+    ) as Record<string, any>;
+
+    expect(staleResult.success).toBe(true);
+    expect(staleResult.source).toBe('snapshot');
+    expect(staleResult.fresh).toBe(true);
+    expect(staleResult.refreshed).toBe(true);
+    expect(staleResult.refreshReason).toBe('stale');
+    expect(staleResult.data.totalFiles).toBeGreaterThan(0);
+    expect(staleResult.generatedAt).not.toBe(beforeGeneratedAt);
   });
 });

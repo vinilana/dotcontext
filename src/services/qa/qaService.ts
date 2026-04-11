@@ -4,16 +4,16 @@
  * Generates and manages Q&A content for the codebase.
  * Pre-answers common questions to reduce token usage during sessions.
  *
- * OPTIMIZATION: Uses codebase-map.json when available to avoid re-analyzing
- * the codebase. This provides ~10x faster Q&A generation when the map exists.
+ * OPTIMIZATION: Uses a persisted semantic snapshot when available to avoid
+ * re-analyzing the codebase.
  */
 
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { CodebaseAnalyzer } from '../semantic/codebaseAnalyzer';
+import { SemanticSnapshotService } from '../semantic/semanticSnapshotService';
 import { StackDetector, type StackInfo } from '../stack/stackDetector';
 import { TopicDetector, type QATopic, type TopicDetectionResult } from './topicDetector';
-import { PatternInferer } from './patternInferer';
 import type { DetectedFunctionalPatterns } from '../semantic/types';
 import type { CodebaseMap } from '../../generators/documentation/codebaseMapGenerator';
 
@@ -54,36 +54,32 @@ export class QAService {
   private analyzer: CodebaseAnalyzer;
   private stackDetector: StackDetector;
   private topicDetector: TopicDetector;
-  private patternInferer: PatternInferer;
+  private snapshotService: SemanticSnapshotService;
 
   constructor(options?: { useLSP?: boolean }) {
     this.analyzer = new CodebaseAnalyzer(options);
     this.stackDetector = new StackDetector();
     this.topicDetector = new TopicDetector();
-    this.patternInferer = new PatternInferer();
+    this.snapshotService = new SemanticSnapshotService();
   }
 
   /**
    * Generate Q&A from codebase analysis
    *
-   * OPTIMIZATION: Uses codebase-map.json when available to avoid re-analyzing.
-   * If the map doesn't exist, falls back to full analysis.
+   * OPTIMIZATION: Uses a persisted semantic snapshot when available.
+   * If the snapshot doesn't exist or is stale, falls back to full analysis.
    */
   async generateFromCodebase(repoPath: string): Promise<QAGenerationResult> {
     const absolutePath = path.resolve(repoPath);
 
-    // Try to use pre-computed codebase map for faster generation
-    const codebaseMap = await this.loadCodebaseMap(absolutePath);
-
     let stack: StackInfo;
     let patterns: DetectedFunctionalPatterns;
 
-    if (codebaseMap) {
-      // Use pre-computed data from codebase-map.json (fast path)
-      stack = this.convertMapStackToStackInfo(codebaseMap);
-      patterns = this.patternInferer.inferFromMap(codebaseMap);
-    } else {
-      // Fall back to full analysis (slow path)
+    try {
+      const snapshot = await this.snapshotService.ensureFreshSummary(absolutePath);
+      stack = this.convertMapStackToStackInfo(snapshot.summary);
+      patterns = snapshot.summary.functionalPatterns;
+    } catch {
       stack = await this.stackDetector.detect(absolutePath);
       patterns = await this.analyzer.detectFunctionalPatterns(absolutePath);
     }
@@ -954,42 +950,9 @@ export class QAService {
   }
 
   /**
-   * Load codebase-map.json if it exists
-   */
-  private async loadCodebaseMap(repoPath: string): Promise<CodebaseMap | null> {
-    const mapPath = path.join(repoPath, '.context', 'docs', 'codebase-map.json');
-
-    try {
-      if (await fs.pathExists(mapPath)) {
-        const content = await fs.readFile(mapPath, 'utf-8');
-        return JSON.parse(content) as CodebaseMap;
-      }
-    } catch {
-      // If loading fails, return null to fall back to full analysis
-    }
-
-    return null;
-  }
-
-  /**
-   * Convert codebase-map stack section to StackInfo format
+   * Convert persisted summary stack section to StackInfo format
    */
   private convertMapStackToStackInfo(map: CodebaseMap): StackInfo {
-    // Infer CLI-related fields from symbols and architecture
-    const hasBinField = map.architecture.entryPoints.some((ep) => ep.startsWith('bin/'));
-    const cliLibraries: string[] = [];
-
-    // Check for CLI frameworks in the symbols
-    const allSymbols = [
-      ...map.symbols.classes,
-      ...map.symbols.functions,
-    ];
-    if (allSymbols.some((s) => /commander|yargs|oclif|inquirer/i.test(s.name))) {
-      if (/commander/i.test(JSON.stringify(allSymbols))) cliLibraries.push('commander');
-      if (/yargs/i.test(JSON.stringify(allSymbols))) cliLibraries.push('yargs');
-      if (/oclif/i.test(JSON.stringify(allSymbols))) cliLibraries.push('oclif');
-    }
-
     return {
       primaryLanguage: map.stack.primaryLanguage,
       languages: map.stack.languages,
@@ -1000,12 +963,11 @@ export class QAService {
       isMonorepo: map.stack.isMonorepo,
       hasDocker: map.stack.hasDocker,
       hasCI: map.stack.hasCI,
-      files: [], // Files are not stored in codebase-map, but not needed for Q&A generation
-      // Inferred fields
-      hasBinField,
-      cliLibraries,
-      hasMainExport: map.publicAPI.length > 0,
-      hasTypesField: map.symbols.types.length > 0,
+      files: [],
+      hasBinField: map.stack.hasBinField,
+      cliLibraries: map.stack.cliLibraries || [],
+      hasMainExport: map.stack.hasMainExport,
+      hasTypesField: map.stack.hasTypesField,
     };
   }
 

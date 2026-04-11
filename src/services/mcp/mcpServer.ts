@@ -158,7 +158,7 @@ export class AIContextMCPServer {
 - fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?) Generated Q&A docs under .context/docs/qa are already populated and are not returned unless you add custom unfilled docs there. Bootstrap .context/harness/sensors.json is returned until customized.
 - fillSingle: Fill a single scaffold file (params: repoPath?, filePath)
 - listToFill: List files that need filling (params: repoPath?, outputDir?, target?)
-- getMap: Get codebase map section (params: repoPath?, section?)
+- getMap: Get codebase map section with on-read auto-refresh (params: repoPath?, section?)
 - buildSemantic: Build semantic context (params: repoPath?, contextType?, targetFile?, options?)
 - scaffoldPlan: Create a plan template (params: planName, repoPath?, title?, summary?, autoFill?)
 - searchQA: Search generated Q&A docs (params: repoPath?, query)
@@ -201,11 +201,10 @@ export class AIContextMCPServer {
         filePath: z.string().optional()
           .describe('(fillSingle) Absolute path to scaffold file'),
         section: z.enum([
-          'all', 'stack', 'structure', 'architecture', 'symbols',
-          'symbols.classes', 'symbols.interfaces', 'symbols.functions',
-          'symbols.types', 'symbols.enums', 'publicAPI', 'dependencies', 'stats'
+          'all', 'meta', 'stack', 'structure', 'architecture',
+          'functionalPatterns', 'dependencies', 'stats', 'keyFiles', 'navigation'
         ]).optional()
-          .describe('(getMap) Section to retrieve'),
+          .describe('(getMap) Section to retrieve; the snapshot auto-refreshes on read'),
         contextType: z.enum(['documentation', 'playbook', 'plan', 'compact']).optional()
           .describe('(buildSemantic) Type of context to build'),
         targetFile: z.string().optional()
