@@ -20,6 +20,19 @@ export {
   type HarnessContextServiceOptions,
   HarnessSkillsService,
   type HarnessSkillsServiceOptions,
+  HarnessRuntimeStateService,
+  type HarnessRuntimeStateServiceOptions,
+  type HarnessSessionStatus,
+  type HarnessTraceLevel,
+  type HarnessArtifactKind,
+  type HarnessSessionRecord,
+  type HarnessSessionCheckpoint,
+  type HarnessTraceRecord,
+  type HarnessArtifactRecord,
+  type CreateSessionInput,
+  type AppendTraceInput,
+  type AddArtifactInput,
+  type CheckpointInput,
 } from '../services/harness';
 
 export {

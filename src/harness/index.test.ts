@@ -4,6 +4,7 @@ import {
   HarnessPlansService,
   HarnessContextService,
   HarnessSkillsService,
+  HarnessRuntimeStateService,
   getScaleName,
   PHASE_NAMES_PT,
   ROLE_DISPLAY_NAMES,
@@ -16,6 +17,7 @@ describe('Harness boundary exports', () => {
     expect(HarnessPlansService).toBeDefined();
     expect(HarnessContextService).toBeDefined();
     expect(HarnessSkillsService).toBeDefined();
+    expect(HarnessRuntimeStateService).toBeDefined();
     expect(getScaleName).toBeDefined();
     expect(PHASE_NAMES_PT).toBeDefined();
     expect(ROLE_DISPLAY_NAMES).toBeDefined();

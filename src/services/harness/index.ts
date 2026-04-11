@@ -9,3 +9,18 @@ export { HarnessAgentsService, type HarnessAgentsServiceOptions } from './agents
 export { HarnessPlansService, type HarnessPlansServiceOptions } from './plansService';
 export { HarnessContextService, type HarnessContextServiceOptions, type HarnessContextInitResult, type HarnessContextPlanScaffoldResult } from './contextService';
 export { HarnessSkillsService, type HarnessSkillsServiceOptions } from './skillsService';
+export {
+  HarnessRuntimeStateService,
+  type HarnessRuntimeStateServiceOptions,
+  type HarnessSessionStatus,
+  type HarnessTraceLevel,
+  type HarnessArtifactKind,
+  type HarnessSessionRecord,
+  type HarnessSessionCheckpoint,
+  type HarnessTraceRecord,
+  type HarnessArtifactRecord,
+  type CreateSessionInput,
+  type AppendTraceInput,
+  type AddArtifactInput,
+  type CheckpointInput,
+} from './runtimeStateService';
