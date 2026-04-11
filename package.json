@@ -1,7 +1,7 @@
 {
   "name": "@dotcontext/cli",
-  "version": "0.8.2",
-  "description": "MCP-first toolkit for AI context workflow, sync, imports, and orchestration",
+  "version": "0.9.0",
+  "description": "Harness engineering runtime for AI-assisted software delivery, with CLI and MCP surfaces",
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",

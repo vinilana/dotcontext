@@ -1,73 +1,55 @@
-# Project Rules and Guidelines
+# Dotcontext Agent Instructions
 
-> Auto-generated from .context/docs on 2026-03-18T21:47:40.751Z
+This repository exposes one runtime through three surfaces:
 
-## README
-
-# Documentation Index
-
-Welcome to the `@dotcontext/cli` repository knowledge base. Start with the project overview, then dive into specific guides as needed.
-
-## Core Guides
-
-| Guide | File | Primary Inputs |
-| --- | --- | --- |
-| Project Overview | [`project-overview.md`](./project-overview.md) | Roadmap, README, stakeholder notes |
-| Development Workflow | [`development-workflow.md`](./development-workflow.md) | Branching rules, CI config, contributing guide |
-| Testing Strategy | [`testing-strategy.md`](./testing-strategy.md) | Test configs, CI gates, known flaky suites |
-| Tooling & Productivity | [`tooling.md`](./tooling.md) | CLI scripts, IDE configs, automation workflows |
-
-## Q&A
-
-Frequently asked questions are organized by topic in the [`qa/`](./qa/) directory.
-See [qa/README.md](./qa/README.md) for the full index.
-
-## Codebase Map
-
-Machine-readable project structure and stack metadata: [`codebase-map.json`](./codebase-map.json)
-
-## Repository Snapshot
-
-```
-AGENTS.md
-CHANGELOG.md
-CLAUDE.md
-CONTRIBUTING.md
-LICENSE
-README.md
-docs/             -- Published documentation produced by this tool
-example-documentation.ts
-jest.config.js
-package.json
-package-lock.json
-prompts/          -- Prompt templates (update_plan_prompt.md, update_scaffold_prompt.md)
-scripts/          -- Build and test helper scripts
-src/              -- TypeScript source (~240 files): CLI entrypoint, services, generators, utilities
-tsconfig.json
+```text
+cli -> harness <- mcp
 ```
 
+Agents working in this repo should preserve that separation.
 
-## qa/README
+## Architectural Intent
 
-# Q&A Index
+- `cli` is the operator interface
+- `harness` is the reusable execution runtime
+- `mcp` is the transport adapter for AI tools
 
-Project type: **cli-tool**
+If a change affects reusable execution logic, prefer `src/services/harness`.
+If a change affects protocol shape or request handling, prefer `src/services/mcp/gateway`.
+If a change affects user-facing commands or installation flows, prefer `src/cli` and `src/services/cli`.
 
-Generated: 2026-03-18T21:32:55.004Z
+## Repository References
 
-## Getting-started
+- `README.md` explains what dotcontext is and why it exists
+- `docs/GUIDE.md` explains how to use it
+- `ARCHITECTURE.md` explains how the harness works
+- `CONTRIBUTING.md` explains contributor workflow
+- `CHANGELOG.md` tracks release-facing changes
 
-- [How do I set up and run this project?](./getting-started.md)
+## Expected Validation
 
-## Architecture
+For code changes:
 
-- [How is the codebase organized?](./project-structure.md)
+```bash
+npm run build
+npm test -- --runInBand
+```
 
-## Operations
+For packaging or release-surface changes:
 
-- [How are errors handled?](./error-handling.md)
+```bash
+npm run build:packages
+npm run smoke:packages
+```
 
-## Testing
+## MCP Install Changes
 
-See [testing-strategy.md](../testing-strategy.md) in the parent docs directory for full test framework documentation.
+If you touch `mcp:install`, keep these aligned:
 
+- `src/services/cli/mcpInstallService.ts`
+- `src/services/mcp/mcpInstallService.test.ts`
+- `README.md`
+- `docs/GUIDE.md`
+- `CHANGELOG.md`
+
+Documentation must reflect the actual config written by the installer.

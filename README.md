@@ -6,12 +6,51 @@
 
 > **Formerly `@ai-coders/context`.** Renamed to avoid confusion with Context7 and other "context" tools in the AI space. The `.context/` directory standard is unchanged. See [Migration Guide](#migration-from-ai-coderscontext).
 
-**The Ultimate MCP for AI Agent Orchestration, Context Engineering, and Spec-Driven Development.**
-Context engineering for AI now is stupidly simple.
+**Dotcontext is a harness engineering runtime for AI-assisted software delivery.**
 
-Stop letting LLMs run on autopilot. PREVC is a universal process that improves AI output through 5 simple steps: **Planning, Review, Execution, Validation, and Confirmation**. Context-oriented. Spec-driven. No guesswork.
+It gives coding agents a real operating environment instead of a loose prompt and a pile of conventions. Dotcontext combines shared project context, workflow structure, policies, sensors, task contracts, replayable execution history, and MCP access into one system.
 
-## The Problem
+The point is not just to "give the model more context". The point is to make agent execution legible, constrained, reusable, and auditable.
+
+## What Dotcontext Is
+
+Dotcontext is three things at once:
+
+- a `.context/` convention for durable project knowledge
+- a harness runtime that governs how agents execute work
+- a CLI and MCP surface that expose that runtime to humans and AI tools
+
+PREVC remains the default execution model for structured work: **Planning, Review, Execution, Validation, and Confirmation**.
+
+## Why Dotcontext Exists
+
+Most agent workflows break down for the same reasons:
+
+- project knowledge is scattered across tool-specific formats
+- execution rules live in prompts instead of in runtime controls
+- agents can change code without producing evidence
+- there is no durable record of why an agent did what it did
+- teams cannot reuse the same operating model across Claude, Cursor, Codex, Copilot, and others
+
+Dotcontext exists to solve that layer, not just the prompt layer.
+
+## Architecture
+
+Dotcontext is now organized around an explicit harness runtime:
+
+```text
+cli -> harness <- mcp
+```
+
+- `@dotcontext/cli` is the operator-facing surface
+- `dotcontext/harness` is the reusable runtime and domain layer
+- `dotcontext/mcp` is the MCP transport adapter
+
+The main architecture reference, with Mermaid diagrams for runtime flow, boundaries, and packaging, lives in [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+## Problems It Solves
+
+### 1. Context Fragmentation
 
 Every AI coding tool invented its own way to organize context:
 
@@ -26,9 +65,32 @@ Every AI coding tool invented its own way to organize context:
 AGENTS.md               # Codex
 ```
 
-Using multiple tools? Enjoy duplicating your rules, agents, and documentation across 8 different formats. Context fragmentation is real.
+Using multiple tools means duplicating rules, playbooks, and documentation across incompatible formats.
 
-## The Solution
+### 2. Weak Runtime Control
+
+Most agent setups still rely on:
+
+- a long agent file
+- a few MCP tools
+- best-effort conventions
+
+That is not enough for production-grade behavior. You need runtime controls such as policies, sensors, contracts, and backpressure.
+
+### 3. No Durable Execution Model
+
+Without sessions, traces, artifacts, and replay:
+
+- agents cannot hand off work cleanly
+- failures are hard to cluster and learn from
+- workflow gates are hard to enforce
+- evaluation becomes anecdotal instead of operational
+
+## What Dotcontext Does
+
+Dotcontext consolidates those concerns into one operating model.
+
+### Shared Context
 
 One `.context/` directory. Works everywhere.
 
@@ -43,11 +105,54 @@ One `.context/` directory. Works everywhere.
 Export to any tool.
 **Write once. Use anywhere. No boilerplate.**
 
+### Harness Runtime
+
+The runtime adds execution controls on top of the shared context:
+
+- durable sessions, traces, artifacts, and checkpoints
+- sensors and backpressure
+- task contracts and handoffs
+- policy enforcement
+- replay and failure dataset generation
+
+### Multi-Surface Access
+
+The same runtime is exposed through:
+
+- `@dotcontext/cli` for operator workflows
+- `dotcontext/mcp` for AI tools
+- `dotcontext/harness` as the reusable domain/runtime boundary
+
+## How The Harness Works
+
+At runtime, both the CLI and the MCP server delegate to the same harness services. The harness is responsible for:
+
+- durable sessions, traces, artifacts, and checkpoints
+- sensors and backpressure
+- task contracts and handoffs
+- policy enforcement
+- replay generation
+- failure dataset clustering
+
+```mermaid
+flowchart LR
+    CLI["CLI"] --> H["Harness Runtime"]
+    MCP["MCP Server"] --> H
+
+    H --> S["Sessions + State"]
+    H --> Q["Sensors + Backpressure"]
+    H --> T["Task Contracts + Handoffs"]
+    H --> P["Policy Engine"]
+    H --> R["Replay + Datasets"]
+```
+
+For the full system view, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+
 > **Using GitHub Copilot, Cursor, Claude, or another AI tool?**
-> Just run `npx @dotcontext/cli mcp:install` — no API key needed!
+> Just run `npx -y @dotcontext/cli@latest mcp:install` — no API key needed!
 >
 > **Usando GitHub Copilot, Cursor, Claude ou outra ferramenta de IA?**
-> Execute `npx @dotcontext/cli mcp:install` — sem necessidade de API key!
+> Execute `npx -y @dotcontext/cli@latest mcp:install` — sem necessidade de API key!
 
 > **Note / Nota**
 > Standalone CLI generation is no longer supported. Use MCP-enabled AI tools to create, fill, or refresh context.
@@ -59,7 +164,7 @@ Export to any tool.
 
 #### English
 
-1. Run `npx @dotcontext/cli mcp:install`
+1. Run `npx -y @dotcontext/cli@latest mcp:install`
 2. Prompt your AI agent: `init the context`
 3. Then: `plan [YOUR TASK] using dotcontext`
 4. After planned: `start the workflow`
@@ -68,7 +173,7 @@ Export to any tool.
 
 #### Português
 
-1. Execute `npx @dotcontext/cli mcp:install`
+1. Execute `npx -y @dotcontext/cli@latest mcp:install`
 2. Diga ao seu agente de IA: `init the context`
 3. Depois: `plan [SUA TAREFA] using dotcontext`
 4. Após o planejamento: `start the workflow`
@@ -79,13 +184,13 @@ Export to any tool.
 
 #### English
 
-1. Run `npx @dotcontext/cli`
+1. Run `npx -y @dotcontext/cli@latest`
 2. Use the interactive CLI for workflow, sync, reverse sync, and MCP setup
 3. When you need context creation or AI-generated content, use your MCP-connected AI tool
 
 #### Português
 
-1. Execute `npx @dotcontext/cli`
+1. Execute `npx -y @dotcontext/cli@latest`
 2. Use a CLI interativa para workflow, sincronização, reverse sync e configuração MCP
 3. Quando precisar criar contexto ou gerar conteúdo com IA, use sua ferramenta conectada via MCP
 
@@ -93,200 +198,190 @@ Export to any tool.
 
 This package includes an MCP (Model Context Protocol) server that provides AI coding assistants with powerful tools to analyze and document your codebase.
 
-### Quick Installation (v0.7.0+)
+### Recommended Installation
 
-Use the MCP Install command to automatically configure the MCP server:
+Use the installer. It is the source of truth for supported tools and config formats:
 
 ```bash
-npx @dotcontext/cli mcp:install
+npx -y @dotcontext/cli@latest mcp:install
 ```
 
-This interactive command:
+If you already have the package installed globally, `dotcontext mcp:install` works too.
+
+The installer:
 - Detects installed AI tools on your system
-- Configures dotcontext MCP server in each tool
+- Configures the `dotcontext` MCP server in each tool
 - Supports global (home directory) and local (project directory) installation
-- Merges with existing MCP configurations without overwriting
-- Includes dry-run mode to preview changes
-- Works with Claude Code, Cursor, Windsurf, Codex, Continue.dev, and more
+- Merges with existing MCP configurations without overwriting unrelated servers
+- Includes `--dry-run` and `--verbose` modes
+- Writes the config shape required by each supported client
+
+Examples:
+
+```bash
+# Interactive install for detected tools
+npx -y @dotcontext/cli@latest mcp:install
+
+# Install for a specific tool
+npx -y @dotcontext/cli@latest mcp:install codex
+
+# Install in the current project instead of your home directory
+npx -y @dotcontext/cli@latest mcp:install cursor --local
+
+# Preview without writing files
+npx -y @dotcontext/cli@latest mcp:install claude --dry-run --verbose
+```
+
+### Supported MCP Install Targets
+
+`mcp:install` currently supports these tool ids:
+
+| Tool ID | Tool | Config Shape |
+| --- | --- | --- |
+| `claude` | Claude Code | `mcpServers` JSON |
+| `cursor` | Cursor AI | `mcpServers` JSON with `type: "stdio"` |
+| `windsurf` | Windsurf | `mcpServers` JSON |
+| `continue` | Continue.dev | standalone `.continue/mcpServers/dotcontext.json` |
+| `claude-desktop` | Claude Desktop | `mcpServers` JSON |
+| `vscode` | VS Code (GitHub Copilot) | `servers` JSON |
+| `roo` | Roo Code | `mcpServers` JSON |
+| `amazonq` | Amazon Q Developer CLI | `mcpServers` JSON |
+| `gemini-cli` | Gemini CLI | `mcpServers` JSON |
+| `codex` | Codex CLI | TOML `[mcp_servers.dotcontext]` |
+| `kiro` | Kiro | `mcpServers` JSON |
+| `zed` | Zed Editor | `context_servers` JSON |
+| `jetbrains` | JetBrains IDEs | `servers` array |
+| `trae` | Trae AI | `mcpServers` JSON |
+| `kilo` | Kilo Code | `mcp` JSON |
+| `copilot-cli` | GitHub Copilot CLI | `mcpServers` JSON |
 
 ### Manual Configuration
 
-Alternatively, manually configure for your preferred tool.
+Use manual configuration only when you cannot use `mcp:install`. The exact file format depends on the client.
 
-### Antigravity
+Dotcontext writes this command into client configs:
 
-#### 1. Access Raw Config
+```text
+command: npx
+args: ["-y", "@dotcontext/cli@latest", "mcp"]
+```
 
-The visual interface only shows official partners, but the manual editing mode allows any local or remote executable.
+#### Standard `mcpServers` JSON
 
-1. Open the **Agent** panel (usually in the sidebar or `Ctrl+L`).
-2. Click the options menu (three dots `...`) or the settings icon.
-3. Select **Manage MCP Servers**.
-4. At the top of this screen, look for a discreet button or link named **"View raw config"** or **"Edit JSON"**.
-
-> **Note:** If you cannot find the button in the UI, you can navigate directly through the file explorer and look for `.idx/mcp.json` or `mcp_config.json` in your workspace root.
-
-#### 2. Add Custom Server
-
-You will see a JSON file. You must add a new entry inside the `"mcpServers"` object.
-
-Here is the template to add a server (example using `npx` for a Node.js server or a local executable):
+Used by tools such as Claude Code, Windsurf, Claude Desktop, Roo Code, Amazon Q Developer CLI, Gemini CLI, Trae AI, and GitHub Copilot CLI.
 
 ```json
 {
   "mcpServers": {
     "dotcontext": {
       "command": "npx",
-      "args": ["@dotcontext/cli", "mcp"]
+      "args": ["-y", "@dotcontext/cli@latest", "mcp"]
     }
   }
 }
 ```
 
-#### 3. Restart the Connection
+#### Cursor
 
-After saving the `mcp.json` file:
-
-1. Return to the **"Manage MCP Servers"** panel.
-2. Click the **Refresh** button or restart the Antigravity environment (*Reload Window*).
-3. The new server should appear in the list with a status indicator (usually a green light if connected successfully).
-
-### Claude Code (CLI)
-
-Add the MCP server using the Claude CLI:
-
-```bash
-claude mcp add dotcontext -- npx @dotcontext/cli mcp
-```
-
-Or configure manually in `~/.claude.json`:
+Cursor expects `type: "stdio"`:
 
 ```json
 {
   "mcpServers": {
     "dotcontext": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["@dotcontext/cli", "mcp"]
+      "args": ["-y", "@dotcontext/cli@latest", "mcp"]
     }
   }
 }
 ```
 
-### Claude Desktop
+#### Continue.dev
 
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS or `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+Continue uses a standalone per-server file:
 
 ```json
 {
-  "mcpServers": {
-    "dotcontext": {
-      "command": "npx",
-      "args": ["@dotcontext/cli", "mcp"]
-    }
-  }
+  "command": "npx",
+  "args": ["-y", "@dotcontext/cli@latest", "mcp"],
+  "env": {}
 }
 ```
 
-### Cursor AI
+#### VS Code (GitHub Copilot)
 
-Create `.cursor/mcp.json` in your project root:
+VS Code uses `servers` instead of `mcpServers`:
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "dotcontext": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["@dotcontext/cli", "mcp"]
+      "args": ["-y", "@dotcontext/cli@latest", "mcp"]
     }
   }
 }
 ```
 
-### Windsurf
+#### Zed
 
-Add to your Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "dotcontext": {
-      "command": "npx",
-      "args": ["@dotcontext/cli", "mcp"]
-    }
-  }
-}
-```
-
-### Zed Editor
-
-Add to your Zed settings (`~/.config/zed/settings.json`):
+Zed uses `context_servers`:
 
 ```json
 {
   "context_servers": {
     "dotcontext": {
-      "command": {
-        "path": "npx",
-        "args": ["@dotcontext/cli", "mcp"]
-      }
+      "command": "npx",
+      "args": ["-y", "@dotcontext/cli@latest", "mcp"],
+      "env": {}
     }
   }
 }
 ```
 
-### Cline (VS Code Extension)
+#### JetBrains IDEs
 
-Configure in Cline settings (VS Code → Settings → Cline → MCP Servers):
+JetBrains uses a `servers` array:
 
 ```json
 {
-  "mcpServers": {
-    "dotcontext": {
+  "servers": [
+    {
+      "name": "dotcontext",
       "command": "npx",
-      "args": ["@dotcontext/cli", "mcp"]
+      "args": ["-y", "@dotcontext/cli@latest", "mcp"],
+      "env": {}
+    }
+  ]
+}
+```
+
+#### Kilo Code
+
+Kilo uses `mcp.dotcontext` with a command array:
+
+```json
+{
+  "mcp": {
+    "dotcontext": {
+      "type": "local",
+      "command": ["npx", "-y", "@dotcontext/cli@latest", "mcp"],
+      "enabled": true
     }
   }
 }
 ```
 
-### Codex CLI
+#### Codex CLI
 
-Add to your Codex CLI config (`~/.codex/config.toml`):
+Codex uses TOML:
 
 ```toml
 [mcp_servers.dotcontext]
 command = "npx"
-args = ["--yes", "@dotcontext/cli@latest", "mcp"]
-```
-
-### Google Antigravity
-
-Add to your Antigravity MCP config (`~/.gemini/mcp_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "dotcontext": {
-      "command": "npx",
-      "args": ["@dotcontext/cli", "mcp"]
-    }
-  }
-}
-```
-
-### Trae AI
-
-Add to your Trae AI MCP config (Settings > MCP Servers):
-
-```json
-{
-  "mcpServers": {
-    "dotcontext": {
-      "command": "npx",
-      "args": ["@dotcontext/cli", "mcp"]
-    }
-  }
-}
+args = ["-y", "@dotcontext/cli@latest", "mcp"]
 ```
 
 ### Local Development
@@ -435,7 +530,7 @@ The system automatically detects project scale and adjusts the workflow:
 
 - Node.js 20+
 
-**Context creation, AI generation, and refresh are MCP-only.** Use `npx dotcontext mcp:install` and let your AI tool use its own LLM.
+**Context creation, AI generation, and refresh are MCP-only.** Use `npx -y @dotcontext/cli@latest mcp:install` and let your AI tool use its own LLM.
 
 ### Available MCP Tools
 
@@ -489,8 +584,8 @@ Skills are task-specific procedures that AI agents activate when needed:
 | `security-audit` | Security review checklist | R, V |
 
 ```bash
-npx dotcontext skill list   # List available skills
-npx dotcontext skill export # Export to AI tools
+npx -y @dotcontext/cli@latest skill list   # List available skills
+npx -y @dotcontext/cli@latest skill export # Export to AI tools
 ```
 
 Use MCP tools from your AI assistant to scaffold, fill, or refresh skills and other context files.
@@ -528,7 +623,7 @@ The previous name `@ai-coders/context` caused frequent confusion with **Context7
 | Before | After |
 |--------|-------|
 | `npm install @ai-coders/context` | `npm install @dotcontext/cli` |
-| `npx @ai-coders/context` | `npx dotcontext` |
+| `npx @ai-coders/context` | `npx -y @dotcontext/cli@latest` |
 | CLI command: `ai-context` | CLI command: `dotcontext` |
 | MCP server name: `"ai-context"` | MCP server name: `"dotcontext"` |
 | Env var: `AI_CONTEXT_LANG` | Env var: `DOTCONTEXT_LANG` |
@@ -551,7 +646,7 @@ The previous name `@ai-coders/context` caused frequent confusion with **Context7
 
 2. **Update MCP configurations** -- re-run the installer:
    ```bash
-   npx dotcontext mcp:install
+   npx -y @dotcontext/cli@latest mcp:install
    ```
    Or manually replace `"ai-context"` with `"dotcontext"` and `"@ai-coders/context"` with `"@dotcontext/cli"` in your MCP JSON configs.
 

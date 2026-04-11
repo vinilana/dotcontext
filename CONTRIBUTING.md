@@ -1,64 +1,108 @@
-# Contributing to @dotcontext/cli
+# Contributing to dotcontext
 
-We love your input! We want to make contributing to this project as easy and transparent as possible.
+Dotcontext is now organized around an explicit runtime split:
 
-## Development Process
-
-We use GitHub to host code, to track issues and feature requests, as well as accept pull requests.
-
-1. Fork the repo and create your branch from `main`.
-2. If you've added code that should be tested, add tests.
-3. If you've changed APIs, update the documentation.
-4. Ensure the test suite passes.
-5. Make sure your code lints.
-6. Issue that pull request!
-
-## Setting Up Development Environment
-
-```bash
-# Clone your fork
-git clone https://github.com/YOUR_USERNAME/dotcontext.git
-cd dotcontext
-
-# Install dependencies
-npm install
-
-# Run in development mode
-npm run dev
-
-# Build the project
-npm run build
-
-# Run tests
-npm test
+```text
+cli -> harness <- mcp
 ```
 
-## Pull Request Process
+If you change behavior, keep that boundary intact:
 
-1. Update the README.md with details of changes to the interface, if applicable.
-2. Update the package.json version following [SemVer](http://semver.org/).
-3. The PR will be merged once you have the sign-off of at least one maintainer.
+- `cli` is the operator-facing surface
+- `harness` is the reusable runtime/domain layer
+- `mcp` is the transport adapter over the harness
 
-## Any contributions you make will be under the MIT Software License
+## Development Setup
 
-When you submit code changes, your submissions are understood to be under the same [MIT License](LICENSE) that covers the project.
+```bash
+git clone https://github.com/YOUR_USERNAME/dotcontext.git
+cd dotcontext
+npm install
+npm run build
+npm test -- --runInBand
+```
 
-## Report bugs using GitHub's issues
+Useful commands:
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/vinilana/dotcontext/issues/new).
+```bash
+npm run dev
+npm run build
+npm test -- --runInBand
+npm run build:packages
+npm run smoke:packages
+```
 
-## Write bug reports with detail, background, and sample code
+## Contribution Expectations
 
-**Great Bug Reports** tend to have:
+1. Create your branch from `main`.
+2. Keep the change scoped. Do not mix refactors, product changes, and release edits in one PR unless they are tightly coupled.
+3. Add or update tests when behavior changes.
+4. Update docs when commands, package surfaces, workflows, or MCP install behavior change.
+5. Run `npm run build` and `npm test -- --runInBand` before opening a PR.
+6. If the change affects packaging, also run `npm run build:packages` and `npm run smoke:packages`.
 
-- A quick summary and/or background
-- Steps to reproduce
-  - Be specific!
-  - Give sample code if you can
-- What you expected would happen
-- What actually happens
-- Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
+## Documentation Expectations
+
+The public docs that matter most are:
+
+- `README.md` for product positioning and install guidance
+- `docs/GUIDE.md` for usage guidance
+- `ARCHITECTURE.md` for runtime and boundary explanations
+- `CHANGELOG.md` for release notes
+
+Contributor and agent-facing instructions live in:
+
+- `CONTRIBUTING.md`
+- `CLAUDE.md`
+- `AGENTS.md`
+
+If you update one of these areas, check the adjacent docs for drift.
+
+## MCP Install Changes
+
+If you change `mcp:install`, update all of the following together:
+
+- `README.md`
+- `docs/GUIDE.md`
+- `CHANGELOG.md`
+- `src/services/cli/mcpInstallService.ts`
+- `src/services/mcp/mcpInstallService.test.ts`
+
+The installer is the source of truth for supported clients and config formats. Documentation should describe what the installer actually writes, not what we hope clients support.
+
+## Release Expectations
+
+- Do not bump `package.json` version in feature PRs unless the change is explicitly part of release preparation.
+- Keep `CHANGELOG.md` aligned with the intended release line.
+- For local packaging validation, use:
+
+```bash
+npm run release:packages:patch
+```
+
+This prepares a local release bundle under `.release/releases/<version>`.
+
+## Pull Requests
+
+A good PR should include:
+
+- a clear problem statement
+- the chosen approach
+- risks or compatibility notes
+- validation performed
+
+When relevant, include file references or screenshots of updated docs.
+
+## Bugs and Issues
+
+Use GitHub issues for bugs and feature requests. A useful bug report includes:
+
+- what you tried
+- expected behavior
+- actual behavior
+- reproduction steps
+- environment details
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under its MIT License.
+By contributing, you agree that your contributions are licensed under the [MIT License](LICENSE).

@@ -6,6 +6,80 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
+## [0.9.0] - 2026-04-11
+
+### Added
+
+- **Harness runtime foundation**: added a transport-agnostic harness layer with durable sessions, traces, artifacts, and checkpoints under `.context/harness`
+  - New runtime state service for persistent execution state shared by CLI, workflow, and MCP adapters
+  - Session quality snapshots with backpressure evaluation and task completion checks
+
+- **Harness quality controls**: added first-class sensors, backpressure policies, task contracts, and handoff contracts
+  - Sensors can persist execution evidence and block completion when critical checks fail
+  - Task contracts now define required sensors, artifacts, outputs, and acceptance criteria
+  - Handoff contracts provide explicit evidence and artifact tracking between agent roles
+
+- **Replay and dataset MVP**: added replayable harness sessions and failure dataset generation
+  - Durable session replay with ordered event logs across traces, artifacts, checkpoints, sensors, tasks, and handoffs
+  - Failure dataset builder with repeated-signature clustering for sensor, task, session, and trace failures
+
+- **Harness policy engine**: added persistent policy documents and rule-based runtime authorization
+  - Policy rules can target `tool`, `action`, `path`, and `risk`
+  - Support for `allow`, `deny`, and `require_approval` effects
+  - MCP harness gateway now supports `getPolicy`, `setPolicy`, `resetPolicy`, `registerPolicy`, `listPolicies`, and `evaluatePolicy`
+
+- **Package productization workflow**: added local packaging, smoke validation, and release preparation for split package distribution
+  - `build:packages` prepares bundle outputs for `cli`, `harness`, and `mcp`
+  - `smoke:packages` validates generated bundle manifests and exports
+  - `release:packages:patch|minor|major` prepares local release directories in `.release/releases/<version>`
+
+### Changed
+
+- **Architectural split is now explicit**: the codebase now follows `cli -> harness <- mcp`
+  - `src/cli` is the operator-facing boundary
+  - `src/harness` is the reusable runtime/domain boundary
+  - `src/mcp` is the transport adapter boundary
+
+- **Workflow integration now uses harness runtime controls**
+  - PREVC workflow initialization creates and binds harness sessions
+  - Workflow advance can be blocked by harness completion checks
+  - Workflow management records artifacts, checkpoints, tasks, handoffs, and sensor runs through the harness runtime
+
+- **MCP gateway surface expanded**
+  - Added explicit harness operations for replay, dataset building, and policy document management
+  - Harness-related gateway handlers are thinner and delegate to transport-agnostic services
+
+### Fixed
+
+- **Policy enforcement consistency**
+  - Aligned workflow and MCP policy handling around a single harness policy model
+  - Fixed policy document operations through the MCP harness gateway
+
+- **Packaging validation coverage**
+  - Added smoke checks for generated `cli`, `harness`, and `mcp` package bundles before local release preparation
+
+### Technical Details
+
+#### New Files
+- `src/services/harness/policyService.ts` — persistent harness policy engine and authorization rules
+- `src/services/harness/replayService.ts` — durable replay generation for harness sessions
+- `src/services/harness/datasetService.ts` — failure dataset and cluster generation
+- `src/services/harness/policyService.test.ts` — policy engine tests
+- `src/services/harness/replayService.test.ts` — replay service tests
+- `src/services/harness/datasetService.test.ts` — dataset service tests
+- `scripts/smoke-package-bundles.js` — package smoke validation for generated bundles
+- `scripts/release-packages.js` — local release preparation for split package outputs
+
+#### Modified Files
+- `src/index.ts` — consumes explicit CLI/MCP boundaries instead of deep service imports
+- `src/cli/index.ts` — operator-facing boundary exports
+- `src/harness/index.ts` — reusable harness boundary exports
+- `src/mcp/index.ts` — MCP transport boundary exports
+- `src/services/workflow/workflowService.ts` — workflow-to-harness session binding and completion enforcement
+- `src/services/mcp/gateway/harness.ts` — harness runtime, replay, dataset, and policy operations
+- `src/services/mcp/mcpServer.ts` — expanded harness tool schema
+- `package.json` — added split exports and packaging/release scripts
+
 ## [0.8.0] - 2026-03-21
 
 ### Changed

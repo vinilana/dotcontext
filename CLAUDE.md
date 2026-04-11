@@ -1,73 +1,67 @@
-# Project Rules and Guidelines
+# Dotcontext Repository Guide
 
-> Auto-generated from .context/docs on 2026-03-18T21:47:40.751Z
+This repository is the source for the dotcontext runtime and its operator/adaptor surfaces.
 
-## README
+Current product shape:
 
-# Documentation Index
-
-Welcome to the `@ai-coders/context` repository knowledge base. Start with the project overview, then dive into specific guides as needed.
-
-## Core Guides
-
-| Guide | File | Primary Inputs |
-| --- | --- | --- |
-| Project Overview | [`project-overview.md`](./project-overview.md) | Roadmap, README, stakeholder notes |
-| Development Workflow | [`development-workflow.md`](./development-workflow.md) | Branching rules, CI config, contributing guide |
-| Testing Strategy | [`testing-strategy.md`](./testing-strategy.md) | Test configs, CI gates, known flaky suites |
-| Tooling & Productivity | [`tooling.md`](./tooling.md) | CLI scripts, IDE configs, automation workflows |
-
-## Q&A
-
-Frequently asked questions are organized by topic in the [`qa/`](./qa/) directory.
-See [qa/README.md](./qa/README.md) for the full index.
-
-## Codebase Map
-
-Machine-readable project structure and stack metadata: [`codebase-map.json`](./codebase-map.json)
-
-## Repository Snapshot
-
-```
-AGENTS.md
-CHANGELOG.md
-CLAUDE.md
-CONTRIBUTING.md
-LICENSE
-README.md
-docs/             -- Published documentation produced by this tool
-example-documentation.ts
-jest.config.js
-package.json
-package-lock.json
-prompts/          -- Prompt templates (update_plan_prompt.md, update_scaffold_prompt.md)
-scripts/          -- Build and test helper scripts
-src/              -- TypeScript source (~240 files): CLI entrypoint, services, generators, utilities
-tsconfig.json
+```text
+cli -> harness <- mcp
 ```
 
+## Source of Truth
 
-## qa/README
+Start here:
 
-# Q&A Index
+- `README.md` for product description and install guidance
+- `docs/GUIDE.md` for usage flows
+- `ARCHITECTURE.md` for runtime and boundary diagrams
+- `CHANGELOG.md` for release notes
 
-Project type: **cli-tool**
+## Working Boundaries
 
-Generated: 2026-03-18T21:32:55.004Z
+- `src/cli` contains operator-facing exports and CLI-oriented services
+- `src/harness` contains reusable runtime exports
+- `src/mcp` contains the MCP transport boundary
+- `src/services/harness` contains transport-agnostic harness logic
+- `src/services/mcp/gateway` contains MCP handlers and schemas
+- `src/services/workflow` contains PREVC workflow integration
 
-## Getting-started
+Do not move domain behavior into `cli` or `mcp` if it belongs in `harness`.
 
-- [How do I set up and run this project?](./getting-started.md)
+## Current Priorities
 
-## Architecture
+The repository now supports:
 
-- [How is the codebase organized?](./project-structure.md)
+- durable harness sessions
+- sensors and backpressure
+- task contracts and handoffs
+- policy documents and policy evaluation
+- replay and failure datasets
+- local packaging for `cli`, `harness`, and `mcp`
 
-## Operations
+## Validation Commands
 
-- [How are errors handled?](./error-handling.md)
+```bash
+npm run build
+npm test -- --runInBand
+npm run build:packages
+npm run smoke:packages
+```
 
-## Testing
+## Documentation Hygiene
 
-See [testing-strategy.md](../testing-strategy.md) in the parent docs directory for full test framework documentation.
+When changing any of the following, keep docs in sync:
 
+- product positioning
+- MCP install behavior
+- package boundaries
+- workflow commands
+- release/versioning guidance
+
+At minimum, review:
+
+- `README.md`
+- `docs/GUIDE.md`
+- `ARCHITECTURE.md`
+- `CONTRIBUTING.md`
+- `CHANGELOG.md`
