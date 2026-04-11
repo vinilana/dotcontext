@@ -24,3 +24,23 @@ export {
   type AddArtifactInput,
   type CheckpointInput,
 } from './runtimeStateService';
+export {
+  HarnessSensorsService,
+  type HarnessSensorsServiceOptions,
+  type HarnessSensorSeverity,
+  type HarnessSensorStatus,
+  type HarnessSensorExecutionInput,
+  type HarnessSensorExecutionResult,
+  type HarnessSensorDefinition,
+  type HarnessSensorRun,
+  type HarnessBackpressurePolicy,
+  type HarnessBackpressureResult,
+} from './sensorsService';
+export {
+  HarnessTaskContractsService,
+  type HarnessTaskContractsServiceOptions,
+  type HarnessTaskContractStatus,
+  type HarnessTaskContract,
+  type HarnessHandoffContract,
+  type HarnessTaskCompletionResult,
+} from './taskContractsService';

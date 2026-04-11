@@ -33,6 +33,22 @@ export {
   type AppendTraceInput,
   type AddArtifactInput,
   type CheckpointInput,
+  HarnessSensorsService,
+  type HarnessSensorsServiceOptions,
+  type HarnessSensorSeverity,
+  type HarnessSensorStatus,
+  type HarnessSensorExecutionInput,
+  type HarnessSensorExecutionResult,
+  type HarnessSensorDefinition,
+  type HarnessSensorRun,
+  type HarnessBackpressurePolicy,
+  type HarnessBackpressureResult,
+  HarnessTaskContractsService,
+  type HarnessTaskContractsServiceOptions,
+  type HarnessTaskContractStatus,
+  type HarnessTaskContract,
+  type HarnessHandoffContract,
+  type HarnessTaskCompletionResult,
 } from '../services/harness';
 
 export {
