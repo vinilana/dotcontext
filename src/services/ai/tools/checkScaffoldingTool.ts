@@ -32,6 +32,26 @@ async function hasSkillContent(skillsDir: string): Promise<boolean> {
   }
 }
 
+async function hasHarnessRuntimeContent(harnessDir: string): Promise<boolean> {
+  const runtimeEntries = [
+    'sessions',
+    'traces',
+    'artifacts',
+    'contracts',
+    'workflows',
+    'replays',
+    'datasets',
+  ];
+
+  for (const entry of runtimeEntries) {
+    if (await hasContent(path.join(harnessDir, entry))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export const checkScaffoldingTool = tool({
   description: 'Check if .context scaffolding exists and return granular status',
   inputSchema: CheckScaffoldingInputSchema,
@@ -62,7 +82,7 @@ export const checkScaffoldingTool = tool({
           exists ? hasContent(path.join(outputDir, 'workflow')) : false
         ),
         fs.pathExists(path.join(outputDir, 'harness')).then(exists =>
-          exists ? hasContent(path.join(outputDir, 'harness')) : false
+          exists ? hasHarnessRuntimeContent(path.join(outputDir, 'harness')) : false
         ),
         fs.pathExists(sensorsPath)
       ]);

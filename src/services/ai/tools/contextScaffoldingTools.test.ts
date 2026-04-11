@@ -45,14 +45,23 @@ describe('context scaffolding tools', () => {
 
     const expectedSkills = [...getSkillsForProjectType('cli')].sort();
     const skillsDir = path.join(tempDir, '.context', 'skills');
+    const gitignorePath = path.join(tempDir, '.gitignore');
     const generatedSkillDirs = (await fs.readdir(skillsDir))
       .filter((entry) => entry !== 'README.md')
       .sort();
+    const gitignore = await fs.readFile(gitignorePath, 'utf-8');
 
     expect(result.status).toBe('incomplete');
     expect(result.skillsGenerated).toBe(expectedSkills.length);
     expect(result.sensorsGenerated).toBeDefined();
+    expect(result.gitignoreUpdated).toBe(true);
+    expect(result.gitignoreAddedPatterns).toContain('.context/plans/');
+    expect(result.gitignoreAddedPatterns).toContain('.context/workflow/');
     expect(await fs.pathExists(path.join(tempDir, '.context', 'harness', 'sensors.json'))).toBe(true);
+    expect(gitignore).toContain('.context/plans/');
+    expect(gitignore).toContain('# dotcontext runtime state');
+    expect(gitignore).toContain('.context/workflow/');
+    expect(gitignore).toContain('.context/harness/sessions/');
     expect(generatedSkillDirs).toEqual(expectedSkills);
     expect(result.pendingWrites.some((item: { fileType: string }) => item.fileType === 'skill')).toBe(true);
   });
@@ -117,12 +126,13 @@ describe('context scaffolding tools', () => {
     expect(initial.skills).toBe(true);
     expect(initial.sensors).toBe(true);
     expect(initial.workflow).toBe(false);
-    expect(initial.harness).toBe(true);
+    expect(initial.harness).toBe(false);
 
     await fs.ensureDir(path.join(tempDir, '.context', 'workflow'));
     await fs.writeFile(path.join(tempDir, '.context', 'workflow', 'status.json'), '{}', 'utf-8');
     await fs.ensureDir(path.join(tempDir, '.context', 'harness'));
-    await fs.writeFile(path.join(tempDir, '.context', 'harness', 'policy.json'), '{}', 'utf-8');
+    await fs.ensureDir(path.join(tempDir, '.context', 'harness', 'sessions'));
+    await fs.writeJson(path.join(tempDir, '.context', 'harness', 'sessions', 's1.json'), { id: 's1' }, { spaces: 2 });
 
     const hydrated = await checkScaffoldingTool.execute!(
       { repoPath: tempDir },
@@ -151,6 +161,9 @@ describe('context scaffolding tools', () => {
     });
 
     const initial = await service.bootstrapStatus();
+    expect(initial.layout.versioned.some((entry: { path: string }) => entry.path === '.context/harness/sensors.json')).toBe(true);
+    expect(initial.layout.local.some((entry: { path: string }) => entry.path === '.context/plans/**')).toBe(true);
+    expect(initial.layout.runtime.some((entry: { path: string }) => entry.path === '.context/workflow/**')).toBe(true);
     expect(initial.readiness.scaffoldReady).toBe(true);
     expect(initial.readiness.skillsReady).toBe(true);
     expect(initial.readiness.sensorsReady).toBe(true);

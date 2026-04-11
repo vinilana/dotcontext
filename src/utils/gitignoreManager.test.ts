@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs-extra';
 
-import { GitIgnoreManager } from './gitignoreManager';
+import { ensureGitignorePatterns, GitIgnoreManager } from './gitignoreManager';
 
 describe('GitIgnoreManager', () => {
     let tempDir: string;
@@ -205,6 +205,44 @@ describe('GitIgnoreManager', () => {
             await fs.writeFile(path.join(tempDir, '.gitignore'), 'coverage/\n');
             await manager.loadFromRepo(tempDir);
             expect(manager.shouldIgnore('coverage/lcov.info')).toBe(true);
+        });
+    });
+
+    describe('ensureGitignorePatterns', () => {
+        it('should create .gitignore and append missing patterns once', async () => {
+            const result = await ensureGitignorePatterns(tempDir, [
+                '.context/plans/**',
+                '.context/workflow/**',
+                '.context/harness/sessions/**',
+            ]);
+
+            const content = await fs.readFile(path.join(tempDir, '.gitignore'), 'utf-8');
+
+            expect(result.updated).toBe(true);
+            expect(result.addedPatterns).toEqual([
+                '.context/plans/',
+                '.context/workflow/',
+                '.context/harness/sessions/',
+            ]);
+            expect(content).toContain('# dotcontext runtime state');
+            expect(content).toContain('.context/plans/');
+            expect(content).toContain('.context/workflow/');
+            expect(content).toContain('.context/harness/sessions/');
+        });
+
+        it('should preserve existing content and avoid duplicate entries', async () => {
+            await fs.writeFile(path.join(tempDir, '.gitignore'), 'node_modules/\n.context/workflow/\n');
+
+            const result = await ensureGitignorePatterns(tempDir, [
+                '.context/plans/**',
+                '.context/workflow/**',
+                '.context/harness/sessions/**',
+            ]);
+            const content = await fs.readFile(path.join(tempDir, '.gitignore'), 'utf-8');
+
+            expect(result.updated).toBe(true);
+            expect(result.addedPatterns).toEqual(['.context/plans/', '.context/harness/sessions/']);
+            expect((content.match(/\.context\/workflow\//g) || []).length).toBe(1);
         });
     });
 });

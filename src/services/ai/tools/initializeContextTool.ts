@@ -18,8 +18,10 @@ import {
 import { UPDATE_SCAFFOLD_PROMPT_FALLBACK } from '../../../prompts/defaults';
 import { QAService } from '../../qa';
 import { HarnessSensorCatalogService } from '../../harness/sensorCatalogService';
+import { getUntrackedContextLayoutEntries } from '../../shared';
 import { createSkillRegistry } from '../../../workflow/skills';
 import { collectScaffoldFiles } from './scaffoldInventory';
+import { ensureGitignorePatterns } from '../../../utils/gitignoreManager';
 
 export const initializeContextTool = tool({
   description: `Initialize .context scaffolding and create template files.
@@ -62,6 +64,14 @@ The AI agent MUST then fill each generated file using the provided context and i
 
       // Ensure output directory exists
       await fs.ensureDir(outputDir);
+
+      const runtimeGitignorePatterns = getUntrackedContextLayoutEntries()
+        .map((entry) => entry.path);
+      const gitignoreUpdate = await ensureGitignorePatterns(
+        resolvedRepoPath,
+        runtimeGitignorePatterns,
+        { header: '# dotcontext runtime state' }
+      );
 
       // Persist user-provided exclude patterns for later use by fillSingle
       if (exclude.length > 0) {
@@ -185,6 +195,10 @@ The AI agent MUST then fill each generated file using the provided context and i
       });
       const sensorCatalog = await sensorCatalogService.bootstrap();
       const sensorsGenerated = sensorCatalog.sensors.length;
+      const qaOutputDir = path.join(outputDir, 'docs', 'qa');
+      const qaNote = qaGenerated > 0
+        ? `Q&A docs are generated directly in ${qaOutputDir} and do not require fillSingleFile.`
+        : undefined;
 
       // Build list of generated files with their types
       interface FileInfo {
@@ -277,12 +291,13 @@ ${generatedFiles.slice(0, 5).map((f, i) => `${i + 1}. Read and fill: ${f.relativ
 Use fillSingleFile tool for each file to get AI-generated content suggestions.
 After getting suggestions, write the content using the Write tool.
 
-DO NOT say "initialization complete" until ALL files are filled.`
+DO NOT say "initialization complete" until ALL files are filled.${qaNote ? `\n\nNote: ${qaNote}` : ''}`
           : undefined;
 
         return {
           // Immediate action signals (appear first in JSON)
           instruction,
+          qaNote,
           _warning: hasFilesToFill ? 'INCOMPLETE - ACTION REQUIRED' : undefined,
 
           // Status signals
@@ -312,6 +327,8 @@ DO NOT say "initialization complete" until ALL files are filled.`
             skillsGenerated,
             sensorsGenerated,
             qaGenerated,
+            gitignoreUpdated: gitignoreUpdate.updated,
+            gitignoreAddedPatterns: gitignoreUpdate.addedPatterns,
             outputDir,
             classification: classification ? {
               projectType: classification.primaryType,
@@ -326,6 +343,8 @@ DO NOT say "initialization complete" until ALL files are filled.`
           skillsGenerated,
           sensorsGenerated,
           qaGenerated,
+          gitignoreUpdated: gitignoreUpdate.updated,
+          gitignoreAddedPatterns: gitignoreUpdate.addedPatterns,
           outputDir,
           classification: classification ? {
             projectType: classification.primaryType,
@@ -353,12 +372,13 @@ ${requiredActions.slice(0, 5).map((a, i) => `${i + 1}. Call fillSingleFile for: 
 fillSingleFile returns semantic context and scaffold structure for intelligent content generation.
 After generating content, write it using the Write tool.
 
-DO NOT say "initialization complete" until ALL files are filled.`
+DO NOT say "initialization complete" until ALL files are filled.${qaNote ? `\n\nNote: ${qaNote}` : ''}`
         : undefined;
 
       return {
         // Immediate action signals (appear first in JSON)
         instruction,
+        qaNote,
         _warning: hasActionsRequired ? 'INCOMPLETE - ACTION REQUIRED' : undefined,
 
         // Status signals
@@ -394,6 +414,8 @@ DO NOT say "initialization complete" until ALL files are filled.`
           skillsGenerated,
           sensorsGenerated,
           qaGenerated,
+          gitignoreUpdated: gitignoreUpdate.updated,
+          gitignoreAddedPatterns: gitignoreUpdate.addedPatterns,
           outputDir,
           classification: classification ? {
             projectType: classification.primaryType,
@@ -408,6 +430,8 @@ DO NOT say "initialization complete" until ALL files are filled.`
         skillsGenerated,
         sensorsGenerated,
         qaGenerated,
+        gitignoreUpdated: gitignoreUpdate.updated,
+        gitignoreAddedPatterns: gitignoreUpdate.addedPatterns,
         outputDir,
         classification: classification ? {
           projectType: classification.primaryType,

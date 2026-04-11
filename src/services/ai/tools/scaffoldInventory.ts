@@ -1,5 +1,7 @@
 import * as fs from 'fs-extra';
+import { glob } from 'glob';
 import * as path from 'path';
+import { needsFill } from '../../../utils/frontMatter';
 
 export type ScaffoldTarget = 'docs' | 'agents' | 'skills' | 'plans' | 'all';
 export type ScaffoldFileType = 'doc' | 'agent' | 'skill' | 'plan';
@@ -20,11 +22,12 @@ export async function collectScaffoldFiles(
   if (target === 'all' || target === 'docs') {
     const docsDir = path.join(outputDir, 'docs');
     if (await fs.pathExists(docsDir)) {
-      const docFiles = await fs.readdir(docsDir);
-      for (const file of docFiles) {
-        if (!file.endsWith('.md')) continue;
+      const docFiles = await glob('**/*.md', { cwd: docsDir, nodir: true });
+      for (const file of docFiles.sort()) {
+        const filePath = path.join(docsDir, file);
+        if (!await needsFill(filePath)) continue;
         files.push({
-          path: path.join(docsDir, file),
+          path: filePath,
           relativePath: path.join('docs', file),
           type: 'doc',
           documentName: path.basename(file, '.md'),
@@ -36,11 +39,12 @@ export async function collectScaffoldFiles(
   if (target === 'all' || target === 'agents') {
     const agentsDir = path.join(outputDir, 'agents');
     if (await fs.pathExists(agentsDir)) {
-      const agentFiles = await fs.readdir(agentsDir);
-      for (const file of agentFiles) {
-        if (!file.endsWith('.md') || file.toLowerCase() === 'readme.md') continue;
+      const agentFiles = await glob('**/*.md', { cwd: agentsDir, nodir: true });
+      for (const file of agentFiles.sort()) {
+        const filePath = path.join(agentsDir, file);
+        if (!await needsFill(filePath)) continue;
         files.push({
-          path: path.join(agentsDir, file),
+          path: filePath,
           relativePath: path.join('agents', file),
           type: 'agent',
           documentName: path.basename(file, '.md'),
@@ -52,20 +56,18 @@ export async function collectScaffoldFiles(
   if (target === 'all' || target === 'skills') {
     const skillsDir = path.join(outputDir, 'skills');
     if (await fs.pathExists(skillsDir)) {
-      const skillEntries = await fs.readdir(skillsDir);
-      for (const entry of skillEntries) {
-        const skillDir = path.join(skillsDir, entry);
-        const stat = await fs.stat(skillDir).catch(() => null);
-        if (!stat?.isDirectory()) continue;
-
-        const skillPath = path.join(skillDir, 'SKILL.md');
-        if (!await fs.pathExists(skillPath)) continue;
+      const skillFiles = await glob('**/SKILL.md', { cwd: skillsDir, nodir: true });
+      for (const file of skillFiles.sort()) {
+        const skillPath = path.join(skillsDir, file);
+        if (!await needsFill(skillPath)) continue;
+        const segments = file.split(path.sep);
+        const skillSlug = segments[0];
 
         files.push({
           path: skillPath,
-          relativePath: path.join('skills', entry, 'SKILL.md'),
+          relativePath: path.join('skills', file),
           type: 'skill',
-          documentName: entry,
+          documentName: skillSlug,
         });
       }
     }
@@ -74,11 +76,12 @@ export async function collectScaffoldFiles(
   if (target === 'all' || target === 'plans') {
     const plansDir = path.join(outputDir, 'plans');
     if (await fs.pathExists(plansDir)) {
-      const planFiles = await fs.readdir(plansDir);
-      for (const file of planFiles) {
-        if (!file.endsWith('.md') || file.toLowerCase() === 'readme.md') continue;
+      const planFiles = await glob('**/*.md', { cwd: plansDir, nodir: true });
+      for (const file of planFiles.sort()) {
+        const filePath = path.join(plansDir, file);
+        if (!await needsFill(filePath)) continue;
         files.push({
-          path: path.join(plansDir, file),
+          path: filePath,
           relativePath: path.join('plans', file),
           type: 'plan',
           documentName: path.basename(file, '.md'),

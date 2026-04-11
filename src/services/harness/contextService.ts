@@ -18,7 +18,11 @@ import {
 import { SemanticContextBuilder, type ContextFormat } from '../semantic/contextBuilder';
 import { CodebaseAnalyzer } from '../semantic/codebaseAnalyzer';
 import { QAService } from '../qa';
-import { toolExecutionContext } from '../shared';
+import {
+  getContextLayoutByClassification,
+  toolExecutionContext,
+  type ContextLayoutEntry,
+} from '../shared';
 
 export interface HarnessContextServiceOptions {
   repoPath: string;
@@ -49,6 +53,11 @@ export interface HarnessBootstrapStatusResult {
   success: true;
   repoPath: string;
   outputDir: string;
+  layout: {
+    versioned: ContextLayoutEntry[];
+    local: ContextLayoutEntry[];
+    runtime: ContextLayoutEntry[];
+  };
   scaffold: {
     initialized: boolean;
     docs: boolean;
@@ -169,6 +178,11 @@ export class HarnessContextService {
       success: true,
       repoPath: resolvedRepoPath,
       outputDir,
+      layout: {
+        versioned: getContextLayoutByClassification('versioned'),
+        local: getContextLayoutByClassification('local'),
+        runtime: getContextLayoutByClassification('runtime'),
+      },
       scaffold,
       runtime,
       readiness,
