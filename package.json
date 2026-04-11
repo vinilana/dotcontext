@@ -24,6 +24,11 @@
   "scripts": {
     "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
     "build:packages": "npm run build && node scripts/build-package-bundles.js",
+    "smoke:packages": "node scripts/smoke-package-bundles.js",
+    "release:packages": "node scripts/release-packages.js",
+    "release:packages:patch": "node scripts/release-packages.js patch",
+    "release:packages:minor": "node scripts/release-packages.js minor",
+    "release:packages:major": "node scripts/release-packages.js major",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "jest",

@@ -335,7 +335,7 @@ export class HarnessPolicyService {
     }
     if (decision.blocked || !decision.allowed) {
       throw new HarnessPolicyBlockedError(
-        `Policy denied ${(input.tool ?? 'harness')}.${input.action}`,
+        `Policy blocked ${(input.tool ?? 'harness')}.${input.action}`,
         decision
       );
     }
@@ -393,7 +393,18 @@ export class HarnessPolicyService {
   }
 
   async assertAllowed(input: HarnessPolicyEvaluationInput): Promise<void> {
-    await this.authorize(input);
+    try {
+      await this.authorize(input);
+    } catch (error) {
+      if (error instanceof HarnessPolicyBlockedError) {
+        const message = error.decision.requiresApproval
+          ? `Policy approval required for ${(input.tool ?? 'harness')}.${input.action}`
+          : `Policy blocked ${(input.tool ?? 'harness')}.${input.action}`;
+        throw new HarnessPolicyBlockedError(message, error.decision);
+      }
+
+      throw error;
+    }
   }
 
   async evaluatePolicy(input: HarnessPolicyEvaluationInput): Promise<HarnessPolicyEvaluationResult> {

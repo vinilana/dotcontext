@@ -24,6 +24,7 @@ import {
   type HarnessPolicyDocument,
   type HarnessPolicyEvaluationInput,
   type HarnessPolicyDecision,
+  type HarnessPolicyDefaultEffect,
   type CreateHarnessPolicyRuleInput,
   type HarnessPolicyRule,
   type HarnessPolicyTarget,
@@ -224,7 +225,7 @@ export class HarnessExecutionService {
   }
 
   setPolicy(input: {
-    defaultEffect?: HarnessPolicyEffect;
+    defaultEffect?: HarnessPolicyDefaultEffect;
     rules?: HarnessPolicyRule[];
   }): Promise<HarnessPolicyDocument> {
     const policy: HarnessPolicyDocument = {
