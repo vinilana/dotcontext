@@ -3,6 +3,12 @@
   "version": "0.8.2",
   "description": "MCP-first toolkit for AI context workflow, sync, imports, and orchestration",
   "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli/index.js",
+    "./harness": "./dist/harness/index.js",
+    "./mcp": "./dist/mcp/index.js"
+  },
   "bin": {
     "dotcontext": "dist/index.js"
   },
@@ -17,6 +23,7 @@
   },
   "scripts": {
     "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
+    "build:packages": "npm run build && node scripts/build-package-bundles.js",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "jest",

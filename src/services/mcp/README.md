@@ -1,5 +1,11 @@
 # MCP Tools Reference
 
+This directory documents the MCP adapter surface over the harness runtime.
+
+CLI-only concerns such as editor installation and local operator setup belong to the CLI boundary and should not be added here.
+
+Harness-domain concerns should live behind reusable services. The MCP layer should increasingly act as a transport adapter, not as the center of the product model.
+
 ## Simplified Tool Structure
 
 The MCP tools follow a simple, explicit pattern:

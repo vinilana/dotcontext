@@ -15,16 +15,30 @@ import { CLIInterface } from './utils/cliUI';
 import { checkForUpdates } from './utils/versionChecker';
 import { createTranslator, detectLocale, SUPPORTED_LOCALES, normalizeLocale } from './utils/i18n';
 import type { TranslateFn, Locale, TranslationKey } from './utils/i18n';
-import { SyncService } from './services/sync/syncService';
-import { ImportRulesService, ImportAgentsService } from './services/import';
-import { startMCPServer, MCPInstallService } from './services/mcp';
-import { StateDetector } from './services/state';
-import { WorkflowService, WorkflowServiceDependencies } from './services/workflow';
-import { ExportRulesService } from './services/export';
-import { ReportService } from './services/report';
-import { QuickSyncService, QuickSyncOptions } from './services/quickSync';
-import { ReverseQuickSyncService, type MergeStrategy } from './services/reverseSync';
-import { getScaleName, PHASE_NAMES_PT, ROLE_DISPLAY_NAMES, type PrevcRole } from './workflow';
+import {
+  MCPInstallService,
+  SyncService,
+  ImportRulesService,
+  ImportAgentsService,
+  ExportRulesService,
+  ReportService,
+  QuickSyncService,
+  type QuickSyncOptions,
+  ReverseQuickSyncService,
+  type MergeStrategy,
+  StateDetector
+} from './cli';
+import {
+  startMCPServer,
+} from './mcp';
+import {
+  WorkflowService,
+  type WorkflowServiceDependencies,
+  getScaleName,
+  PHASE_NAMES_PT,
+  ROLE_DISPLAY_NAMES,
+  type PrevcRole
+} from './harness';
 import {
   detectSmartDefaults,
   displayConfigSummary,

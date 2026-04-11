@@ -7,14 +7,9 @@
  */
 
 import {
-  PHASE_NAMES_EN,
-  ROLE_DISPLAY_NAMES,
-  agentOrchestrator,
-  documentLinker,
   AgentType,
-  AGENT_TYPES,
-  createPlanLinker,
 } from '../../../workflow';
+import { HarnessAgentsService } from '../../harness';
 
 import type { AgentParams } from './types';
 import type { MCPToolResponse } from './response';
@@ -32,145 +27,44 @@ export async function handleAgent(
   options: AgentOptions
 ): Promise<MCPToolResponse> {
   const repoPath = options.repoPath || process.cwd();
+  const service = new HarnessAgentsService({ repoPath });
 
   try {
     switch (params.action) {
       case 'discover': {
-        const linker = createPlanLinker(repoPath);
-        const agents = await linker.discoverAgents();
-
-        const builtIn = agents.filter(a => !a.isCustom);
-        const custom = agents.filter(a => a.isCustom);
-
-        return createJsonResponse({
-          success: true,
-          totalAgents: agents.length,
-          builtInCount: builtIn.length,
-          customCount: custom.length,
-          agents: {
-            builtIn: builtIn.map(a => a.type),
-            custom: custom.map(a => ({ type: a.type, path: a.path })),
-          },
-        });
+        return createJsonResponse(await service.discover());
       }
 
       case 'getInfo': {
-        const linker = createPlanLinker(repoPath);
-        const info = await linker.getAgentInfo(params.agentType!);
-
-        return createJsonResponse({
-          success: true,
-          agent: info,
-        });
+        return createJsonResponse(await service.getInfo(params.agentType!));
       }
 
       case 'orchestrate': {
-        let agents: AgentType[] = [];
-        let source = '';
-
-        if (params.task) {
-          agents = agentOrchestrator.selectAgentsByTask(params.task);
-          source = `task: "${params.task}"`;
-        } else if (params.phase) {
-          agents = agentOrchestrator.getAgentsForPhase(params.phase);
-          source = `phase: ${params.phase} (${PHASE_NAMES_EN[params.phase]})`;
-        } else if (params.role) {
-          agents = agentOrchestrator.getAgentsForRole(params.role);
-          source = `role: ${ROLE_DISPLAY_NAMES[params.role]}`;
-        } else {
-          return createErrorResponse('Provide task, phase, or role parameter');
-        }
-
-        const agentDetails = agents.map((agent) => ({
-          type: agent,
-          description: agentOrchestrator.getAgentDescription(agent),
-          docs: documentLinker.getDocPathsForAgent(agent),
+        return createJsonResponse(service.orchestrate({
+          task: params.task,
+          phase: params.phase,
+          role: params.role,
         }));
-
-        return createJsonResponse({
-          source,
-          agents: agentDetails,
-          count: agents.length,
-        });
       }
 
       case 'getSequence': {
-        let sequence: AgentType[];
-
-        if (params.phases && params.phases.length > 0) {
-          sequence = agentOrchestrator.getAgentHandoffSequence(params.phases);
-        } else {
-          sequence = agentOrchestrator.getTaskAgentSequence(
-            params.task!,
-            params.includeReview !== false
-          );
-        }
-
-        const sequenceDetails = sequence.map((agent, index) => ({
-          order: index + 1,
-          agent,
-          description: agentOrchestrator.getAgentDescription(agent),
-          primaryDoc: documentLinker.getPrimaryDocForAgent(agent)?.path || null,
-        }));
-
-        return createJsonResponse({
+        return createJsonResponse(service.getSequence({
+          phases: params.phases,
           task: params.task,
-          sequence: sequenceDetails,
-          totalAgents: sequence.length,
-        });
+          includeReview: params.includeReview,
+        }));
       }
 
       case 'getDocs': {
-        if (!agentOrchestrator.isValidAgentType(params.agent!)) {
-          return createErrorResponse(`Invalid agent type "${params.agent}". Valid types: ${AGENT_TYPES.join(', ')}`);
-        }
-
-        const docs = documentLinker.getDocsForAgent(params.agent!);
-        const agentDesc = agentOrchestrator.getAgentDescription(params.agent!);
-
-        return createJsonResponse({
-          agent: params.agent,
-          description: agentDesc,
-          documentation: docs.map((doc) => ({
-            type: doc.type,
-            title: doc.title,
-            path: doc.path,
-            description: doc.description,
-          })),
-        });
+        return createJsonResponse(service.getDocs(params.agent! as AgentType));
       }
 
       case 'getPhaseDocs': {
-        const docs = documentLinker.getDocsForPhase(params.phase!);
-        const agents = agentOrchestrator.getAgentsForPhase(params.phase!);
-
-        return createJsonResponse({
-          phase: params.phase,
-          phaseName: PHASE_NAMES_EN[params.phase!],
-          documentation: docs.map((doc) => ({
-            type: doc.type,
-            title: doc.title,
-            path: doc.path,
-            description: doc.description,
-          })),
-          recommendedAgents: agents.map((agent) => ({
-            type: agent,
-            description: agentOrchestrator.getAgentDescription(agent),
-          })),
-        });
+        return createJsonResponse(service.getPhaseDocs(params.phase!));
       }
 
       case 'listTypes': {
-        const agents = agentOrchestrator.getAllAgentTypes().map((agent) => ({
-          type: agent,
-          description: agentOrchestrator.getAgentDescription(agent),
-          primaryDoc: documentLinker.getPrimaryDocForAgent(agent)?.title || null,
-        }));
-
-        return createJsonResponse({
-          agents,
-          total: agents.length,
-        });
+        return createJsonResponse(service.listTypes());
       }
 
       default:

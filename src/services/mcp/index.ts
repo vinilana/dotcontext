@@ -1,11 +1,12 @@
+/**
+ * MCP transport adapter exports.
+ *
+ * Keep this surface focused on the protocol adapter that exposes harness
+ * capabilities over Model Context Protocol. CLI-side installation flows live
+ * under src/services/cli/.
+ */
+
 export { AIContextMCPServer, startMCPServer, type MCPServerOptions } from './mcpServer';
-export {
-  MCPInstallService,
-  type MCPInstallServiceDependencies,
-  type MCPInstallOptions,
-  type MCPInstallResult,
-  type MCPInstallation,
-} from './mcpInstallService';
 
 // Consolidated gateway tool handlers
 export {

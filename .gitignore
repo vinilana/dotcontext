@@ -33,6 +33,7 @@ coverage/
 # Output directories
 output/
 .context-test/
+.release/
 
 # AI Context state files
 context-log.json
