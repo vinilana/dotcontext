@@ -75,6 +75,46 @@ describe('handleHarness', () => {
     expect(payload.evaluation.blocked).toBe(true);
   });
 
+  it('gets, sets, and resets policy documents', async () => {
+    const setResponse = await handleHarness(
+      {
+        action: 'setPolicy',
+        policy: {
+          defaultEffect: 'deny',
+          rules: [
+            {
+              id: 'allow-src',
+              effect: 'allow',
+              target: 'path',
+              pattern: 'src/**',
+            },
+          ],
+        },
+      },
+      { repoPath: tempDir }
+    );
+    const setPayload = JSON.parse(setResponse.content[0].text);
+    expect(setPayload.success).toBe(true);
+    expect(setPayload.policy.defaultEffect).toBe('deny');
+
+    const getResponse = await handleHarness(
+      { action: 'getPolicy' },
+      { repoPath: tempDir }
+    );
+    const getPayload = JSON.parse(getResponse.content[0].text);
+    expect(getPayload.success).toBe(true);
+    expect(getPayload.policy.rules).toHaveLength(1);
+
+    const resetResponse = await handleHarness(
+      { action: 'resetPolicy' },
+      { repoPath: tempDir }
+    );
+    const resetPayload = JSON.parse(resetResponse.content[0].text);
+    expect(resetPayload.success).toBe(true);
+    expect(Array.isArray(resetPayload.policy.rules)).toBe(true);
+    expect(resetPayload.policy.rules.length).toBeGreaterThan(0);
+  });
+
   it('replays sessions and builds failure datasets', async () => {
     const created = await handleHarness(
       { action: 'createSession', name: 'replay-dataset-run' },

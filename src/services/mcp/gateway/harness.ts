@@ -297,6 +297,34 @@ export async function handleHarness(
           success: true,
           rules: await service.listPolicies(),
         });
+      case 'getPolicy':
+        return createJsonResponse({
+          success: true,
+          policy: await service.getPolicy(),
+        });
+      case 'setPolicy':
+        if (!params.policy) {
+          return createErrorResponse('setPolicy requires policy');
+        }
+        return createJsonResponse({
+          success: true,
+          policy: await service.setPolicy({
+            defaultEffect: params.policy.defaultEffect,
+            rules: (params.policy.rules ?? []).map((rule, index) => ({
+              id: rule.id ?? `policy-${Date.now()}-${index}`,
+              effect: normalizePolicyEffect(rule.effect),
+              target: normalizePolicyTarget(rule.target, rule.pathPattern, rule.scope === 'risk' ? 'high' : undefined),
+              pattern: rule.pattern ?? rule.pathPattern ?? rule.scope ?? 'harness',
+              approvalRole: rule.approvalRole,
+              reason: rule.reason ?? rule.description,
+            })),
+          }),
+        });
+      case 'resetPolicy':
+        return createJsonResponse({
+          success: true,
+          policy: await service.resetPolicy(),
+        });
       case 'evaluatePolicy':
         return createJsonResponse({
           success: true,

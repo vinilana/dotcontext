@@ -47,4 +47,44 @@ describe('HarnessPolicyService', () => {
     expect(decision.requiresApproval).toBe(true);
     await expect(service.assertAllowed({ action: 'completeSession', risk: 'high' })).rejects.toThrow('Policy approval required');
   });
+
+  it('matches declarative tool/action/path rules and respects approval role', async () => {
+    await service.setPolicy({
+      version: 1,
+      defaultEffect: 'allow',
+      rules: [
+        {
+          id: 'mcp-write-review',
+          effect: 'require_approval',
+          when: {
+            tools: ['harness'],
+            actions: ['addArtifact'],
+            paths: ['src/services/mcp/**'],
+            risk: 'medium',
+          },
+          approvalRole: 'reviewer',
+        },
+      ],
+    });
+
+    const denied = await service.evaluate({
+      tool: 'harness',
+      action: 'addArtifact',
+      path: 'src/services/mcp/gateway/harness.ts',
+      risk: 'high',
+    });
+    expect(denied.requiresApproval).toBe(true);
+    expect(denied.allowed).toBe(false);
+
+    const approved = await service.evaluate({
+      tool: 'harness',
+      action: 'addArtifact',
+      path: 'src/services/mcp/gateway/harness.ts',
+      risk: 'high',
+      approval: { approvedBy: 'alice' },
+      approvalRole: 'reviewer',
+    });
+    expect(approved.allowed).toBe(true);
+    expect(approved.blocked).toBe(false);
+  });
 });

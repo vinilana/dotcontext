@@ -593,7 +593,10 @@ Actions:
 - getFailureClusters: Get clusters for a dataset (params: datasetId)
 - registerPolicy: Register policy rule (params: scope, effect, target?, pattern?, pathPattern?, risk?, description?)
 - listPolicies: List policy rules
-- evaluatePolicy: Evaluate policy against runtime input (params: scope, target?, path?, risk?)`,
+- getPolicy: Retrieve current policy document
+- setPolicy: Replace policy document (params: policy)
+- resetPolicy: Reset policy to bootstrap defaults
+- evaluatePolicy: Evaluate policy against runtime input (params: scope, pattern?, path?, risk?, approvedBy?, approvalRole?)`,
       inputSchema: {
         action: z.enum([
           'createSession',
@@ -623,6 +626,9 @@ Actions:
           'getFailureClusters',
           'registerPolicy',
           'listPolicies',
+          'getPolicy',
+          'setPolicy',
+          'resetPolicy',
           'evaluatePolicy',
         ]).describe('Action to perform'),
         sessionId: z.string().optional(),
@@ -673,7 +679,24 @@ Actions:
         target: z.enum(['tool', 'action', 'path', 'risk']).optional(),
         pattern: z.string().optional(),
         pathPattern: z.string().optional(),
+        approvalRole: z.string().optional(),
+        approvedBy: z.string().optional(),
+        approvalNote: z.string().optional(),
         risk: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+        policy: z.object({
+          defaultEffect: z.enum(['allow', 'deny']).optional(),
+          rules: z.array(z.object({
+            id: z.string().optional(),
+            effect: z.enum(['allow', 'deny', 'require_approval']),
+            target: z.enum(['tool', 'action', 'path', 'risk']).optional(),
+            pattern: z.string().optional(),
+            pathPattern: z.string().optional(),
+            approvalRole: z.string().optional(),
+            reason: z.string().optional(),
+            description: z.string().optional(),
+            scope: z.enum(['sensor', 'artifact', 'handoff', 'workflow', 'task', 'risk']).optional(),
+          })).optional(),
+        }).optional(),
       }
     }, wrap('harness', async (params): Promise<MCPToolResponse> => {
       return handleHarness(params as HarnessParams, { repoPath: this.getRepoPath() });
