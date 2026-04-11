@@ -1,7 +1,7 @@
 /**
  * MCP Server - Model Context Protocol server for Claude Code integration
  *
- * Exposes 9 tools (5 consolidated gateways + 4 dedicated workflow tools) for
+ * Exposes 10 tools (6 consolidated gateways + 4 dedicated workflow tools) for
  * reduced context and simpler tool selection for AI agents.
  *
  * Simplified workflow: context init → fillSingle → workflow-init
@@ -34,6 +34,7 @@ import {
   handlePlan,
   handleAgent,
   handleSkill,
+  handleHarness,
   handleWorkflowInit,
   handleWorkflowStatus,
   handleWorkflowAdvance,
@@ -44,6 +45,7 @@ import {
   type PlanParams,
   type AgentParams,
   type SkillParams,
+  type HarnessParams,
   type WorkflowInitParams,
   type WorkflowStatusParams,
   type WorkflowAdvanceParams,
@@ -95,8 +97,8 @@ export class AIContextMCPServer {
   }
 
   /**
-   * Register tools: 5 consolidated gateways + 4 dedicated workflow tools
-   * Total: 9 tools for clear entry points and reduced AI cognitive load
+   * Register tools: 6 consolidated gateways + 4 dedicated workflow tools
+   * Total: 10 tools for clear entry points and reduced AI cognitive load
    *
    * Project tools removed - use context({ action: "init" }) + workflow-init instead
    *
@@ -320,7 +322,7 @@ Use force=true to bypass gates, or use workflow-manage({ action: 'setAutonomous'
 
     // Tool 3d: workflow-manage - Manage workflow operations
     this.server.registerTool('workflow-manage', {
-      description: `Manage workflow operations: handoffs, collaboration, documents, gates, approvals.
+      description: `Manage workflow operations: handoffs, collaboration, documents, gates, approvals, and harness runtime state.
 
 Actions:
 - handoff: Transfer work between agents (params: from, to, artifacts)
@@ -328,9 +330,13 @@ Actions:
 - createDoc: Create workflow document (params: type, docName)
 - getGates: Check gate status
 - approvePlan: Approve linked plan (params: planSlug?, approver?, notes?)
-- setAutonomous: Toggle autonomous mode (params: enabled, reason?)`,
+- setAutonomous: Toggle autonomous mode (params: enabled, reason?)
+- checkpoint: Record a harness checkpoint (params: notes?, data?, artifactIds?, pause?)
+- recordArtifact: Attach an artifact to the active harness session (params: name, kind?, filePath?, content?)
+- defineTask: Define the active harness task contract (params: taskTitle, taskDescription?, expectedOutputs?, acceptanceCriteria?, requiredSensors?, requiredArtifacts?)
+- runSensors: Execute harness sensors for the active session (params: sensors)`,
       inputSchema: {
-        action: z.enum(['handoff', 'collaborate', 'createDoc', 'getGates', 'approvePlan', 'setAutonomous'])
+        action: z.enum(['handoff', 'collaborate', 'createDoc', 'getGates', 'approvePlan', 'setAutonomous', 'checkpoint', 'recordArtifact', 'defineTask', 'runSensors'])
           .describe('Action to perform'),
         from: z.string().optional()
           .describe('(handoff) Agent handing off (e.g., feature-developer)'),
@@ -356,6 +362,38 @@ Actions:
           .describe('(setAutonomous) Enable/disable'),
         reason: z.string().optional()
           .describe('(setAutonomous) Reason for change'),
+        name: z.string().optional()
+          .describe('(recordArtifact) Artifact name'),
+        kind: z.enum(['text', 'json', 'file']).optional()
+          .describe('(recordArtifact) Artifact kind'),
+        content: z.any().optional()
+          .describe('(recordArtifact, checkpoint) Structured content or payload'),
+        filePath: z.string().optional()
+          .describe('(recordArtifact) Artifact file path'),
+        taskTitle: z.string().optional()
+          .describe('(defineTask) Task title'),
+        taskDescription: z.string().optional()
+          .describe('(defineTask) Task description'),
+        owner: z.string().optional()
+          .describe('(defineTask) Task owner'),
+        inputs: z.array(z.string()).optional()
+          .describe('(defineTask) Required inputs'),
+        expectedOutputs: z.array(z.string()).optional()
+          .describe('(defineTask) Expected outputs'),
+        acceptanceCriteria: z.array(z.string()).optional()
+          .describe('(defineTask) Acceptance criteria'),
+        requiredSensors: z.array(z.string()).optional()
+          .describe('(defineTask) Required sensors'),
+        requiredArtifacts: z.array(z.string()).optional()
+          .describe('(defineTask) Required artifacts'),
+        sensors: z.array(z.string()).optional()
+          .describe('(runSensors) Sensors to execute'),
+        data: z.any().optional()
+          .describe('(checkpoint) Optional checkpoint payload'),
+        artifactIds: z.array(z.string()).optional()
+          .describe('(checkpoint) Artifact IDs associated with the checkpoint'),
+        pause: z.boolean().optional()
+          .describe('(checkpoint) Pause the active harness session after checkpoint'),
       }
     }, wrap('workflow-manage', async (params): Promise<MCPToolResponse> => {
       return handleWorkflowManage(params as WorkflowManageParams, { repoPath: this.getRepoPath((params as WorkflowManageParams).repoPath) });
@@ -525,7 +563,91 @@ Actions:
       return handleSkill(params as SkillParams, { repoPath: this.getRepoPath() });
     }));
 
-    this.log('Registered 9 tools (5 consolidated gateways + 4 dedicated workflow tools)');
+    // Gateway 9: harness - Explicit harness runtime operations
+    this.server.registerTool('harness', {
+      description: `Harness runtime operations. Actions:
+- createSession: Create durable harness session (params: name, metadata?)
+- listSessions: List harness sessions
+- getSession: Get a harness session (params: sessionId)
+- appendTrace: Append trace event (params: sessionId, level, event, message, data?)
+- listTraces: List trace events for a session (params: sessionId)
+- addArtifact: Add artifact to a session (params: sessionId, name, kind?, content?, path?, metadata?)
+- listArtifacts: List session artifacts (params: sessionId)
+- checkpoint: Record session checkpoint (params: sessionId, note?, data?, artifactIds?, pause?)
+- resumeSession: Resume paused session (params: sessionId)
+- completeSession: Complete session (params: sessionId, note?)
+- failSession: Fail session (params: sessionId, message)
+- recordSensor: Record sensor result for session (params: sessionId, sensorId, sensorStatus, summary, sensorSeverity?, sensorBlocking?, evidence?)
+- getSessionQuality: Evaluate backpressure and task completion (params: sessionId, taskId?, blockOnWarnings?, requireEvidence?)
+- createTask: Create task contract (params: title, sessionId?, expectedOutputs?, acceptanceCriteria?, requiredSensors?, requiredArtifacts?)
+- listTasks: List task contracts
+- evaluateTask: Evaluate task completion (params: taskId, sessionId?)
+- createHandoff: Create handoff contract (params: from, to, sessionId?, taskId?, artifacts?, evidence?)
+- listHandoffs: List handoff contracts`,
+      inputSchema: {
+        action: z.enum([
+          'createSession',
+          'listSessions',
+          'getSession',
+          'appendTrace',
+          'listTraces',
+          'addArtifact',
+          'listArtifacts',
+          'checkpoint',
+          'resumeSession',
+          'completeSession',
+          'failSession',
+          'recordSensor',
+          'getSessionQuality',
+          'createTask',
+          'listTasks',
+          'evaluateTask',
+          'createHandoff',
+          'listHandoffs',
+        ]).describe('Action to perform'),
+        sessionId: z.string().optional(),
+        taskId: z.string().optional(),
+        name: z.string().optional(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        owner: z.string().optional(),
+        status: z.enum(['draft', 'ready', 'in_progress', 'blocked', 'completed', 'failed']).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+        level: z.enum(['debug', 'info', 'warn', 'error']).optional(),
+        event: z.string().optional(),
+        message: z.string().optional(),
+        data: z.record(z.string(), z.unknown()).optional(),
+        kind: z.enum(['text', 'json', 'file']).optional(),
+        content: z.unknown().optional(),
+        path: z.string().optional(),
+        note: z.string().optional(),
+        artifactIds: z.array(z.string()).optional(),
+        pause: z.boolean().optional(),
+        sensorId: z.string().optional(),
+        sensorName: z.string().optional(),
+        sensorSeverity: z.enum(['info', 'warning', 'critical']).optional(),
+        sensorBlocking: z.boolean().optional(),
+        sensorStatus: z.enum(['passed', 'failed', 'skipped', 'blocked']).optional(),
+        summary: z.string().optional(),
+        evidence: z.array(z.string()).optional(),
+        output: z.unknown().optional(),
+        details: z.record(z.string(), z.unknown()).optional(),
+        blockOnWarnings: z.boolean().optional(),
+        requireEvidence: z.boolean().optional(),
+        inputs: z.array(z.string()).optional(),
+        expectedOutputs: z.array(z.string()).optional(),
+        acceptanceCriteria: z.array(z.string()).optional(),
+        requiredSensors: z.array(z.string()).optional(),
+        requiredArtifacts: z.array(z.string()).optional(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+        artifacts: z.array(z.string()).optional(),
+      }
+    }, wrap('harness', async (params): Promise<MCPToolResponse> => {
+      return handleHarness(params as HarnessParams, { repoPath: this.getRepoPath() });
+    }));
+
+    this.log('Registered 10 tools (6 consolidated gateways + 4 dedicated workflow tools)');
   }
 
   /**

@@ -19,6 +19,25 @@ export type SyncAction = 'exportRules' | 'exportDocs' | 'exportAgents' | 'export
 export type PlanAction = 'link' | 'getLinked' | 'getDetails' | 'getForPhase' | 'updatePhase' | 'recordDecision' | 'updateStep' | 'getStatus' | 'syncMarkdown' | 'commitPhase';
 export type AgentAction = 'discover' | 'getInfo' | 'orchestrate' | 'getSequence' | 'getDocs' | 'getPhaseDocs' | 'listTypes';
 export type SkillAction = 'list' | 'getContent' | 'getForPhase' | 'scaffold' | 'export' | 'fill';
+export type HarnessAction =
+  | 'createSession'
+  | 'listSessions'
+  | 'getSession'
+  | 'appendTrace'
+  | 'listTraces'
+  | 'addArtifact'
+  | 'listArtifacts'
+  | 'checkpoint'
+  | 'resumeSession'
+  | 'completeSession'
+  | 'failSession'
+  | 'recordSensor'
+  | 'getSessionQuality'
+  | 'createTask'
+  | 'listTasks'
+  | 'evaluateTask'
+  | 'createHandoff'
+  | 'listHandoffs';
 
 // Parameter interfaces for each gateway
 export interface ExploreParams {
@@ -129,4 +148,45 @@ export interface SkillParams {
   includeContent?: boolean;
   includeBuiltIn?: boolean;
   preset?: 'claude' | 'gemini' | 'codex' | 'antigravity' | 'all';
+}
+
+export interface HarnessParams {
+  action: HarnessAction;
+  sessionId?: string;
+  taskId?: string;
+  name?: string;
+  title?: string;
+  description?: string;
+  owner?: string;
+  status?: 'draft' | 'ready' | 'in_progress' | 'blocked' | 'completed' | 'failed';
+  metadata?: Record<string, unknown>;
+  level?: 'debug' | 'info' | 'warn' | 'error';
+  event?: string;
+  message?: string;
+  data?: Record<string, unknown>;
+  kind?: 'text' | 'json' | 'file';
+  content?: unknown;
+  path?: string;
+  note?: string;
+  artifactIds?: string[];
+  pause?: boolean;
+  sensorId?: string;
+  sensorName?: string;
+  sensorSeverity?: 'info' | 'warning' | 'critical';
+  sensorBlocking?: boolean;
+  sensorStatus?: 'passed' | 'failed' | 'skipped' | 'blocked';
+  summary?: string;
+  evidence?: string[];
+  output?: unknown;
+  details?: Record<string, unknown>;
+  blockOnWarnings?: boolean;
+  requireEvidence?: boolean;
+  inputs?: string[];
+  expectedOutputs?: string[];
+  acceptanceCriteria?: string[];
+  requiredSensors?: string[];
+  requiredArtifacts?: string[];
+  from?: string;
+  to?: string;
+  artifacts?: string[];
 }

@@ -32,6 +32,7 @@ export {
   type PlanAction,
   type AgentAction,
   type SkillAction,
+  type HarnessAction,
 
   // Parameter types
   type ExploreParams,
@@ -40,6 +41,7 @@ export {
   type PlanParams,
   type AgentParams,
   type SkillParams,
+  type HarnessParams,
 
   // Consolidated gateway handlers
   handleExplore,
@@ -48,6 +50,7 @@ export {
   handlePlan,
   handleAgent,
   handleSkill,
+  handleHarness,
 
   // Dedicated workflow handlers
   handleWorkflowInit,
@@ -62,6 +65,7 @@ export {
   type PlanOptions,
   type AgentOptions,
   type SkillOptions,
+  type HarnessOptions,
 
   // Dedicated workflow handler types
   type WorkflowInitParams,

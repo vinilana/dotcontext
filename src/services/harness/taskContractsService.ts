@@ -133,12 +133,14 @@ export class HarnessTaskContractsService {
 
     const filePath = await this.taskFile(contract.id);
     await fs.writeJson(filePath, contract, { spaces: 2 });
-    await this.options.stateService.appendTrace(contract.sessionId ?? '__global__', {
-      level: 'info',
-      event: 'task.contract.created',
-      message: `Task contract created: ${contract.title}`,
-      data: { contract },
-    });
+    if (contract.sessionId) {
+      await this.options.stateService.appendTrace(contract.sessionId, {
+        level: 'info',
+        event: 'task.contract.created',
+        message: `Task contract created: ${contract.title}`,
+        data: { contract },
+      });
+    }
 
     return contract;
   }
@@ -206,12 +208,14 @@ export class HarnessTaskContractsService {
 
     const filePath = await this.handoffFile(contract.id);
     await fs.writeJson(filePath, contract, { spaces: 2 });
-    await this.options.stateService.appendTrace(contract.sessionId ?? '__global__', {
-      level: 'info',
-      event: 'handoff.contract.created',
-      message: `${contract.from} -> ${contract.to}`,
-      data: { contract },
-    });
+    if (contract.sessionId) {
+      await this.options.stateService.appendTrace(contract.sessionId, {
+        level: 'info',
+        event: 'handoff.contract.created',
+        message: `${contract.from} -> ${contract.to}`,
+        data: { contract },
+      });
+    }
 
     return contract;
   }
@@ -238,10 +242,17 @@ export class HarnessTaskContractsService {
     const sensorRuns = traces
       .filter((trace) => trace.event === 'sensor.run' && trace.data?.run)
       .map((trace) => trace.data!.run as HarnessSensorRun);
+    const latestRunsBySensor = new Map<string, HarnessSensorRun>();
+    for (const run of sensorRuns) {
+      const current = latestRunsBySensor.get(run.sensorId);
+      if (!current || current.createdAt < run.createdAt) {
+        latestRunsBySensor.set(run.sensorId, run);
+      }
+    }
     const artifacts = sessionId ? await this.options.stateService.listArtifacts(sessionId) : [];
 
     const matchedSensorRuns = contract.requiredSensors
-      .map((sensorId) => sensorRuns.find((run) => run.sensorId === sensorId))
+      .map((sensorId) => latestRunsBySensor.get(sensorId))
       .filter((run): run is HarnessSensorRun => Boolean(run))
       .filter((run) => run.status === 'passed');
     const missingSensors = contract.requiredSensors.filter(

@@ -44,3 +44,8 @@ export {
   type HarnessHandoffContract,
   type HarnessTaskCompletionResult,
 } from './taskContractsService';
+export {
+  HarnessExecutionService,
+  type HarnessExecutionServiceOptions,
+  type HarnessSessionQualitySnapshot,
+} from './executionService';

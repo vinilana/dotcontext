@@ -16,6 +16,7 @@ export {
   handlePlan,
   handleAgent,
   handleSkill,
+  handleHarness,
 } from './gatewayTools';
 
 // Dedicated workflow tool handlers
@@ -37,6 +38,7 @@ export type {
   PlanAction,
   AgentAction,
   SkillAction,
+  HarnessAction,
 } from './gatewayTools';
 
 // Consolidated gateway tool parameter types
@@ -47,6 +49,7 @@ export type {
   PlanParams,
   AgentParams,
   SkillParams,
+  HarnessParams,
 } from './gatewayTools';
 
 // Dedicated workflow handler parameter types

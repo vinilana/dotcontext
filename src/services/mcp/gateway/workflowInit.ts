@@ -66,6 +66,7 @@ export async function handleWorkflowInit(
     const isAutonomous = settings.autonomous_mode;
     const requiresPlan = settings.require_plan;
     const orchestration = await service.getPhaseOrchestration(status.project.current_phase);
+    const harness = await service.getHarnessStatus();
 
     // Build actionable enhancement prompt based on workflow state
     const enhancementPrompt = buildWorkflowEnhancementPrompt({
@@ -99,6 +100,11 @@ export async function handleWorkflowInit(
       statusFilePath,
       contextPath,
       orchestration,
+      harness: harness ? {
+        sessionId: harness.binding.sessionId,
+        sessionStatus: harness.session.status,
+        harnessPath: path.join(contextPath, 'harness'),
+      } : null,
 
       // Action signals for AI agents
       _actionRequired: true,

@@ -17,7 +17,7 @@ import type { MCPToolResponse } from './response';
 import { createJsonResponse, createErrorResponse } from './response';
 
 export interface WorkflowManageParams {
-  action: 'handoff' | 'collaborate' | 'createDoc' | 'getGates' | 'approvePlan' | 'setAutonomous';
+  action: 'handoff' | 'collaborate' | 'createDoc' | 'getGates' | 'approvePlan' | 'setAutonomous' | 'checkpoint' | 'recordArtifact' | 'defineTask' | 'runSensors';
   from?: string;
   to?: string;
   artifacts?: string[];
@@ -30,6 +30,22 @@ export interface WorkflowManageParams {
   notes?: string;
   enabled?: boolean;
   reason?: string;
+  name?: string;
+  kind?: 'text' | 'json' | 'file';
+  content?: unknown;
+  filePath?: string;
+  taskTitle?: string;
+  taskDescription?: string;
+  owner?: string;
+  inputs?: string[];
+  expectedOutputs?: string[];
+  acceptanceCriteria?: string[];
+  requiredSensors?: string[];
+  requiredArtifacts?: string[];
+  sensors?: string[];
+  data?: unknown;
+  artifactIds?: string[];
+  pause?: boolean;
   repoPath?: string;
 }
 
@@ -235,6 +251,124 @@ export async function handleWorkflowManage(
           effect: params.enabled
             ? 'All workflow gates are now bypassed. Use workflow-advance() freely.'
             : 'Workflow gates are now enforced based on settings.',
+        });
+      }
+
+      case 'checkpoint': {
+        if (!(await service.hasWorkflow())) {
+          return createJsonResponse({
+            success: false,
+            error: 'No workflow found. Initialize a workflow first.',
+            suggestion: 'Use workflow-init({ name: "feature-name" }) to start.',
+          });
+        }
+
+        const result = await service.checkpointHarnessSession(
+          params.notes,
+          params.data,
+          params.artifactIds,
+          params.pause
+        );
+
+        return createJsonResponse({
+          success: true,
+          message: params.pause ? 'Harness session checkpointed and paused' : 'Harness session checkpointed',
+          sessionId: result.binding.sessionId,
+          sessionStatus: result.session.status,
+          checkpointCount: result.session.checkpointCount,
+        });
+      }
+
+      case 'recordArtifact': {
+        if (!(await service.hasWorkflow())) {
+          return createJsonResponse({
+            success: false,
+            error: 'No workflow found. Initialize a workflow first.',
+            suggestion: 'Use workflow-init({ name: "feature-name" }) to start.',
+          });
+        }
+
+        if (!params.name) {
+          return createJsonResponse({
+            success: false,
+            error: 'recordArtifact requires name',
+          });
+        }
+
+        const artifact = await service.recordHarnessArtifact({
+          name: params.name,
+          kind: params.kind,
+          content: params.content,
+          path: params.filePath,
+          metadata: { action: 'workflow-manage.recordArtifact' },
+        });
+
+        return createJsonResponse({
+          success: true,
+          message: `Artifact recorded: ${artifact.name}`,
+          artifact,
+        });
+      }
+
+      case 'defineTask': {
+        if (!(await service.hasWorkflow())) {
+          return createJsonResponse({
+            success: false,
+            error: 'No workflow found. Initialize a workflow first.',
+            suggestion: 'Use workflow-init({ name: "feature-name" }) to start.',
+          });
+        }
+
+        if (!params.taskTitle) {
+          return createJsonResponse({
+            success: false,
+            error: 'defineTask requires taskTitle',
+          });
+        }
+
+        const task = await service.defineHarnessTask({
+          title: params.taskTitle,
+          description: params.taskDescription,
+          owner: params.owner,
+          inputs: params.inputs,
+          expectedOutputs: params.expectedOutputs,
+          acceptanceCriteria: params.acceptanceCriteria,
+          requiredSensors: params.requiredSensors,
+          requiredArtifacts: params.requiredArtifacts,
+        });
+
+        return createJsonResponse({
+          success: true,
+          message: `Harness task defined: ${task.title}`,
+          task,
+        });
+      }
+
+      case 'runSensors': {
+        if (!(await service.hasWorkflow())) {
+          return createJsonResponse({
+            success: false,
+            error: 'No workflow found. Initialize a workflow first.',
+            suggestion: 'Use workflow-init({ name: "feature-name" }) to start.',
+          });
+        }
+
+        if (!params.sensors || params.sensors.length === 0) {
+          return createJsonResponse({
+            success: false,
+            error: 'runSensors requires sensors',
+          });
+        }
+
+        const result = await service.runHarnessSensors(params.sensors, {
+          action: 'workflow-manage.runSensors',
+        });
+
+        return createJsonResponse({
+          success: true,
+          message: `Executed ${result.runs.length} sensors`,
+          runs: result.runs,
+          backpressure: result.backpressure,
         });
       }
 

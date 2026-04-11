@@ -53,6 +53,7 @@ export async function handleWorkflowStatus(
     const status = await service.getStatus();
     const statusFilePath = path.join(contextPath, 'workflow', 'status.yaml');
     const orchestration = await service.getPhaseOrchestration(summary.currentPhase);
+    const harness = await service.getHarnessStatus();
 
     return createJsonResponse({
       success: true,
@@ -68,6 +69,7 @@ export async function handleWorkflowStatus(
       agents: status.agents,
       roles: status.roles,
       orchestration,
+      harness,
       statusFilePath,
     });
   } catch (error) {

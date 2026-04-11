@@ -10,6 +10,8 @@ export {
   WorkflowService,
   type WorkflowServiceDependencies,
   type WorkflowInitOptions,
+  type WorkflowHarnessStatus,
+  HarnessWorkflowBlockedError,
 } from '../services/workflow';
 export {
   HarnessAgentsService,
@@ -49,6 +51,9 @@ export {
   type HarnessTaskContract,
   type HarnessHandoffContract,
   type HarnessTaskCompletionResult,
+  HarnessExecutionService,
+  type HarnessExecutionServiceOptions,
+  type HarnessSessionQualitySnapshot,
 } from '../services/harness';
 
 export {

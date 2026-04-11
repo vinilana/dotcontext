@@ -10,6 +10,7 @@ import {
   PHASE_NAMES_EN,
   WorkflowGateError,
 } from '../../../workflow';
+import { HarnessWorkflowBlockedError } from '../../workflow';
 
 import type { MCPToolResponse } from './response';
 import { createJsonResponse, createErrorResponse } from './response';
@@ -95,6 +96,22 @@ export async function handleWorkflowAdvance(
         });
       }
     } catch (error) {
+      if (error instanceof HarnessWorkflowBlockedError) {
+        return createJsonResponse({
+          success: false,
+          error: error.message,
+          blockedBy: 'harness',
+          reasons: error.reasons,
+          harness: error.harnessStatus,
+          resolution: [
+            'Use workflow-manage({ action: "runSensors", sensors: [...] }) to run required sensors',
+            'Use workflow-manage({ action: "recordArtifact", ... }) to attach missing artifacts',
+            'Use workflow-manage({ action: "defineTask", ... }) to refresh the active task contract if it is stale',
+            'Use workflow-advance({ force: true }) only if you intentionally want to bypass harness checks',
+          ],
+        });
+      }
+
       if (error instanceof WorkflowGateError) {
         const blockedGate = error.message.includes('plan') ? 'plan_required' : 'approval_required';
 
