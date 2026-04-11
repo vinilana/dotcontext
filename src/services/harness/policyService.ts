@@ -1,5 +1,6 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { StackDetector, type StackInfo } from '../stack';
 
 export type HarnessPolicyEffect = 'allow' | 'deny' | 'require_approval';
 export type HarnessPolicyRisk = 'low' | 'medium' | 'high' | 'critical';
@@ -85,6 +86,10 @@ export interface CreateHarnessPolicyRuleInput {
 
 export interface HarnessPolicyServiceOptions {
   repoPath: string;
+}
+
+export interface CreateHarnessBootstrapPolicyOptions {
+  stackInfo?: StackInfo;
 }
 
 export class HarnessPolicyBlockedError extends Error {
@@ -177,6 +182,86 @@ function isLegacyEnforcementInput(
 ): input is HarnessPolicyLegacyEnforcementInput {
   return (input as HarnessPolicyLegacyEnforcementInput).scope !== undefined;
 }
+
+const CORE_DIRECTORY_CANDIDATES = [
+  'src',
+  'app',
+  'apps',
+  'lib',
+  'libs',
+  'packages',
+  'modules',
+  'services',
+  'server',
+  'client',
+  'web',
+  'frontend',
+  'backend',
+  'api',
+  'cmd',
+  'pkg',
+  'internal',
+  'bin',
+] as const;
+
+const ROOT_CONFIG_FILE_CANDIDATES = [
+  'package.json',
+  'package-lock.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  'bun.lockb',
+  'tsconfig.json',
+  'pyproject.toml',
+  'requirements.txt',
+  'setup.py',
+  'go.mod',
+  'go.sum',
+  'Cargo.toml',
+  'Cargo.lock',
+  'pom.xml',
+  'build.gradle',
+  'build.gradle.kts',
+  'settings.gradle',
+  'Gemfile',
+  'composer.json',
+  'Makefile',
+  'turbo.json',
+  'nx.json',
+  'lerna.json',
+  'pnpm-workspace.yaml',
+] as const;
+
+const ROOT_SOURCE_FILE_EXTENSIONS = new Set([
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.py',
+  '.go',
+  '.rs',
+  '.java',
+  '.kt',
+  '.rb',
+  '.php',
+  '.cs',
+  '.swift',
+]);
+
+const CONFIG_DIRECTORY_PATTERNS: Array<{ path: string; pattern: string }> = [
+  { path: '.github/workflows', pattern: '.github/workflows/**' },
+  { path: '.circleci', pattern: '.circleci/**' },
+  { path: 'docker', pattern: 'docker/**' },
+  { path: 'infra', pattern: 'infra/**' },
+  { path: 'infrastructure', pattern: 'infrastructure/**' },
+  { path: 'terraform', pattern: 'terraform/**' },
+  { path: 'k8s', pattern: 'k8s/**' },
+  { path: 'helm', pattern: 'helm/**' },
+  { path: 'deploy', pattern: 'deploy/**' },
+  { path: 'deployment', pattern: 'deployment/**' },
+  { path: '.devcontainer', pattern: '.devcontainer/**' },
+] as const;
 
 export class HarnessPolicyService {
   constructor(private readonly options: HarnessPolicyServiceOptions) {}
@@ -419,38 +504,141 @@ export class HarnessPolicyService {
     return this.loadPolicy();
   }
 
-  createBootstrapPolicy(): HarnessPolicyDocument {
+  private async detectStackInfo(): Promise<StackInfo | undefined> {
+    try {
+      return await new StackDetector().detect(this.repoPath);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async readTopLevelEntries(): Promise<{ files: string[]; directories: string[] }> {
+    try {
+      const entries = await fs.readdir(this.repoPath);
+      const files: string[] = [];
+      const directories: string[] = [];
+
+      await Promise.all(entries.map(async (entry) => {
+        const fullPath = path.join(this.repoPath, entry);
+        const stats = await fs.stat(fullPath);
+        if (stats.isDirectory()) {
+          directories.push(entry);
+        } else {
+          files.push(entry);
+        }
+      }));
+
+      return {
+        files: files.sort(),
+        directories: directories.sort(),
+      };
+    } catch {
+      return {
+        files: [],
+        directories: [],
+      };
+    }
+  }
+
+  private getCorePathPatterns(topLevelEntries: { files: string[]; directories: string[] }): string[] {
+    const directorySet = new Set(topLevelEntries.directories);
+    const paths = CORE_DIRECTORY_CANDIDATES
+      .filter((directory) => directorySet.has(directory))
+      .map((directory) => `${directory}/**`);
+
+    if (paths.length > 0) {
+      return [...new Set(paths)];
+    }
+
+    return topLevelEntries.files
+      .filter((file) => ROOT_SOURCE_FILE_EXTENSIONS.has(path.extname(file).toLowerCase()))
+      .sort();
+  }
+
+  private async getConfigPathPatterns(topLevelEntries: { files: string[]; directories: string[] }): Promise<string[]> {
+    const fileSet = new Set(topLevelEntries.files);
+    const patterns: string[] = ROOT_CONFIG_FILE_CANDIDATES
+      .filter((file) => fileSet.has(file))
+      .slice();
+
+    for (const file of topLevelEntries.files) {
+      if (file === 'Dockerfile' || file.startsWith('Dockerfile.')) {
+        patterns.push(file);
+      }
+      if (/^docker-compose\.(ya?ml)$/i.test(file)) {
+        patterns.push(file);
+      }
+    }
+
+    for (const candidate of CONFIG_DIRECTORY_PATTERNS) {
+      if (await fs.pathExists(path.join(this.repoPath, candidate.path))) {
+        patterns.push(candidate.pattern);
+      }
+    }
+
+    return [...new Set(patterns)].sort();
+  }
+
+  private buildCoreRuleReason(stackInfo?: StackInfo): string {
+    const descriptors = [
+      stackInfo?.isMonorepo ? 'monorepo' : null,
+      stackInfo?.primaryLanguage ?? null,
+      stackInfo?.frameworks[0] ?? null,
+    ].filter((value): value is string => Boolean(value));
+
+    if (descriptors.length === 0) {
+      return 'High-risk changes to core repository paths require approval.';
+    }
+
+    return `High-risk changes to core ${descriptors.join(' ')} paths require approval.`;
+  }
+
+  async createBootstrapPolicy(
+    options: CreateHarnessBootstrapPolicyOptions = {}
+  ): Promise<HarnessPolicyDocument> {
+    const stackInfo = options.stackInfo ?? await this.detectStackInfo();
+    const topLevelEntries = await this.readTopLevelEntries();
+    const corePaths = this.getCorePathPatterns(topLevelEntries);
+    const configPaths = await this.getConfigPathPatterns(topLevelEntries);
+    const rules: HarnessPolicyRule[] = [];
+
+    if (corePaths.length > 0) {
+      rules.push({
+        id: 'protect-repository-core',
+        effect: 'require_approval',
+        when: {
+          paths: corePaths,
+          risk: 'high',
+        },
+        reason: this.buildCoreRuleReason(stackInfo),
+      });
+    }
+
+    if (configPaths.length > 0) {
+      rules.push({
+        id: 'protect-repository-config',
+        effect: 'require_approval',
+        when: {
+          paths: configPaths,
+          risk: 'high',
+        },
+        reason: 'High-risk changes to repository automation and build configuration require approval.',
+      });
+    }
+
+    rules.push({
+      id: 'block-secrets',
+      effect: 'deny',
+      when: {
+        paths: ['**/.env*', '**/*.pem', '**/*.key', '**/*secret*'],
+      },
+      reason: 'Secret-like files are blocked by policy.',
+    });
+
     return {
       version: 1,
       defaultEffect: 'allow',
-      rules: [
-        {
-          id: 'protect-mcp-adapter',
-          effect: 'require_approval',
-          when: {
-            paths: ['src/services/mcp/**', 'src/mcp/**'],
-            risk: 'high',
-          },
-          reason: 'Changes to the MCP adapter or high-risk MCP operations require approval.',
-        },
-        {
-          id: 'protect-workflow-core',
-          effect: 'require_approval',
-          when: {
-            paths: ['src/services/workflow/**', 'src/workflow/**'],
-            risk: 'high',
-          },
-          reason: 'Changes to workflow core require approval.',
-        },
-        {
-          id: 'block-secrets',
-          effect: 'deny',
-          when: {
-            paths: ['**/.env*', '**/*.pem', '**/*.key', '**/*secret*'],
-          },
-          reason: 'Secret-like files are blocked by policy.',
-        },
-      ],
+      rules,
     };
   }
 }

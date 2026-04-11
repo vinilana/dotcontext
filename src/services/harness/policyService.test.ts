@@ -87,4 +87,24 @@ describe('HarnessPolicyService', () => {
     expect(approved.allowed).toBe(true);
     expect(approved.blocked).toBe(false);
   });
+
+  it('builds bootstrap rules from the initialized repository instead of static dotcontext paths', async () => {
+    await fs.ensureDir(path.join(tempDir, 'packages', 'api'));
+    await fs.ensureDir(path.join(tempDir, '.github', 'workflows'));
+    await fs.writeJson(path.join(tempDir, 'package.json'), {
+      name: 'policy-bootstrap-test',
+      version: '1.0.0',
+      workspaces: ['packages/*'],
+    }, { spaces: 2 });
+    await fs.writeFile(path.join(tempDir, 'packages', 'api', 'index.ts'), 'export const api = true;\n', 'utf-8');
+    await fs.writeFile(path.join(tempDir, '.github', 'workflows', 'ci.yml'), 'name: ci\n', 'utf-8');
+
+    const policy = await service.createBootstrapPolicy();
+    const coreRule = policy.rules.find((rule) => rule.id === 'protect-repository-core');
+    const configRule = policy.rules.find((rule) => rule.id === 'protect-repository-config');
+
+    expect(coreRule?.when?.paths).toEqual(expect.arrayContaining(['packages/**']));
+    expect(coreRule?.when?.paths).not.toEqual(expect.arrayContaining(['src/services/mcp/**', 'src/workflow/**']));
+    expect(configRule?.when?.paths).toEqual(expect.arrayContaining(['package.json', '.github/workflows/**']));
+  });
 });

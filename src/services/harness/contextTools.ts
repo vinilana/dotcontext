@@ -743,7 +743,7 @@ export const initializeContextTool = createInternalTool<
       const policyPath = path.join(outputDir, 'harness', 'policy.json');
       let policyGenerated = false;
       if (!await fs.pathExists(policyPath)) {
-        await policyService.savePolicy(policyService.createBootstrapPolicy());
+        await policyService.savePolicy(await policyService.createBootstrapPolicy());
         policyGenerated = true;
       }
 

@@ -248,8 +248,8 @@ export class HarnessExecutionService {
     return this.policy.setPolicy(policy);
   }
 
-  resetPolicy(): Promise<HarnessPolicyDocument> {
-    return this.policy.setPolicy(this.policy.createBootstrapPolicy());
+  async resetPolicy(): Promise<HarnessPolicyDocument> {
+    return this.policy.setPolicy(await this.policy.createBootstrapPolicy());
   }
 
   evaluatePolicy(input: HarnessPolicyEvaluationInput): Promise<HarnessPolicyDecision> {

@@ -59,6 +59,25 @@ describe('contextTools sensors scaffolding', () => {
     expect(listed.files[0].type).toBe('sensor');
   });
 
+  it('generates a repo-specific harness policy during init', async () => {
+    await initializeContextTool.execute!(
+      {
+        repoPath: tempDir,
+        type: 'docs',
+        generateQA: false,
+        skipContentGeneration: true,
+      },
+      toolExecutionContext
+    );
+
+    const policy = await fs.readJson(path.join(tempDir, '.context', 'harness', 'policy.json'));
+    const protectedPaths = policy.rules
+      .flatMap((rule: { when?: { paths?: string[] } }) => rule.when?.paths ?? []);
+
+    expect(protectedPaths).toEqual(expect.arrayContaining(['src/**', 'package.json']));
+    expect(protectedPaths).not.toEqual(expect.arrayContaining(['src/services/mcp/**', 'src/workflow/**']));
+  });
+
   it('returns JSON-specific guidance when filling sensors.json', async () => {
     await initializeContextTool.execute!(
       {
