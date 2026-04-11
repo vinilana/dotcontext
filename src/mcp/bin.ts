@@ -7,18 +7,16 @@
  */
 
 import { startMCPServer } from './index';
+import { registerProcessShutdown } from '../utils/processShutdown';
 
 async function main(): Promise<void> {
   const server = await startMCPServer();
 
-  process.on('SIGINT', async () => {
-    await server.stop();
-    process.exit(0);
-  });
-
-  process.on('SIGTERM', async () => {
-    await server.stop();
-    process.exit(0);
+  registerProcessShutdown(server, {
+    onError: (error) => {
+      console.error(error instanceof Error ? error.message : String(error));
+    },
+    exit: (code) => process.exit(code),
   });
 }
 

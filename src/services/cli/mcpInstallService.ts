@@ -550,6 +550,9 @@ export class MCPInstallService {
     } else {
       // No tool specified - install for all detected
       toolsToInstall = await this.detectInstalledTools();
+      if (toolsToInstall.length === 0) {
+        toolsToInstall = this.getSupportedToolIds();
+      }
     }
 
     if (toolsToInstall.length === 0) {

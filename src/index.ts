@@ -13,6 +13,7 @@ import {
 import { themedSelect, Separator } from './utils/themedPrompt';
 import { CLIInterface } from './utils/cliUI';
 import { checkForUpdates } from './utils/versionChecker';
+import { registerProcessShutdown } from './utils/processShutdown';
 import { createTranslator, detectLocale, SUPPORTED_LOCALES, normalizeLocale } from './utils/i18n';
 import type { TranslateFn, Locale, TranslationKey } from './utils/i18n';
 import {
@@ -267,15 +268,13 @@ program
         verbose: options.verbose
       });
 
-      // Handle graceful shutdown
-      process.on('SIGINT', async () => {
-        await server.stop();
-        process.exit(0);
-      });
-
-      process.on('SIGTERM', async () => {
-        await server.stop();
-        process.exit(0);
+      registerProcessShutdown(server, {
+        onError: (error) => {
+          if (options.verbose) {
+            process.stderr.write(`[mcp] Shutdown error: ${error}\n`);
+          }
+        },
+        exit: (code) => process.exit(code),
       });
     } catch (error) {
       if (options.verbose) {
@@ -296,14 +295,15 @@ program
   .action(async (tool: string | undefined, options: any) => {
     try {
       const mcpInstallService = new MCPInstallService({ ui, t, version: VERSION });
+      let selectedTool = tool;
 
-      // If no tool specified and not in CI, show interactive prompt
-      if (!tool && process.stdin.isTTY) {
+      // Interactive terminals can choose a specific tool; headless runs default to all supported tools.
+      if (!selectedTool && process.stdin.isTTY) {
         const supportedTools = mcpInstallService.getSupportedTools();
         const detectedTools = await mcpInstallService.detectInstalledTools();
         const choices = buildMcpToolChoices(supportedTools, detectedTools);
 
-        const { selectedTool } = await inquirer.prompt([
+        const { selectedTool: promptSelectedTool } = await inquirer.prompt([
           {
             type: 'list',
             name: 'selectedTool',
@@ -312,11 +312,13 @@ program
           },
         ]);
 
-        tool = selectedTool;
+        selectedTool = promptSelectedTool;
+      } else if (!selectedTool) {
+        selectedTool = 'all';
       }
 
       const result = await mcpInstallService.run({
-        tool,
+        tool: selectedTool,
         global: options.local ? false : options.global,
         dryRun: options.dryRun,
         verbose: options.verbose,
@@ -1289,11 +1291,6 @@ function handleGracefulExit(): void {
   ui.displaySuccess(t('success.interactive.goodbye'));
   process.exit(0);
 }
-
-// Handle SIGINT (Ctrl+C) at process level
-process.on('SIGINT', () => {
-  handleGracefulExit();
-});
 
 if (require.main === module) {
   main().catch(error => {

@@ -23,6 +23,7 @@ import {
   toolExecutionContext,
   type ContextLayoutEntry,
 } from '../shared';
+import { HarnessWorkflowStateService } from './workflowStateService';
 
 export interface HarnessContextServiceOptions {
   repoPath: string;
@@ -81,6 +82,8 @@ export interface HarnessBootstrapStatusResult {
     sensorsReady: boolean;
     workflowReady: boolean;
     harnessReady: boolean;
+    configurationReady: boolean;
+    runtimeReady: boolean;
     complete: boolean;
   };
   nextSteps: string[];
@@ -104,18 +107,18 @@ export class HarnessContextService {
     const resolvedRepoPath = path.resolve(repoPath || this.repoPath);
     const outputDir = path.join(resolvedRepoPath, '.context');
     const scaffoldStatus = await this.check(resolvedRepoPath) as Record<string, unknown>;
+    const workflowStateService = new HarnessWorkflowStateService({ contextPath: outputDir });
 
-    const workflowDir = path.join(outputDir, 'workflow');
     const harnessDir = path.join(outputDir, 'harness');
-    const harnessBindingPath = path.join(workflowDir, 'harness-session.json');
     const qaDir = path.join(outputDir, 'docs', 'qa');
     const sessionsDir = path.join(harnessDir, 'sessions');
     const tracesDir = path.join(harnessDir, 'traces');
     const artifactsDir = path.join(harnessDir, 'artifacts');
 
-    const [qa, harnessBinding, sessionCount, traceCount, artifactSessionCount] = await Promise.all([
+    const [qa, workflowActive, harnessBinding, sessionCount, traceCount, artifactSessionCount] = await Promise.all([
       fs.pathExists(qaDir).then((exists) => exists ? fs.readdir(qaDir).then((entries) => entries.some((entry) => entry.endsWith('.md') && entry.toLowerCase() !== 'readme.md')) : false),
-      fs.pathExists(harnessBindingPath),
+      workflowStateService.exists(),
+      workflowStateService.getBinding().then((binding) => Boolean(binding)),
       fs.pathExists(sessionsDir).then((exists) => exists ? fs.readdir(sessionsDir).then((entries) => entries.filter((entry) => entry.endsWith('.json')).length) : 0),
       fs.pathExists(tracesDir).then((exists) => exists ? fs.readdir(tracesDir).then((entries) => entries.filter((entry) => entry.endsWith('.jsonl')).length) : 0),
       fs.pathExists(artifactsDir).then((exists) => exists ? fs.readdir(artifactsDir).then((entries) => entries.length) : 0),
@@ -132,7 +135,7 @@ export class HarnessContextService {
     };
 
     const runtime = {
-      workflow: Boolean(scaffoldStatus.workflow),
+      workflow: Boolean(scaffoldStatus.workflow) || workflowActive,
       harness: Boolean(scaffoldStatus.harness),
       harnessBinding,
       sessionCount,
@@ -146,9 +149,13 @@ export class HarnessContextService {
       sensorsReady: scaffold.sensors,
       workflowReady: runtime.workflow,
       harnessReady: runtime.harness && (runtime.harnessBinding || runtime.sessionCount > 0),
+      configurationReady: false,
+      runtimeReady: false,
       complete: false,
     };
-    readiness.complete = readiness.scaffoldReady && readiness.skillsReady && readiness.sensorsReady && readiness.workflowReady && readiness.harnessReady;
+    readiness.configurationReady = readiness.scaffoldReady && readiness.skillsReady && readiness.sensorsReady;
+    readiness.runtimeReady = readiness.workflowReady && readiness.harnessReady;
+    readiness.complete = readiness.configurationReady && readiness.runtimeReady;
 
     const nextSteps: string[] = [];
     if (!scaffold.initialized) {

@@ -190,6 +190,39 @@ export async function handleWorkflowManage(
           });
         }
 
+        const workflowStatus = await service.getStatus();
+        const planLinker = createPlanLinker(repoPath);
+        const plans = await planLinker.getLinkedPlans();
+        const linkedPlanSlugs = [...plans.active, ...plans.completed].map((plan) => plan.slug);
+        const canonicalPlanSlug = workflowStatus.project.plan
+          || plans.primary
+          || (plans.active.length === 1 ? plans.active[0].slug : null);
+        const requestedPlanSlug = params.planSlug || canonicalPlanSlug;
+
+        if (params.planSlug && canonicalPlanSlug && params.planSlug !== canonicalPlanSlug) {
+          return createJsonResponse({
+            success: false,
+            error: `Plan slug mismatch: workflow is linked to ${canonicalPlanSlug}, but approvePlan received ${params.planSlug}.`,
+            hint: 'Pass the workflow-linked plan slug or re-link the plan before approving.',
+          });
+        }
+
+        if (!requestedPlanSlug) {
+          return createJsonResponse({
+            success: false,
+            error: 'No linked plan is available to approve.',
+            hint: 'Link a plan first using plan({ action: "link" }) or pass planSlug explicitly.',
+          });
+        }
+
+        if (!linkedPlanSlugs.includes(requestedPlanSlug)) {
+          return createJsonResponse({
+            success: false,
+            error: `Linked plan not found: ${requestedPlanSlug}`,
+            hint: 'Link the plan first using plan({ action: "link" }).',
+          });
+        }
+
         const currentApproval = await service.getApproval();
         if (!currentApproval?.plan_created) {
           return createJsonResponse({
@@ -204,15 +237,17 @@ export async function handleWorkflowManage(
           params.notes
         );
 
-        if (params.planSlug) {
-          const planLinker = createPlanLinker(repoPath);
-          const plans = await planLinker.getLinkedPlans();
-          const planRef = plans.active.find(p => p.slug === params.planSlug);
-          if (planRef) {
-            planRef.approval_status = 'approved';
-            planRef.approved_at = approval.approved_at;
-            planRef.approved_by = approval.approved_by as string;
-          }
+        const syncedPlan = await planLinker.updatePlanApproval(requestedPlanSlug, {
+          approvalStatus: 'approved',
+          approvedAt: approval.approved_at,
+          approvedBy: approval.approved_by ? String(approval.approved_by) : undefined,
+        });
+
+        if (!syncedPlan) {
+          return createJsonResponse({
+            success: false,
+            error: `Unable to persist approval metadata for linked plan: ${requestedPlanSlug}`,
+          });
         }
 
         const gateResult = await service.checkGates();
@@ -220,6 +255,12 @@ export async function handleWorkflowManage(
         return createJsonResponse({
           success: true,
           message: 'Plan approved successfully',
+          plan: {
+            slug: syncedPlan.slug,
+            approval_status: syncedPlan.approval_status,
+            approved_by: syncedPlan.approved_by,
+            approved_at: syncedPlan.approved_at,
+          },
           approval: {
             plan_approved: approval.plan_approved,
             approved_by: approval.approved_by,

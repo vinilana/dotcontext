@@ -20,6 +20,22 @@ describe('HarnessReplayService', () => {
     await fs.remove(tempDir);
   });
 
+  it('builds a replay without persisting it', async () => {
+    const session = await execution.createSession({ name: 'transient-replay' });
+    await execution.appendTrace(session.id, {
+      level: 'info',
+      event: 'custom.step',
+      message: 'Step one',
+    });
+
+    const replay = await service.buildReplay(session.id);
+
+    expect(replay.sessionId).toBe(session.id);
+    expect(replay.eventCount).toBeGreaterThan(0);
+    expect(await fs.pathExists(path.join(tempDir, '.context', 'harness', 'replays', `${replay.id}.json`))).toBe(false);
+    expect(await service.listReplays({ sessionId: session.id })).toHaveLength(0);
+  });
+
   it('replays a session into a durable ordered event log', async () => {
     const session = await execution.createSession({ name: 'replay-run' });
     await execution.appendTrace(session.id, {
@@ -44,4 +60,3 @@ describe('HarnessReplayService', () => {
     expect(await fs.pathExists(path.join(tempDir, '.context', 'harness', 'replays', `${replay.id}.json`))).toBe(true);
   });
 });
-

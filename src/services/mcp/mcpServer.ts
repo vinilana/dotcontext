@@ -1,7 +1,7 @@
 /**
- * MCP Server - Model Context Protocol server for Claude Code integration
+ * MCP Server - Model Context Protocol server for dotcontext integration.
  *
- * Exposes 10 tools (6 consolidated gateways + 4 dedicated workflow tools) for
+ * Exposes consolidated gateway tools plus dedicated workflow entry points for
  * reduced context and simpler tool selection for AI agents.
  *
  * Simplified workflow: context init → fillSingle → workflow-init
@@ -97,12 +97,11 @@ export class AIContextMCPServer {
   }
 
   /**
-   * Register tools: 6 consolidated gateways + 4 dedicated workflow tools
-   * Total: 10 tools for clear entry points and reduced AI cognitive load
+   * Register consolidated gateway tools and dedicated workflow tools.
    *
-   * Project tools removed - use context({ action: "init" }) + workflow-init instead
+   * Project tools removed - use context({ action: "init" }) + workflow-init instead.
    *
-   * NOTE: repoPath is now determined dynamically via getRepoPath() at runtime,
+   * NOTE: repoPath is determined dynamically via getRepoPath() at runtime,
    * which uses smart initialization and client path caching.
    */
   private registerGatewayTools(): void {
@@ -597,7 +596,7 @@ Actions:
 - getPolicy: Retrieve current policy document
 - setPolicy: Replace policy document (params: policy)
 - resetPolicy: Reset policy to bootstrap defaults
-- evaluatePolicy: Evaluate policy against runtime input (params: scope, pattern?, path?, risk?, approvedBy?, approvalRole?)`,
+- evaluatePolicy: Evaluate policy against runtime input (params: scope, pattern?, target?, path?, pathPattern?, risk?, approvedBy?, approvalRole?, approvalNote?)`,
       inputSchema: {
         action: z.enum([
           'createSession',
@@ -703,7 +702,7 @@ Actions:
       return handleHarness(params as HarnessParams, { repoPath: this.getRepoPath() });
     }));
 
-    this.log('Registered 10 tools (6 consolidated gateways + 4 dedicated workflow tools)');
+    this.log('Registered consolidated MCP gateway and workflow tools');
   }
 
   /**

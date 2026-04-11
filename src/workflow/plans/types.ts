@@ -246,6 +246,12 @@ export interface PlanExecutionTracking {
   planSlug: string;
   /** Overall progress (0-100) */
   progress: number;
+  /** Approval status mirrored from workflow state */
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  /** When the linked plan was approved */
+  approvedAt?: string;
+  /** Who approved the linked plan */
+  approvedBy?: string;
   /** Phase tracking with steps */
   phases: Record<string, PlanPhaseTracking>;
   /** Decisions recorded during execution */

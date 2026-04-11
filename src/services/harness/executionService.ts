@@ -151,6 +151,18 @@ export class HarnessExecutionService {
     definition: HarnessSensorDefinition,
     input: HarnessSensorExecutionInput
   ): Promise<HarnessSensorRun> {
+    await this.policy.authorize({
+      tool: 'harness',
+      action: 'runSensor',
+      risk: definition.blocking ? 'high' : definition.severity === 'critical' ? 'high' : 'medium',
+      metadata: {
+        sensorId: definition.id,
+        sensorName: definition.name,
+        sessionId: input.sessionId,
+        contractId: input.contractId,
+        ...(input.metadata ?? {}),
+      },
+    });
     this.sensors.registerSensor(definition);
     return this.sensors.runSensor(definition.id, input);
   }

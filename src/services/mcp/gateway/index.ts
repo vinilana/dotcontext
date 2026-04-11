@@ -2,7 +2,7 @@
  * Gateway Tools Module
  *
  * Exports all gateway handlers, types, and response utilities.
- * This module consolidates tools into 10 MCP tools (6 gateways + 4 dedicated workflow tools).
+ * This module consolidates MCP tools into gateway and dedicated workflow entry points.
  *
  * Note: Project tools (project-setup, project-report) have been removed.
  * Use context({ action: "init" }) for scaffolding and workflow-init for workflows instead.

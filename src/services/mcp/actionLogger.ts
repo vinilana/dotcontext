@@ -6,9 +6,9 @@
  */
 
 import * as fs from 'fs-extra';
-import * as path from 'path';
 
 import { HarnessRuntimeStateService } from '../harness/runtimeStateService';
+import { HarnessWorkflowStateService } from '../harness/workflowStateService';
 import { resolveContextRoot } from '../shared/contextRootResolver';
 
 type ActionStatus = 'success' | 'error';
@@ -91,16 +91,14 @@ function sanitizeDetails(details?: Record<string, unknown>): Record<string, unkn
 }
 
 async function resolveWorkflowSessionId(contextPath: string): Promise<string | null> {
-  const bindingPath = path.join(contextPath, 'workflow', 'harness-session.json');
-  if (!(await fs.pathExists(bindingPath))) {
+  const workflowState = new HarnessWorkflowStateService({ contextPath });
+  if (!(await workflowState.exists())) {
     return null;
   }
 
   try {
-    const binding = await fs.readJson(bindingPath) as { sessionId?: string };
-    return typeof binding.sessionId === 'string' && binding.sessionId.length > 0
-      ? binding.sessionId
-      : null;
+    const binding = await workflowState.getBinding();
+    return binding?.sessionId ?? null;
   } catch {
     return null;
   }
@@ -153,7 +151,17 @@ export async function logMcpAction(
 
     const state = new HarnessRuntimeStateService({ repoPath });
     const workflowSessionId = await resolveWorkflowSessionId(contextPath);
-    const sessionId = workflowSessionId || await resolveMcpActivitySessionId(repoPath, state);
+    let sessionId = workflowSessionId;
+    if (sessionId) {
+      try {
+        await state.getSession(sessionId);
+      } catch {
+        sessionId = null;
+      }
+    }
+    if (!sessionId) {
+      sessionId = await resolveMcpActivitySessionId(repoPath, state);
+    }
     const timestamp = entry.timestamp || new Date().toISOString();
 
     await state.appendTrace(sessionId, {

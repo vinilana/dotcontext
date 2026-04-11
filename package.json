@@ -2,9 +2,10 @@
   "name": "@dotcontext/cli",
   "version": "0.9.0",
   "description": "Harness engineering runtime for AI-assisted software delivery, with CLI and MCP surfaces",
-  "main": "dist/index.js",
+  "main": "dist/cli/index.js",
   "exports": {
-    ".": "./dist/index.js",
+    ".": "./dist/cli/index.js",
+    "./package.json": "./package.json",
     "./cli": "./dist/cli/index.js",
     "./harness": "./dist/harness/index.js",
     "./mcp": "./dist/mcp/index.js"

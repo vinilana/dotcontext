@@ -64,37 +64,6 @@ export interface ReplaySessionOptions {
   maxEvents?: number;
 }
 
-export interface HarnessFailureRecord {
-  id: string;
-  sessionId: string;
-  category: 'sensor' | 'contract' | 'handoff';
-  signature: string;
-  message: string;
-  severity: 'warning' | 'error';
-  sourceId: string;
-  evidence: string[];
-  details?: Record<string, unknown>;
-}
-
-export interface HarnessFailureCluster {
-  signature: string;
-  category: HarnessFailureRecord['category'];
-  message: string;
-  count: number;
-  sessionIds: string[];
-  recordIds: string[];
-  example: HarnessFailureRecord;
-}
-
-export interface HarnessFailureDataset {
-  id: string;
-  createdAt: string;
-  repoPath: string;
-  sessionIds: string[];
-  records: HarnessFailureRecord[];
-  clusters: HarnessFailureCluster[];
-}
-
 export interface HarnessReplayDependencies {
   stateService: HarnessRuntimeStatePort;
   sensorsService: Pick<HarnessSensorsService, 'getSessionSensorRuns'>;
@@ -160,7 +129,7 @@ export class HarnessReplayService {
     return fs.readJson(filePath) as Promise<HarnessReplayRecord>;
   }
 
-  async replaySession(
+  async buildReplay(
     sessionId: string,
     options: ReplaySessionOptions = {}
   ): Promise<HarnessReplayRecord> {
@@ -298,6 +267,14 @@ export class HarnessReplayService {
       handoffs: sessionHandoffs,
     };
 
+    return replay;
+  }
+
+  async replaySession(
+    sessionId: string,
+    options: ReplaySessionOptions = {}
+  ): Promise<HarnessReplayRecord> {
+    const replay = await this.buildReplay(sessionId, options);
     await this.saveReplay(replay);
     return replay;
   }
@@ -320,101 +297,5 @@ export class HarnessReplayService {
 
   async getReplay(replayId: string): Promise<HarnessReplayRecord> {
     return this.readReplay(replayId);
-  }
-
-  async exportFailureDataset(sessionIds?: string[]): Promise<HarnessFailureDataset> {
-    const sessions = sessionIds && sessionIds.length > 0
-      ? await Promise.all(sessionIds.map((id) => this.stateService.getSession(id)))
-      : await this.stateService.listSessions();
-
-    const records: HarnessFailureRecord[] = [];
-    for (const session of sessions) {
-      const replay = await this.replaySession(session.id, { includePayloads: true });
-      const failureEvents = replay.events.filter(
-        (event) => event.source === 'sensor' || event.source === 'task' || event.source === 'handoff'
-      );
-
-      for (const event of failureEvents) {
-        const payload = event.payload as Record<string, unknown> | undefined;
-
-        if (event.source === 'sensor' && payload && (payload.status === 'failed' || payload.blocking === true)) {
-          records.push({
-            id: event.id,
-            sessionId: session.id,
-            category: 'sensor',
-            signature: `${event.label}:${String(payload.status ?? 'unknown')}`,
-            message: event.label,
-            severity: payload.blocking === true ? 'error' : 'warning',
-            sourceId: event.id,
-            evidence: Array.isArray(payload.evidence) ? payload.evidence.map(String) : [],
-            details: payload,
-          });
-          continue;
-        }
-
-        if (event.source === 'task' && payload?.status && payload.status !== 'completed') {
-          records.push({
-            id: event.id,
-            sessionId: session.id,
-            category: 'contract',
-            signature: `task:${event.label}:${String(payload.status)}`,
-            message: event.label,
-            severity: 'warning',
-            sourceId: event.id,
-            evidence: [],
-            details: payload,
-          });
-          continue;
-        }
-
-        if (event.source === 'handoff') {
-          records.push({
-            id: event.id,
-            sessionId: session.id,
-            category: 'handoff',
-            signature: `handoff:${event.label}`,
-            message: event.label,
-            severity: 'warning',
-            sourceId: event.id,
-            evidence: [],
-            details: payload,
-          });
-        }
-      }
-    }
-
-    const clustersMap = new Map<string, HarnessFailureCluster>();
-    for (const record of records) {
-      const existing = clustersMap.get(record.signature);
-      if (!existing) {
-        clustersMap.set(record.signature, {
-          signature: record.signature,
-          category: record.category,
-          message: record.message,
-          count: 1,
-          sessionIds: [record.sessionId],
-          recordIds: [record.id],
-          example: record,
-        });
-        continue;
-      }
-
-      existing.count += 1;
-      existing.sessionIds.push(record.sessionId);
-      existing.recordIds.push(record.id);
-    }
-
-    const dataset: HarnessFailureDataset = {
-      id: randomUUID(),
-      createdAt: nowIso(),
-      repoPath: this.repoPath,
-      sessionIds: sessions.map((session) => session.id),
-      records,
-      clusters: Array.from(clustersMap.values()),
-    };
-
-    await this.ensureLayout();
-    await fs.writeJson(path.join(this.replaysPath, `dataset-${dataset.id}.json`), dataset, { spaces: 2 });
-    return dataset;
   }
 }

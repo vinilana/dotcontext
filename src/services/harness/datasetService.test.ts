@@ -51,11 +51,14 @@ describe('HarnessDatasetService', () => {
     const dataset = await service.buildFailureDataset({ includeSuccessfulSessions: true });
     const datasets = await service.listDatasets();
 
-    expect(dataset.failureCount).toBeGreaterThan(0);
-    expect(dataset.clusterCount).toBeGreaterThan(0);
-    expect(dataset.clusters[0]?.count).toBeGreaterThanOrEqual(2);
+    expect(dataset.sessionCount).toBe(2);
+    expect(dataset.replayCount).toBe(2);
+    expect(dataset.failureCount).toBe(2);
+    expect(dataset.clusterCount).toBe(1);
+    expect(dataset.failures).toHaveLength(2);
+    expect(dataset.clusters[0]?.count).toBe(2);
     expect(datasets).toHaveLength(1);
+    expect(await fs.pathExists(path.join(tempDir, '.context', 'harness', 'replays'))).toBe(false);
     expect(await fs.pathExists(path.join(tempDir, '.context', 'harness', 'datasets', `${dataset.id}.json`))).toBe(true);
   });
 });
-

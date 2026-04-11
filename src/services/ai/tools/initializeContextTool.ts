@@ -17,6 +17,7 @@ import {
 } from '../../stack';
 import { UPDATE_SCAFFOLD_PROMPT_FALLBACK } from '../../../prompts/defaults';
 import { QAService } from '../../qa';
+import { HarnessPolicyService } from '../../harness/policyService';
 import { HarnessSensorCatalogService } from '../../harness/sensorCatalogService';
 import { getUntrackedContextLayoutEntries } from '../../shared';
 import { createSkillRegistry } from '../../../workflow/skills';
@@ -195,6 +196,13 @@ The AI agent MUST then fill each generated file using the provided context and i
       });
       const sensorCatalog = await sensorCatalogService.bootstrap();
       const sensorsGenerated = sensorCatalog.sensors.length;
+      const policyService = new HarnessPolicyService({ repoPath: resolvedRepoPath });
+      const policyPath = path.join(outputDir, 'harness', 'policy.json');
+      let policyGenerated = false;
+      if (!await fs.pathExists(policyPath)) {
+        await policyService.savePolicy(policyService.createBootstrapPolicy());
+        policyGenerated = true;
+      }
       const qaOutputDir = path.join(outputDir, 'docs', 'qa');
       const qaNote = qaGenerated > 0
         ? `Q&A docs are generated directly in ${qaOutputDir} and do not require fillSingleFile.`
@@ -342,6 +350,7 @@ DO NOT say "initialization complete" until ALL files are filled.${qaNote ? `\n\n
           agentsGenerated,
           skillsGenerated,
           sensorsGenerated,
+          policyGenerated,
           qaGenerated,
           gitignoreUpdated: gitignoreUpdate.updated,
           gitignoreAddedPatterns: gitignoreUpdate.addedPatterns,
@@ -410,13 +419,14 @@ DO NOT say "initialization complete" until ALL files are filled.${qaNote ? `\n\n
         // Metadata
         _metadata: {
           docsGenerated,
-          agentsGenerated,
-          skillsGenerated,
-          sensorsGenerated,
-          qaGenerated,
-          gitignoreUpdated: gitignoreUpdate.updated,
-          gitignoreAddedPatterns: gitignoreUpdate.addedPatterns,
-          outputDir,
+        agentsGenerated,
+        skillsGenerated,
+        sensorsGenerated,
+        policyGenerated,
+        qaGenerated,
+        gitignoreUpdated: gitignoreUpdate.updated,
+        gitignoreAddedPatterns: gitignoreUpdate.addedPatterns,
+        outputDir,
           classification: classification ? {
             projectType: classification.primaryType,
             confidence: classification.confidence,
@@ -429,6 +439,7 @@ DO NOT say "initialization complete" until ALL files are filled.${qaNote ? `\n\n
         agentsGenerated,
         skillsGenerated,
         sensorsGenerated,
+        policyGenerated,
         qaGenerated,
         gitignoreUpdated: gitignoreUpdate.updated,
         gitignoreAddedPatterns: gitignoreUpdate.addedPatterns,

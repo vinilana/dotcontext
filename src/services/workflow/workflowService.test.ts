@@ -2,6 +2,7 @@ import * as fs from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 
+import { HarnessWorkflowStateService } from '../harness/workflowStateService';
 import { HarnessWorkflowBlockedError, WorkflowService } from './workflowService';
 
 describe('WorkflowService harness integration', () => {
@@ -32,13 +33,56 @@ describe('WorkflowService harness integration', () => {
     });
 
     const harness = await service.getHarnessStatus();
+    const workflowState = new HarnessWorkflowStateService({
+      contextPath: path.join(tempDir, '.context'),
+    });
+    const binding = await workflowState.getBinding();
 
     expect(harness).not.toBeNull();
     expect(harness?.session.name).toBe('alpha');
     expect(harness?.session.status).toBe('active');
-    expect(await fs.pathExists(path.join(tempDir, '.context', 'workflow', 'harness-session.json'))).toBe(true);
+    expect(binding?.sessionId).toBe(harness?.session.id);
+    expect(binding?.workflowName).toBe('alpha');
     expect(await fs.pathExists(path.join(tempDir, '.context', 'harness', 'workflows', 'prevc.json'))).toBe(true);
     expect(await fs.pathExists(path.join(tempDir, '.context', 'workflow', 'status.yaml'))).toBe(false);
+  });
+
+  it('creates a fresh canonical binding when a workflow is reinitialized', async () => {
+    await service.init({
+      name: 'alpha',
+      scale: 'SMALL',
+      autonomous: true,
+    });
+
+    const firstTask = await service.defineHarnessTask({
+      title: 'Implement alpha',
+      requiredSensors: ['build'],
+    });
+    const firstHarness = await service.getHarnessStatus();
+
+    await service.init({
+      name: 'beta',
+      scale: 'SMALL',
+      autonomous: true,
+      archivePrevious: false,
+    });
+
+    const secondHarness = await service.getHarnessStatus();
+    const workflowState = new HarnessWorkflowStateService({
+      contextPath: path.join(tempDir, '.context'),
+    });
+    const binding = await workflowState.getBinding();
+
+    expect(firstHarness).not.toBeNull();
+    expect(secondHarness).not.toBeNull();
+    expect(secondHarness?.session.name).toBe('beta');
+    expect(secondHarness?.session.id).not.toBe(firstHarness?.session.id);
+    expect(secondHarness?.binding.activeTaskId).toBeUndefined();
+    expect(binding?.workflowName).toBe('beta');
+    expect(binding?.sessionId).toBe(secondHarness?.session.id);
+    expect(binding?.activeTaskId).toBeUndefined();
+    expect(binding?.sessionId).not.toBe(firstHarness?.session.id);
+    expect(firstTask.id).not.toBe(binding?.activeTaskId);
   });
 
   it('blocks workflow advance when required harness checks are missing', async () => {

@@ -204,6 +204,22 @@ describe('MCPInstallService', () => {
       }
     });
 
+    it('should fall back to all supported tools when "all" is requested and nothing is detected', async () => {
+      const detectSpy = jest.spyOn(service, 'detectInstalledTools').mockResolvedValue([]);
+
+      const result = await service.run({
+        tool: 'all',
+        global: false,
+        repoPath: tempDir,
+        dryRun: true,
+      });
+
+      expect(detectSpy).toHaveBeenCalled();
+      expect(result.installations.length).toBe(service.getSupportedToolIds().length);
+
+      detectSpy.mockRestore();
+    });
+
     it('should show warning when unsupported tool is specified', async () => {
       const result = await service.run({
         tool: 'nonexistent-tool',
@@ -213,6 +229,21 @@ describe('MCPInstallService', () => {
 
       expect(mockUI.displayError).toHaveBeenCalled();
       expect(result.filesCreated).toBe(0);
+    });
+
+    it('should fall back to all supported tools when no tool is specified and nothing is detected', async () => {
+      const detectSpy = jest.spyOn(service, 'detectInstalledTools').mockResolvedValue([]);
+
+      const result = await service.run({
+        global: false,
+        repoPath: tempDir,
+        dryRun: true,
+      });
+
+      expect(detectSpy).toHaveBeenCalled();
+      expect(result.installations.length).toBe(service.getSupportedToolIds().length);
+
+      detectSpy.mockRestore();
     });
   });
 

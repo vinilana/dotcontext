@@ -54,7 +54,7 @@ export interface BuildHarnessDatasetOptions {
 
 export interface HarnessDatasetDependencies {
   stateService: HarnessRuntimeStatePort;
-  replayService: Pick<HarnessReplayService, 'replaySession'>;
+  replayService: Pick<HarnessReplayService, 'buildReplay'>;
   taskContractsService: Pick<HarnessTaskContractsService, 'evaluateTaskCompletion'>;
 }
 
@@ -149,6 +149,7 @@ function buildSessionFailure(replay: HarnessReplayRecord): HarnessFailureRecord[
 
 function buildTraceFailures(replay: HarnessReplayRecord): HarnessFailureRecord[] {
   return replay.traces
+    .filter(trace => trace.event !== 'sensor.run')
     .filter(trace => trace.level === 'error' || /failed|blocked/i.test(trace.event) || /failed|blocked/i.test(trace.message))
     .map(trace => ({
       id: randomUUID(),
@@ -257,7 +258,7 @@ export class HarnessDatasetService {
       ? sessions
       : sessions.filter(session => session.status !== 'completed');
 
-    const replays = await Promise.all(selectedSessions.map(session => this.replayService.replaySession(session.id, { includePayloads: false })));
+    const replays = await Promise.all(selectedSessions.map(session => this.replayService.buildReplay(session.id, { includePayloads: false })));
     const sensorFailures = replays.flatMap(replay => buildSensorFailures(replay));
     const taskFailures: HarnessFailureRecord[] = [];
     for (const replay of replays) {

@@ -99,4 +99,5 @@ export {
   HarnessWorkflowStateService,
   type HarnessWorkflowStateServiceOptions,
   type HarnessWorkflowRecord,
+  type WorkflowHarnessBinding,
 } from './workflowStateService';

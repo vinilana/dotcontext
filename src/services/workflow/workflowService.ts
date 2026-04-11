@@ -34,23 +34,17 @@ import {
   HarnessSensorsService,
   HarnessTaskContractsService,
   HarnessPolicyService,
+  HarnessWorkflowStateService,
   type HarnessArtifactKind,
   type HarnessTaskContract,
   type HarnessHandoffContract,
   type HarnessSensorRun,
   type HarnessSessionRecord,
   type HarnessSensorDefinition,
+  type WorkflowHarnessBinding,
 } from '../harness';
 
 const exec = promisify(execCallback);
-
-interface WorkflowHarnessBinding {
-  workflowName: string;
-  sessionId: string;
-  activeTaskId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface WorkflowHarnessStatus {
   binding: WorkflowHarnessBinding;
@@ -127,6 +121,7 @@ export class WorkflowService {
   private sensorsService: HarnessSensorsService;
   private taskContractsService: HarnessTaskContractsService;
   private policyService: HarnessPolicyService;
+  private workflowStateService: HarnessWorkflowStateService;
   private deps: WorkflowServiceDependencies;
 
   constructor(
@@ -153,6 +148,7 @@ export class WorkflowService {
       stateService: this.runtimeStateService,
     });
     this.policyService = new HarnessPolicyService({ repoPath: this.repoPath });
+    this.workflowStateService = new HarnessWorkflowStateService({ contextPath: this.contextPath });
     this.deps = deps;
     this.registerDefaultSensors();
   }
@@ -338,23 +334,23 @@ export class WorkflowService {
     }
 
     const nextPhase = await this.orchestrator.completePhase(outputs, options);
-    const binding = await this.loadHarnessBinding();
+    const binding = await this.requireHarnessBinding();
 
     if (nextPhase) {
-      if (binding) {
-        await this.runtimeStateService.checkpointSession(binding.sessionId, {
-          note: `Advanced workflow phase ${currentPhase} -> ${nextPhase}`,
-          data: { from: currentPhase, to: nextPhase, outputs },
-        });
-      }
+      const session = await this.runtimeStateService.checkpointSession(binding.sessionId, {
+        note: `Advanced workflow phase ${currentPhase} -> ${nextPhase}`,
+        data: { from: currentPhase, to: nextPhase, outputs },
+      });
+      binding.updatedAt = session.updatedAt;
+      await this.saveHarnessBinding(binding);
 
       this.deps.ui?.displaySuccess(
         `Advanced from ${PHASE_NAMES_PT[currentPhase]} to ${PHASE_NAMES_PT[nextPhase]}`
       );
     } else {
-      if (binding) {
-        await this.runtimeStateService.completeSession(binding.sessionId, 'Workflow completed');
-      }
+      const session = await this.runtimeStateService.completeSession(binding.sessionId, 'Workflow completed');
+      binding.updatedAt = session.updatedAt;
+      await this.saveHarnessBinding(binding);
 
       this.deps.ui?.displaySuccess('Workflow completed!');
     }
@@ -471,30 +467,28 @@ export class WorkflowService {
     });
 
     await this.orchestrator.handoff(from, to, artifacts);
-    const binding = await this.loadHarnessBinding();
+    const binding = await this.requireHarnessBinding();
 
-    if (binding) {
-      for (const artifactPath of artifacts) {
-        await this.runtimeStateService.addArtifact(binding.sessionId, {
-          name: artifactPath,
-          kind: 'file',
-          path: artifactPath,
-          metadata: { from, to, source: 'workflow.handoff' },
-        });
-      }
-
-      await this.taskContractsService.createHandoffContract({
-        from,
-        to,
-        sessionId: binding.sessionId,
-        taskId: binding.activeTaskId,
-        artifacts,
-        evidence: [],
+    for (const artifactPath of artifacts) {
+      await this.runtimeStateService.addArtifact(binding.sessionId, {
+        name: artifactPath,
+        kind: 'file',
+        path: artifactPath,
+        metadata: { from, to, source: 'workflow.handoff' },
       });
-
-      binding.updatedAt = new Date().toISOString();
-      await this.saveHarnessBinding(binding);
     }
+
+    await this.taskContractsService.createHandoffContract({
+      from,
+      to,
+      sessionId: binding.sessionId,
+      taskId: binding.activeTaskId,
+      artifacts,
+      evidence: [],
+    });
+
+    binding.updatedAt = new Date().toISOString();
+    await this.saveHarnessBinding(binding);
 
     this.deps.ui?.displaySuccess(
       `Handoff: ${from} → ${to}`
@@ -622,10 +616,12 @@ export class WorkflowService {
   }
 
   async getHarnessStatus(): Promise<WorkflowHarnessStatus | null> {
-    const binding = await this.loadHarnessBinding();
-    if (!binding) {
+    if (!(await this.hasWorkflow())) {
       return null;
     }
+
+    const summary = await this.getSummary();
+    const binding = await this.ensureHarnessSession(summary.name);
 
     const session = await this.runtimeStateService.getSession(binding.sessionId);
     const allSensorRuns = await this.sensorsService.getSessionSensorRuns(binding.sessionId);
@@ -642,8 +638,11 @@ export class WorkflowService {
       .filter((contract) => contract.sessionId === binding.sessionId);
     const handoffs = (await this.taskContractsService.listHandoffContracts())
       .filter((handoff) => handoff.sessionId === binding.sessionId);
-    const taskCompletion = binding.activeTaskId
-      ? await this.taskContractsService.evaluateTaskCompletion(binding.activeTaskId, binding.sessionId)
+    const activeTask = binding.activeTaskId
+      ? taskContracts.find((contract) => contract.id === binding.activeTaskId) ?? null
+      : null;
+    const taskCompletion = activeTask
+      ? await this.taskContractsService.evaluateTaskCompletion(activeTask.id, binding.sessionId)
       : null;
     const backpressure = this.sensorsService.evaluateBackpressure(sensorRuns, { requireEvidence: true });
     const reasons = [
@@ -783,8 +782,13 @@ export class WorkflowService {
     description?: string
   ): Promise<WorkflowHarnessBinding> {
     const existing = await this.loadHarnessBinding();
-    if (existing) {
-      return existing;
+    if (existing && existing.workflowName === workflowName) {
+      try {
+        await this.runtimeStateService.getSession(existing.sessionId);
+        return existing;
+      } catch {
+        // Session was removed or became unreadable. Recreate below.
+      }
     }
 
     const session = await this.runtimeStateService.createSession({
@@ -811,21 +815,12 @@ export class WorkflowService {
     return this.ensureHarnessSession(summary.name);
   }
 
-  private get harnessBindingPath(): string {
-    return path.join(this.contextPath, 'workflow', 'harness-session.json');
-  }
-
   private async loadHarnessBinding(): Promise<WorkflowHarnessBinding | null> {
-    if (!(await fs.pathExists(this.harnessBindingPath))) {
-      return null;
-    }
-
-    return fs.readJson(this.harnessBindingPath) as Promise<WorkflowHarnessBinding>;
+    return this.workflowStateService.getBinding();
   }
 
   private async saveHarnessBinding(binding: WorkflowHarnessBinding): Promise<void> {
-    await fs.ensureDir(path.dirname(this.harnessBindingPath));
-    await fs.writeJson(this.harnessBindingPath, binding, { spaces: 2 });
+    await this.workflowStateService.saveBinding(binding);
   }
 
   private registerDefaultSensors(): void {

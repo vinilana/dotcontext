@@ -54,10 +54,12 @@ describe('context scaffolding tools', () => {
     expect(result.status).toBe('incomplete');
     expect(result.skillsGenerated).toBe(expectedSkills.length);
     expect(result.sensorsGenerated).toBeDefined();
+    expect(result.policyGenerated).toBe(true);
     expect(result.gitignoreUpdated).toBe(true);
     expect(result.gitignoreAddedPatterns).toContain('.context/plans/');
     expect(result.gitignoreAddedPatterns).toContain('.context/workflow/');
     expect(await fs.pathExists(path.join(tempDir, '.context', 'harness', 'sensors.json'))).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, '.context', 'harness', 'policy.json'))).toBe(true);
     expect(gitignore).toContain('.context/plans/');
     expect(gitignore).toContain('# dotcontext runtime state');
     expect(gitignore).toContain('.context/workflow/');
@@ -167,11 +169,40 @@ describe('context scaffolding tools', () => {
     expect(initial.readiness.scaffoldReady).toBe(true);
     expect(initial.readiness.skillsReady).toBe(true);
     expect(initial.readiness.sensorsReady).toBe(true);
+    expect(initial.readiness.configurationReady).toBe(true);
     expect(initial.readiness.workflowReady).toBe(false);
     expect(initial.readiness.harnessReady).toBe(false);
+    expect(initial.readiness.runtimeReady).toBe(false);
 
-    await fs.ensureDir(path.join(tempDir, '.context', 'workflow'));
-    await fs.writeJson(path.join(tempDir, '.context', 'workflow', 'harness-session.json'), { sessionId: 's1' }, { spaces: 2 });
+    await fs.ensureDir(path.join(tempDir, '.context', 'harness', 'workflows'));
+    await fs.writeJson(path.join(tempDir, '.context', 'harness', 'workflows', 'prevc.json'), {
+      version: 2,
+      workflowType: 'prevc',
+      updatedAt: new Date().toISOString(),
+      status: {
+        project: {
+          name: 'bootstrap',
+          scale: 'SMALL',
+          started: new Date().toISOString(),
+          current_phase: 'P',
+        },
+        phases: {
+          P: { status: 'in_progress' },
+          R: { status: 'pending' },
+          E: { status: 'pending' },
+          V: { status: 'pending' },
+          C: { status: 'pending' },
+        },
+        agents: {},
+        roles: {},
+      },
+      binding: {
+        workflowName: 'bootstrap',
+        sessionId: 's1',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    }, { spaces: 2 });
     await fs.ensureDir(path.join(tempDir, '.context', 'harness', 'sessions'));
     await fs.writeJson(path.join(tempDir, '.context', 'harness', 'sessions', 's1.json'), { id: 's1' }, { spaces: 2 });
 
@@ -179,6 +210,8 @@ describe('context scaffolding tools', () => {
     expect(hydrated.runtime.workflow).toBe(true);
     expect(hydrated.runtime.harnessBinding).toBe(true);
     expect(hydrated.runtime.sessionCount).toBe(1);
+    expect(hydrated.readiness.configurationReady).toBe(true);
+    expect(hydrated.readiness.runtimeReady).toBe(true);
     expect(hydrated.readiness.harnessReady).toBe(true);
     expect(hydrated.readiness.complete).toBe(true);
   });

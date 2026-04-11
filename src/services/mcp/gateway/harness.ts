@@ -326,14 +326,29 @@ export async function handleHarness(
           policy: await service.resetPolicy(),
         });
       case 'evaluatePolicy':
+        const evaluationTarget = normalizePolicyTarget(params.target, params.pathPattern, params.risk);
+        const evaluationPath = params.pathPattern || params.path || (evaluationTarget === 'path' ? params.pattern : undefined);
+        const evaluationApproval = params.approvedBy || params.approvalRole || params.approvalNote
+          ? {
+            approvedBy: params.approvedBy,
+            note: params.approvalNote,
+          }
+          : undefined;
         return createJsonResponse({
           success: true,
           evaluation: await service.evaluatePolicy({
             tool: params.scope === 'workflow' ? 'workflow' : 'harness',
-            action: params.target || inferPolicyAction(),
-            paths: params.path ? [params.path] : undefined,
-            risk: params.risk,
+            action: evaluationTarget === 'action'
+              ? (params.pattern || inferPolicyAction())
+              : inferPolicyAction(),
+            paths: evaluationPath ? [evaluationPath] : undefined,
+            risk: evaluationTarget === 'risk'
+              && (params.pattern === 'low' || params.pattern === 'medium' || params.pattern === 'high' || params.pattern === 'critical')
+              ? params.pattern
+              : params.risk,
             metadata: params.metadata,
+            approval: evaluationApproval,
+            approvalRole: params.approvalRole,
           }),
         });
       default:
