@@ -182,4 +182,93 @@ describe('context scaffolding tools', () => {
     expect(hydrated.readiness.harnessReady).toBe(true);
     expect(hydrated.readiness.complete).toBe(true);
   });
+
+  it('generates QA docs during init but excludes them from pending writes', async () => {
+    const result = await initializeContextTool.execute!(
+      {
+        repoPath: tempDir,
+        type: 'docs',
+        projectType: 'cli',
+        skipContentGeneration: true,
+      },
+      toolExecutionContext
+    ) as Record<string, any>;
+
+    const qaDir = path.join(tempDir, '.context', 'docs', 'qa');
+    const qaFiles = (await fs.readdir(qaDir))
+      .filter((entry) => entry.toLowerCase() !== 'readme.md')
+      .sort();
+    const firstQaFile = await fs.readFile(path.join(qaDir, qaFiles[0]), 'utf-8');
+
+    expect(result.qaGenerated).toBeGreaterThan(0);
+    expect(result.qaNote).toContain('.context/docs/qa');
+    expect(result.pendingWrites.every((item: { filePath: string }) => !item.filePath.includes(`${path.sep}.context${path.sep}docs${path.sep}qa${path.sep}`))).toBe(true);
+    expect(qaFiles.length).toBeGreaterThan(0);
+    expect(firstQaFile).toContain('# ');
+
+    const listedDocs = await listFilesToFillTool.execute!(
+      {
+        repoPath: tempDir,
+        target: 'docs',
+      },
+      toolExecutionContext
+    ) as Record<string, any>;
+
+    expect(listedDocs.files.some((file: { relativePath: string }) => file.relativePath.startsWith('docs/qa/'))).toBe(false);
+  });
+
+  it('lists nested unfilled docs under docs/qa for fill operations', async () => {
+    await initializeContextTool.execute!(
+      {
+        repoPath: tempDir,
+        type: 'docs',
+        projectType: 'cli',
+        generateQA: false,
+        skipContentGeneration: true,
+      },
+      toolExecutionContext
+    );
+
+    const nestedDocPath = path.join(tempDir, '.context', 'docs', 'qa', 'custom-question.md');
+    await fs.ensureDir(path.dirname(nestedDocPath));
+    await fs.writeFile(
+      nestedDocPath,
+      [
+        '---',
+        'type: doc',
+        'name: custom-question',
+        'description: Custom nested QA scaffold',
+        'generated: 2026-04-11',
+        'status: unfilled',
+        'scaffoldVersion: "2.0.0"',
+        '---',
+        '',
+      ].join('\n'),
+      'utf-8'
+    );
+
+    const listedDocs = await listFilesToFillTool.execute!(
+      {
+        repoPath: tempDir,
+        target: 'docs',
+      },
+      toolExecutionContext
+    ) as Record<string, any>;
+
+    const nestedDoc = listedDocs.files.find((file: { relativePath: string }) => file.relativePath === 'docs/qa/custom-question.md');
+
+    expect(nestedDoc).toBeDefined();
+
+    const filled = await fillSingleFileTool.execute!(
+      {
+        repoPath: tempDir,
+        filePath: nestedDoc.path,
+      },
+      toolExecutionContext
+    ) as Record<string, any>;
+
+    expect(filled.success).toBe(true);
+    expect(filled.fileType).toBe('doc');
+    expect(filled.documentName).toBe('custom-question');
+  });
 });
