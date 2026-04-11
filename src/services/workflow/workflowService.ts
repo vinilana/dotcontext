@@ -250,6 +250,7 @@ export class WorkflowService {
   async getFormattedStatus(): Promise<string> {
     const summary = await this.getSummary();
     const status = await this.getStatus();
+    const harness = await this.getHarnessStatus();
 
     const lines: string[] = [];
 
@@ -266,6 +267,32 @@ export class WorkflowService {
                     phaseStatus.status === 'skipped' ? '⏭️' : '⏸️';
       const phaseName = PHASE_NAMES_PT[phase as PrevcPhase];
       lines.push(`  ${emoji} ${phase}: ${phaseName} - ${phaseStatus.status}`);
+    }
+
+    if (harness) {
+      const activeTask = harness.binding.activeTaskId
+        ? harness.taskContracts.find((task) => task.id === harness.binding.activeTaskId) || null
+        : null;
+
+      lines.push('');
+      lines.push('Harness:');
+      lines.push(`  🧵 Session: ${harness.session.name} (${harness.session.status})`);
+      lines.push(`  📌 Tasks: ${harness.taskContracts.length}`);
+      lines.push(`  🤝 Handoffs: ${harness.handoffs.length}`);
+      lines.push(`  🧪 Sensors: ${harness.sensorRuns.length}`);
+
+      if (activeTask) {
+        lines.push(`  🎯 Active Task: ${activeTask.title} (${activeTask.status})`);
+      } else if (harness.taskContracts.length > 0) {
+        lines.push('  🎯 Active Task: none');
+      }
+
+      if (harness.completionCheck.blocked) {
+        lines.push('  🚫 Completion checks blocked');
+        for (const reason of harness.completionCheck.reasons) {
+          lines.push(`    - ${reason}`);
+        }
+      }
     }
 
     if (summary.isComplete) {

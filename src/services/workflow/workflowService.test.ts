@@ -85,6 +85,25 @@ describe('WorkflowService harness integration', () => {
     expect(harness?.sensorRuns).toHaveLength(1);
   });
 
+  it('includes harness task details in formatted status output', async () => {
+    await service.init({
+      name: 'formatted-status',
+      scale: 'SMALL',
+      autonomous: true,
+    });
+
+    await service.defineHarnessTask({
+      title: 'Implement formatted status',
+      requiredSensors: ['build'],
+    });
+
+    const formatted = await service.getFormattedStatus();
+
+    expect(formatted).toContain('Harness:');
+    expect(formatted).toContain('Tasks: 1');
+    expect(formatted).toContain('Active Task: Implement formatted status (ready)');
+  });
+
   it('enforces artifact policy rules during workflow execution', async () => {
     await service.init({
       name: 'policy-run',
