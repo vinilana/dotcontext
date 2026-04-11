@@ -43,7 +43,8 @@ export const checkScaffoldingTool = tool({
     const outputDir = path.resolve(repoPath, '.context');
 
     try {
-      const [initialized, docs, agents, skills, plans, workflow, harness] = await Promise.all([
+      const sensorsPath = path.join(outputDir, 'harness', 'sensors.json');
+      const [initialized, docs, agents, skills, plans, workflow, harness, sensors] = await Promise.all([
         fs.pathExists(outputDir),
         fs.pathExists(path.join(outputDir, 'docs')).then(exists =>
           exists ? hasContent(path.join(outputDir, 'docs')) : false
@@ -62,7 +63,8 @@ export const checkScaffoldingTool = tool({
         ),
         fs.pathExists(path.join(outputDir, 'harness')).then(exists =>
           exists ? hasContent(path.join(outputDir, 'harness')) : false
-        )
+        ),
+        fs.pathExists(sensorsPath)
       ]);
 
       return {
@@ -73,6 +75,7 @@ export const checkScaffoldingTool = tool({
         plans,
         workflow,
         harness,
+        sensors,
         outputDir
       };
     } catch (error) {
@@ -84,6 +87,7 @@ export const checkScaffoldingTool = tool({
         plans: false,
         workflow: false,
         harness: false,
+        sensors: false,
         outputDir,
         error: error instanceof Error ? error.message : String(error)
       };

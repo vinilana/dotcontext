@@ -104,6 +104,62 @@ describe('WorkflowService harness integration', () => {
     expect(formatted).toContain('Active Task: Implement formatted status (ready)');
   });
 
+  it('registers sensors from project scripts instead of assuming a universal Node set', async () => {
+    const sensors = service.listAvailableSensors();
+
+    expect(sensors.map((sensor) => sensor.id)).toEqual(['build']);
+  });
+
+  it('detects Python sensors without assuming Node scripts', async () => {
+    const pythonDir = await fs.mkdtemp(path.join(os.tmpdir(), 'dotcontext-python-workflow-'));
+
+    try {
+      await fs.writeFile(path.join(pythonDir, 'pyproject.toml'), '[project]\nname = "python-workflow-test"\nversion = "0.1.0"\n');
+      await fs.writeFile(path.join(pythonDir, 'mypy.ini'), '[mypy]\npython_version = 3.11\n');
+
+      const pythonService = new WorkflowService(pythonDir);
+      const sensors = pythonService.listAvailableSensors();
+
+      expect(sensors.map((sensor) => sensor.id)).toEqual(['test', 'typecheck']);
+    } finally {
+      await fs.remove(pythonDir);
+    }
+  });
+
+  it('loads customizable sensors from .context/harness/sensors.json', async () => {
+    await fs.ensureDir(path.join(tempDir, '.context', 'harness'));
+    await fs.writeJson(
+      path.join(tempDir, '.context', 'harness', 'sensors.json'),
+      {
+        version: 1,
+        generatedAt: new Date().toISOString(),
+        source: 'manual',
+        sensors: [
+          {
+            id: 'quality',
+            name: 'Quality',
+            severity: 'warning',
+            command: 'echo quality',
+          },
+          {
+            id: 'build',
+            name: 'Build',
+            severity: 'critical',
+            command: 'npm run build',
+            script: 'build',
+            enabled: false,
+          },
+        ],
+      },
+      { spaces: 2 }
+    );
+
+    const customizedService = new WorkflowService(tempDir);
+    const sensors = customizedService.listAvailableSensors();
+
+    expect(sensors.map((sensor) => sensor.id)).toEqual(['quality']);
+  });
+
   it('enforces artifact policy rules during workflow execution', async () => {
     await service.init({
       name: 'policy-run',

@@ -17,6 +17,7 @@ import {
 } from '../../stack';
 import { UPDATE_SCAFFOLD_PROMPT_FALLBACK } from '../../../prompts/defaults';
 import { QAService } from '../../qa';
+import { HarnessSensorCatalogService } from '../../harness/sensorCatalogService';
 import { createSkillRegistry } from '../../../workflow/skills';
 import { collectScaffoldFiles } from './scaffoldInventory';
 
@@ -178,6 +179,13 @@ The AI agent MUST then fill each generated file using the provided context and i
         }
       }
 
+      const sensorCatalogService = new HarnessSensorCatalogService({
+        repoPath: resolvedRepoPath,
+        contextPath: outputDir,
+      });
+      const sensorCatalog = await sensorCatalogService.bootstrap();
+      const sensorsGenerated = sensorCatalog.sensors.length;
+
       // Build list of generated files with their types
       interface FileInfo {
         path: string;
@@ -302,6 +310,7 @@ DO NOT say "initialization complete" until ALL files are filled.`
             docsGenerated,
             agentsGenerated,
             skillsGenerated,
+            sensorsGenerated,
             qaGenerated,
             outputDir,
             classification: classification ? {
@@ -315,6 +324,7 @@ DO NOT say "initialization complete" until ALL files are filled.`
           docsGenerated,
           agentsGenerated,
           skillsGenerated,
+          sensorsGenerated,
           qaGenerated,
           outputDir,
           classification: classification ? {
@@ -382,6 +392,7 @@ DO NOT say "initialization complete" until ALL files are filled.`
           docsGenerated,
           agentsGenerated,
           skillsGenerated,
+          sensorsGenerated,
           qaGenerated,
           outputDir,
           classification: classification ? {
@@ -395,6 +406,7 @@ DO NOT say "initialization complete" until ALL files are filled.`
         docsGenerated,
         agentsGenerated,
         skillsGenerated,
+        sensorsGenerated,
         qaGenerated,
         outputDir,
         classification: classification ? {

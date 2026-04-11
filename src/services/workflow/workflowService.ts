@@ -30,6 +30,7 @@ import {
 } from '../../workflow';
 import {
   HarnessRuntimeStateService,
+  HarnessSensorCatalogService,
   HarnessSensorsService,
   HarnessTaskContractsService,
   HarnessPolicyService,
@@ -38,6 +39,7 @@ import {
   type HarnessHandoffContract,
   type HarnessSensorRun,
   type HarnessSessionRecord,
+  type HarnessSensorDefinition,
 } from '../harness';
 
 const exec = promisify(execCallback);
@@ -53,6 +55,7 @@ interface WorkflowHarnessBinding {
 export interface WorkflowHarnessStatus {
   binding: WorkflowHarnessBinding;
   session: HarnessSessionRecord;
+  availableSensors: Array<Pick<HarnessSensorDefinition, 'id' | 'name' | 'description'>>;
   sensorRuns: HarnessSensorRun[];
   taskContracts: HarnessTaskContract[];
   handoffs: HarnessHandoffContract[];
@@ -120,6 +123,7 @@ export class WorkflowService {
   private orchestrator: PrevcOrchestrator;
   private collaborationManager: CollaborationManager;
   private runtimeStateService: HarnessRuntimeStateService;
+  private sensorCatalogService: HarnessSensorCatalogService;
   private sensorsService: HarnessSensorsService;
   private taskContractsService: HarnessTaskContractsService;
   private policyService: HarnessPolicyService;
@@ -139,6 +143,10 @@ export class WorkflowService {
     this.orchestrator = new PrevcOrchestrator(this.contextPath);
     this.collaborationManager = new CollaborationManager();
     this.runtimeStateService = new HarnessRuntimeStateService({ repoPath: this.repoPath });
+    this.sensorCatalogService = new HarnessSensorCatalogService({
+      repoPath: this.repoPath,
+      contextPath: this.contextPath,
+    });
     this.sensorsService = new HarnessSensorsService({ stateService: this.runtimeStateService });
     this.taskContractsService = new HarnessTaskContractsService({
       repoPath: this.repoPath,
@@ -382,6 +390,14 @@ export class WorkflowService {
    */
   async getSettings(): Promise<WorkflowSettings> {
     return this.orchestrator.getSettings();
+  }
+
+  listAvailableSensors(): Array<Pick<HarnessSensorDefinition, 'id' | 'name' | 'description'>> {
+    return this.sensorsService.listSensors().map((sensor) => ({
+      id: sensor.id,
+      name: sensor.name,
+      description: sensor.description,
+    }));
   }
 
   /**
@@ -638,6 +654,7 @@ export class WorkflowService {
     return {
       binding,
       session,
+      availableSensors: this.listAvailableSensors(),
       sensorRuns,
       taskContracts,
       handoffs,
@@ -812,42 +829,7 @@ export class WorkflowService {
   }
 
   private registerDefaultSensors(): void {
-    const definitions = [
-      {
-        id: 'build',
-        name: 'Build',
-        severity: 'critical' as const,
-        command: 'npm run build',
-        script: 'build',
-      },
-      {
-        id: 'test',
-        name: 'Test',
-        severity: 'critical' as const,
-        command: 'npm test -- --runInBand',
-        script: 'test',
-      },
-      {
-        id: 'lint',
-        name: 'Lint',
-        severity: 'warning' as const,
-        command: 'npm run lint',
-        script: 'lint',
-      },
-      {
-        id: 'typecheck',
-        name: 'Typecheck',
-        severity: 'critical' as const,
-        command: 'npm run typecheck',
-        script: 'typecheck',
-      },
-      {
-        id: 'structural',
-        name: 'Structural Integrity',
-        severity: 'critical' as const,
-        command: 'npm test -- --runInBand --runTestsByPath src/tests/integrity/postRefactoringIntegrity.test.ts',
-      },
-    ];
+    const definitions = this.sensorCatalogService.resolveEffectiveSensorsSync();
 
     for (const definition of definitions) {
       if (this.sensorsService.getSensor(definition.id)) {

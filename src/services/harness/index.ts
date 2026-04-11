@@ -44,6 +44,13 @@ export {
   type HarnessBackpressureResult,
 } from './sensorsService';
 export {
+  HarnessSensorCatalogService,
+  type HarnessSensorCatalogServiceOptions,
+  type HarnessShellSensorConfig,
+  type HarnessSensorCatalogDocument,
+  type HarnessSensorCatalogSeverity,
+} from './sensorCatalogService';
+export {
   HarnessTaskContractsService,
   type HarnessTaskContractsServiceOptions,
   type HarnessTaskContractStatus,

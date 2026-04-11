@@ -51,6 +51,8 @@ describe('context scaffolding tools', () => {
 
     expect(result.status).toBe('incomplete');
     expect(result.skillsGenerated).toBe(expectedSkills.length);
+    expect(result.sensorsGenerated).toBeDefined();
+    expect(await fs.pathExists(path.join(tempDir, '.context', 'harness', 'sensors.json'))).toBe(true);
     expect(generatedSkillDirs).toEqual(expectedSkills);
     expect(result.pendingWrites.some((item: { fileType: string }) => item.fileType === 'skill')).toBe(true);
   });
@@ -113,8 +115,9 @@ describe('context scaffolding tools', () => {
     expect(initial.initialized).toBe(true);
     expect(initial.agents).toBe(true);
     expect(initial.skills).toBe(true);
+    expect(initial.sensors).toBe(true);
     expect(initial.workflow).toBe(false);
-    expect(initial.harness).toBe(false);
+    expect(initial.harness).toBe(true);
 
     await fs.ensureDir(path.join(tempDir, '.context', 'workflow'));
     await fs.writeFile(path.join(tempDir, '.context', 'workflow', 'status.json'), '{}', 'utf-8');
@@ -150,6 +153,7 @@ describe('context scaffolding tools', () => {
     const initial = await service.bootstrapStatus();
     expect(initial.readiness.scaffoldReady).toBe(true);
     expect(initial.readiness.skillsReady).toBe(true);
+    expect(initial.readiness.sensorsReady).toBe(true);
     expect(initial.readiness.workflowReady).toBe(false);
     expect(initial.readiness.harnessReady).toBe(false);
 

@@ -54,6 +54,7 @@ export interface HarnessBootstrapStatusResult {
     docs: boolean;
     agents: boolean;
     skills: boolean;
+    sensors: boolean;
     plans: boolean;
     qa: boolean;
   };
@@ -68,6 +69,7 @@ export interface HarnessBootstrapStatusResult {
   readiness: {
     scaffoldReady: boolean;
     skillsReady: boolean;
+    sensorsReady: boolean;
     workflowReady: boolean;
     harnessReady: boolean;
     complete: boolean;
@@ -115,6 +117,7 @@ export class HarnessContextService {
       docs: Boolean(scaffoldStatus.docs),
       agents: Boolean(scaffoldStatus.agents),
       skills: Boolean(scaffoldStatus.skills),
+      sensors: Boolean(scaffoldStatus.sensors),
       plans: Boolean(scaffoldStatus.plans),
       qa,
     };
@@ -131,11 +134,12 @@ export class HarnessContextService {
     const readiness = {
       scaffoldReady: scaffold.initialized && (scaffold.docs || scaffold.agents || scaffold.skills || scaffold.plans),
       skillsReady: scaffold.skills,
+      sensorsReady: scaffold.sensors,
       workflowReady: runtime.workflow,
       harnessReady: runtime.harness && (runtime.harnessBinding || runtime.sessionCount > 0),
       complete: false,
     };
-    readiness.complete = readiness.scaffoldReady && readiness.skillsReady && readiness.workflowReady && readiness.harnessReady;
+    readiness.complete = readiness.scaffoldReady && readiness.skillsReady && readiness.sensorsReady && readiness.workflowReady && readiness.harnessReady;
 
     const nextSteps: string[] = [];
     if (!scaffold.initialized) {
@@ -143,6 +147,9 @@ export class HarnessContextService {
     } else {
       if (!scaffold.skills) {
         nextSteps.push('Regenerate or create .context/skills so skills are available to agents.');
+      }
+      if (!scaffold.sensors) {
+        nextSteps.push('Regenerate or create .context/harness/sensors.json so quality sensors are customizable.');
       }
       if (!runtime.workflow) {
         nextSteps.push('Run workflow-init to create .context/workflow and enable PREVC execution.');
