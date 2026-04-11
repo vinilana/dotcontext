@@ -14,7 +14,7 @@ import type { PrevcPhase, PrevcRole, AgentType } from '../../../workflow';
 // Note: Workflow uses dedicated tools (workflow-init, workflow-status, workflow-advance, workflow-manage)
 // Note: Project tools removed - use context init + workflow-init instead
 export type ExploreAction = 'read' | 'list' | 'analyze' | 'search' | 'getStructure';
-export type ContextAction = 'check' | 'init' | 'fill' | 'fillSingle' | 'listToFill' | 'getMap' | 'buildSemantic' | 'scaffoldPlan' | 'searchQA' | 'generateQA' | 'getFlow' | 'detectPatterns';
+export type ContextAction = 'check' | 'bootstrapStatus' | 'init' | 'fill' | 'fillSingle' | 'listToFill' | 'getMap' | 'buildSemantic' | 'scaffoldPlan' | 'searchQA' | 'generateQA' | 'getFlow' | 'detectPatterns';
 export type SyncAction = 'exportRules' | 'exportDocs' | 'exportAgents' | 'exportContext' | 'exportSkills' | 'reverseSync' | 'importDocs' | 'importAgents' | 'importSkills';
 export type PlanAction = 'link' | 'getLinked' | 'getDetails' | 'getForPhase' | 'updatePhase' | 'recordDecision' | 'updateStep' | 'getStatus' | 'syncMarkdown' | 'commitPhase';
 export type AgentAction = 'discover' | 'getInfo' | 'orchestrate' | 'getSequence' | 'getDocs' | 'getPhaseDocs' | 'listTypes';
@@ -78,7 +78,7 @@ export interface ContextParams {
   exclude?: string[];
   autoFill?: boolean;
   skipContentGeneration?: boolean;
-  target?: 'docs' | 'agents' | 'plans' | 'all';
+  target?: 'docs' | 'agents' | 'skills' | 'plans' | 'all';
   offset?: number;
   limit?: number;
   filePath?: string;

@@ -7,7 +7,13 @@
 
 export { HarnessAgentsService, type HarnessAgentsServiceOptions } from './agentsService';
 export { HarnessPlansService, type HarnessPlansServiceOptions } from './plansService';
-export { HarnessContextService, type HarnessContextServiceOptions, type HarnessContextInitResult, type HarnessContextPlanScaffoldResult } from './contextService';
+export {
+  HarnessContextService,
+  type HarnessContextServiceOptions,
+  type HarnessContextInitResult,
+  type HarnessContextPlanScaffoldResult,
+  type HarnessBootstrapStatusResult,
+} from './contextService';
 export { HarnessSkillsService, type HarnessSkillsServiceOptions } from './skillsService';
 export {
   HarnessRuntimeStateService,

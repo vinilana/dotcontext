@@ -11,12 +11,14 @@ import {
   classifyProject,
   getAgentsForProjectType,
   getDocsForProjectType,
+  getSkillsForProjectType,
   ProjectType,
   ProjectClassification,
 } from '../../stack';
 import { UPDATE_SCAFFOLD_PROMPT_FALLBACK } from '../../../prompts/defaults';
 import { QAService } from '../../qa';
 import { createSkillRegistry } from '../../../workflow/skills';
+import { collectScaffoldFiles } from './scaffoldInventory';
 
 export const initializeContextTool = tool({
   description: `Initialize .context scaffolding and create template files.
@@ -101,6 +103,7 @@ The AI agent MUST then fill each generated file using the provided context and i
       // Get filtered agents and docs based on project type
       const filteredAgents = disableFiltering ? undefined : getAgentsForProjectType(projectType);
       const filteredDocs = disableFiltering ? undefined : getDocsForProjectType(projectType);
+      const filteredSkills = disableFiltering ? undefined : getSkillsForProjectType(projectType);
 
       let docsGenerated = 0;
       let agentsGenerated = 0;
@@ -124,7 +127,10 @@ The AI agent MUST then fill each generated file using the provided context and i
             repoPath: resolvedRepoPath,
             outputDir: path.relative(resolvedRepoPath, outputDir),
           });
-          const skillResult = await skillGenerator.generate({ force: false });
+          const skillResult = await skillGenerator.generate({
+            skills: filteredSkills,
+            force: false,
+          });
           skillsGenerated = skillResult.generatedSkills.length;
         } catch {
           // Skills generation is optional, continue if it fails
@@ -176,33 +182,42 @@ The AI agent MUST then fill each generated file using the provided context and i
       interface FileInfo {
         path: string;
         relativePath: string;
-        type: 'doc' | 'agent';
+        type: 'doc' | 'agent' | 'skill';
         fillInstructions: string;
       }
       const generatedFiles: FileInfo[] = [];
 
       if (scaffoldDocs) {
-        const docsDir = path.join(outputDir, 'docs');
-        const docFiles = await fs.readdir(docsDir);
-        for (const f of docFiles.filter(f => f.endsWith('.md') && f.toLowerCase() !== 'readme.md')) {
+        const docFiles = await collectScaffoldFiles(outputDir, 'docs');
+        for (const file of docFiles.filter((entry) => path.basename(entry.path).toLowerCase() !== 'readme.md')) {
           generatedFiles.push({
-            path: path.join(docsDir, f),
-            relativePath: `docs/${f}`,
+            path: file.path,
+            relativePath: file.relativePath,
             type: 'doc',
-            fillInstructions: getDocFillInstructions(f),
+            fillInstructions: getDocFillInstructions(path.basename(file.path)),
           });
         }
       }
       if (scaffoldAgents) {
-        const agentsDir = path.join(outputDir, 'agents');
-        const agentFiles = await fs.readdir(agentsDir);
-        for (const f of agentFiles.filter(f => f.endsWith('.md') && f.toLowerCase() !== 'readme.md')) {
-          const agentType = path.basename(f, '.md');
+        const agentFiles = await collectScaffoldFiles(outputDir, 'agents');
+        for (const file of agentFiles) {
+          const agentType = file.documentName;
           generatedFiles.push({
-            path: path.join(agentsDir, f),
-            relativePath: `agents/${f}`,
+            path: file.path,
+            relativePath: file.relativePath,
             type: 'agent',
             fillInstructions: getAgentFillInstructions(agentType),
+          });
+        }
+      }
+      if (generateSkills) {
+        const skillFiles = await collectScaffoldFiles(outputDir, 'skills');
+        for (const file of skillFiles) {
+          generatedFiles.push({
+            path: file.path,
+            relativePath: file.relativePath,
+            type: 'skill',
+            fillInstructions: getSkillFillInstructions(file.documentName),
           });
         }
       }
@@ -493,3 +508,13 @@ function getAgentFillInstructions(agentType: string): string {
 - Common pitfalls to avoid`;
 }
 
+function getSkillFillInstructions(skillSlug: string): string {
+  return `Fill this skill with:
+- A clear description of when the skill should be used
+- Preconditions, assumptions, and constraints
+- A practical execution workflow for the skill
+- Project-specific commands, files, and patterns the agent should use
+- Expected outputs or verification steps
+
+Keep it concise, actionable, and tailored to this repository. Skill slug: ${skillSlug}`;
+}

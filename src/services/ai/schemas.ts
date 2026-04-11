@@ -271,7 +271,7 @@ export const RequiredActionSchema = z.object({
   order: z.number().describe('Sequence order for this action'),
   actionType: z.enum(['WRITE_FILE', 'CALL_TOOL', 'VERIFY']).describe('Type of action to perform'),
   filePath: z.string().describe('Absolute path to the file'),
-  fileType: z.enum(['doc', 'agent']).describe('Type of scaffold file'),
+  fileType: z.enum(['doc', 'agent', 'skill', 'plan']).describe('Type of scaffold file'),
   instructions: z.string().describe('Instructions for filling this file'),
   suggestedContent: z.string().optional().describe('Pre-generated content to write to the file'),
   status: ActionStatusEnum.describe('Current status of this action'),
@@ -313,7 +313,10 @@ export const CheckScaffoldingOutputSchema = z.object({
   initialized: z.boolean().describe('Whether .context directory exists'),
   docs: z.boolean().describe('Whether docs scaffolding exists with content'),
   agents: z.boolean().describe('Whether agents scaffolding exists with content'),
+  skills: z.boolean().describe('Whether skills scaffolding exists with content'),
   plans: z.boolean().describe('Whether plans scaffolding exists with content'),
+  workflow: z.boolean().describe('Whether workflow runtime state exists with content'),
+  harness: z.boolean().describe('Whether harness runtime state exists with content'),
   outputDir: z.string().describe('Resolved output directory path')
 });
 
@@ -382,6 +385,8 @@ export const InitializeContextOutputSchema = z.object({
   _metadata: z.object({
     docsGenerated: z.number().optional(),
     agentsGenerated: z.number().optional(),
+    skillsGenerated: z.number().optional(),
+    qaGenerated: z.number().optional(),
     outputDir: z.string(),
     classification: ProjectClassificationSchema.optional(),
   }).optional().describe('Metadata about the operation'),
@@ -389,6 +394,8 @@ export const InitializeContextOutputSchema = z.object({
   // Legacy fields (kept for backwards compatibility)
   docsGenerated: z.number().optional(),
   agentsGenerated: z.number().optional(),
+  skillsGenerated: z.number().optional(),
+  qaGenerated: z.number().optional(),
   outputDir: z.string(),
   classification: ProjectClassificationSchema.optional()
     .describe('Detected project type and classification confidence'),

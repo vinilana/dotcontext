@@ -154,6 +154,7 @@ export class AIContextMCPServer {
     this.server.registerTool('context', {
       description: `Context scaffolding and semantic context. Actions:
 - check: Check if .context scaffolding exists (params: repoPath?)
+- bootstrapStatus: Summarize scaffold, workflow, and harness bootstrap readiness (params: repoPath?)
 - init: Initialize .context scaffolding (params: repoPath?, type?, outputDir?, semantic?, autoFill?, skipContentGeneration?)
 - fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?)
 - fillSingle: Fill a single scaffold file (params: repoPath?, filePath)
@@ -168,7 +169,7 @@ export class AIContextMCPServer {
 3. After context init, call fillSingle for each pending file
 4. Call workflow-init to enable PREVC workflow (unless trivial change)`,
       inputSchema: {
-        action: z.enum(['check', 'init', 'fill', 'fillSingle', 'listToFill', 'getMap', 'buildSemantic', 'scaffoldPlan'])
+        action: z.enum(['check', 'bootstrapStatus', 'init', 'fill', 'fillSingle', 'listToFill', 'getMap', 'buildSemantic', 'scaffoldPlan'])
           .describe('Action to perform'),
         repoPath: z.string().optional()
           .describe('Repository path (defaults to cwd)'),
@@ -186,8 +187,8 @@ export class AIContextMCPServer {
           .describe('(init, scaffoldPlan) Auto-fill with codebase content'),
         skipContentGeneration: z.boolean().optional()
           .describe('(init) Skip pre-generating content'),
-        target: z.enum(['docs', 'agents', 'plans', 'all']).optional()
-          .describe('(fill, listToFill) Which scaffolding to target'),
+        target: z.enum(['docs', 'agents', 'skills', 'plans', 'all']).optional()
+          .describe('(fill, listToFill) Which scaffolding to target, including nested skills'),
         offset: z.number().optional()
           .describe('(fill) Skip first N files'),
         limit: z.number().optional()

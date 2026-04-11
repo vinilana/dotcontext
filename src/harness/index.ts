@@ -22,6 +22,7 @@ export {
   type HarnessContextServiceOptions,
   HarnessSkillsService,
   type HarnessSkillsServiceOptions,
+  type HarnessBootstrapStatusResult,
   HarnessRuntimeStateService,
   type HarnessRuntimeStateServiceOptions,
   type HarnessSessionStatus,

@@ -4,6 +4,8 @@
  * Transport-agnostic context, semantic analysis, and scaffold orchestration logic.
  */
 
+import * as fs from 'fs-extra';
+import * as path from 'path';
 import {
   checkScaffoldingTool,
   initializeContextTool,
@@ -43,6 +45,36 @@ export interface HarnessContextPlanScaffoldResult {
   } | null;
 }
 
+export interface HarnessBootstrapStatusResult {
+  success: true;
+  repoPath: string;
+  outputDir: string;
+  scaffold: {
+    initialized: boolean;
+    docs: boolean;
+    agents: boolean;
+    skills: boolean;
+    plans: boolean;
+    qa: boolean;
+  };
+  runtime: {
+    workflow: boolean;
+    harness: boolean;
+    harnessBinding: boolean;
+    sessionCount: number;
+    traceCount: number;
+    artifactSessionCount: number;
+  };
+  readiness: {
+    scaffoldReady: boolean;
+    skillsReady: boolean;
+    workflowReady: boolean;
+    harnessReady: boolean;
+    complete: boolean;
+  };
+  nextSteps: string[];
+}
+
 export class HarnessContextService {
   constructor(private readonly options: HarnessContextServiceOptions) {}
 
@@ -55,6 +87,86 @@ export class HarnessContextService {
       { repoPath: repoPath || this.repoPath },
       toolExecutionContext
     );
+  }
+
+  async bootstrapStatus(repoPath?: string): Promise<HarnessBootstrapStatusResult> {
+    const resolvedRepoPath = path.resolve(repoPath || this.repoPath);
+    const outputDir = path.join(resolvedRepoPath, '.context');
+    const scaffoldStatus = await this.check(resolvedRepoPath) as Record<string, unknown>;
+
+    const workflowDir = path.join(outputDir, 'workflow');
+    const harnessDir = path.join(outputDir, 'harness');
+    const harnessBindingPath = path.join(workflowDir, 'harness-session.json');
+    const qaDir = path.join(outputDir, 'docs', 'qa');
+    const sessionsDir = path.join(harnessDir, 'sessions');
+    const tracesDir = path.join(harnessDir, 'traces');
+    const artifactsDir = path.join(harnessDir, 'artifacts');
+
+    const [qa, harnessBinding, sessionCount, traceCount, artifactSessionCount] = await Promise.all([
+      fs.pathExists(qaDir).then((exists) => exists ? fs.readdir(qaDir).then((entries) => entries.some((entry) => entry.endsWith('.md') && entry.toLowerCase() !== 'readme.md')) : false),
+      fs.pathExists(harnessBindingPath),
+      fs.pathExists(sessionsDir).then((exists) => exists ? fs.readdir(sessionsDir).then((entries) => entries.filter((entry) => entry.endsWith('.json')).length) : 0),
+      fs.pathExists(tracesDir).then((exists) => exists ? fs.readdir(tracesDir).then((entries) => entries.filter((entry) => entry.endsWith('.jsonl')).length) : 0),
+      fs.pathExists(artifactsDir).then((exists) => exists ? fs.readdir(artifactsDir).then((entries) => entries.length) : 0),
+    ]);
+
+    const scaffold = {
+      initialized: Boolean(scaffoldStatus.initialized),
+      docs: Boolean(scaffoldStatus.docs),
+      agents: Boolean(scaffoldStatus.agents),
+      skills: Boolean(scaffoldStatus.skills),
+      plans: Boolean(scaffoldStatus.plans),
+      qa,
+    };
+
+    const runtime = {
+      workflow: Boolean(scaffoldStatus.workflow),
+      harness: Boolean(scaffoldStatus.harness),
+      harnessBinding,
+      sessionCount,
+      traceCount,
+      artifactSessionCount,
+    };
+
+    const readiness = {
+      scaffoldReady: scaffold.initialized && (scaffold.docs || scaffold.agents || scaffold.skills || scaffold.plans),
+      skillsReady: scaffold.skills,
+      workflowReady: runtime.workflow,
+      harnessReady: runtime.harness && (runtime.harnessBinding || runtime.sessionCount > 0),
+      complete: false,
+    };
+    readiness.complete = readiness.scaffoldReady && readiness.skillsReady && readiness.workflowReady && readiness.harnessReady;
+
+    const nextSteps: string[] = [];
+    if (!scaffold.initialized) {
+      nextSteps.push('Run context init to scaffold .context assets.');
+    } else {
+      if (!scaffold.skills) {
+        nextSteps.push('Regenerate or create .context/skills so skills are available to agents.');
+      }
+      if (!runtime.workflow) {
+        nextSteps.push('Run workflow-init to create .context/workflow and enable PREVC execution.');
+      }
+      if (runtime.workflow && !runtime.harnessBinding) {
+        nextSteps.push('Create or refresh the workflow harness binding so workflow and harness stay connected.');
+      }
+      if (!runtime.harness) {
+        nextSteps.push('Run a workflow or harness action to materialize .context/harness runtime state.');
+      }
+    }
+    if (nextSteps.length === 0) {
+      nextSteps.push('Bootstrap is complete. The repository has scaffolded context, workflow state, and active harness runtime artifacts.');
+    }
+
+    return {
+      success: true,
+      repoPath: resolvedRepoPath,
+      outputDir,
+      scaffold,
+      runtime,
+      readiness,
+      nextSteps,
+    };
   }
 
   async init(params: {
@@ -133,7 +245,7 @@ Skip ONLY for trivial changes (typos, single-line edits).`,
   async fill(params: {
     repoPath?: string;
     outputDir?: string;
-    target?: 'docs' | 'agents' | 'plans' | 'all';
+    target?: 'docs' | 'agents' | 'skills' | 'plans' | 'all';
     offset?: number;
     limit?: number;
   }): Promise<unknown> {
@@ -159,7 +271,7 @@ Skip ONLY for trivial changes (typos, single-line edits).`,
   async listToFill(params: {
     repoPath?: string;
     outputDir?: string;
-    target?: 'docs' | 'agents' | 'plans' | 'all';
+    target?: 'docs' | 'agents' | 'skills' | 'plans' | 'all';
   }): Promise<unknown> {
     return listFilesToFillTool.execute!(
       {

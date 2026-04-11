@@ -39,6 +39,10 @@ export async function handleContext(
         return createJsonResponse(await service.check(repoPath));
       }
 
+      case 'bootstrapStatus': {
+        return createJsonResponse(await service.bootstrapStatus(repoPath));
+      }
+
       case 'init': {
         const { result, scaffold } = await service.init({
           repoPath,

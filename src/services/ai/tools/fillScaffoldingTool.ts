@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { SemanticContextBuilder } from '../../semantic/contextBuilder';
 import { DEFAULT_EXCLUDE_PATTERNS } from '../../semantic/types';
 import { getScaffoldStructure, serializeStructureForAI } from '../../../generators/shared/scaffoldStructures';
+import { collectScaffoldFiles, resolveScaffoldFileInfo } from './scaffoldInventory';
 
 // Shared context builder instance for efficiency
 let sharedContextBuilder: SemanticContextBuilder | null = null;
@@ -68,7 +69,7 @@ export async function cleanupSharedContext(): Promise<void> {
 const ListFilesToFillInputSchema = z.object({
   repoPath: z.string().describe('Repository path'),
   outputDir: z.string().optional().describe('Scaffold directory (default: ./.context)'),
-  target: z.enum(['docs', 'agents', 'plans', 'all']).default('all').optional()
+  target: z.enum(['docs', 'agents', 'skills', 'plans', 'all']).default('all').optional()
     .describe('Which scaffolding to list')
 });
 
@@ -77,7 +78,7 @@ export type ListFilesToFillInput = z.infer<typeof ListFilesToFillInputSchema>;
 interface FileToFillInfo {
   path: string;
   relativePath: string;
-  type: 'doc' | 'agent' | 'plan';
+  type: 'doc' | 'agent' | 'skill' | 'plan';
 }
 
 export const listFilesToFillTool = tool({
@@ -100,55 +101,7 @@ Use this first to get the list, then call fillSingleFile for each file.`,
         };
       }
 
-      const files: FileToFillInfo[] = [];
-
-      // Collect docs
-      if (target === 'all' || target === 'docs') {
-        const docsDir = path.join(outputDir, 'docs');
-        if (await fs.pathExists(docsDir)) {
-          const docFiles = await fs.readdir(docsDir);
-          for (const file of docFiles) {
-            if (!file.endsWith('.md')) continue;
-            files.push({
-              path: path.join(docsDir, file),
-              relativePath: `docs/${file}`,
-              type: 'doc'
-            });
-          }
-        }
-      }
-
-      // Collect agents
-      if (target === 'all' || target === 'agents') {
-        const agentsDir = path.join(outputDir, 'agents');
-        if (await fs.pathExists(agentsDir)) {
-          const agentFiles = await fs.readdir(agentsDir);
-          for (const file of agentFiles) {
-            if (!file.endsWith('.md') || file.toLowerCase() === 'readme.md') continue;
-            files.push({
-              path: path.join(agentsDir, file),
-              relativePath: `agents/${file}`,
-              type: 'agent'
-            });
-          }
-        }
-      }
-
-      // Collect plans
-      if (target === 'all' || target === 'plans') {
-        const plansDir = path.join(outputDir, 'plans');
-        if (await fs.pathExists(plansDir)) {
-          const planFiles = await fs.readdir(plansDir);
-          for (const file of planFiles) {
-            if (!file.endsWith('.md') || file.toLowerCase() === 'readme.md') continue;
-            files.push({
-              path: path.join(plansDir, file),
-              relativePath: `plans/${file}`,
-              type: 'plan'
-            });
-          }
-        }
-      }
+      const files: FileToFillInfo[] = await collectScaffoldFiles(outputDir, target);
 
       return {
         success: true,
@@ -201,28 +154,9 @@ Use this context to generate intelligent content, then write the content to the 
       // Read current content (frontmatter/template)
       const currentContent = await fs.readFile(resolvedFilePath, 'utf-8');
       const fileName = path.basename(resolvedFilePath);
-      const parentDir = path.basename(path.dirname(resolvedFilePath));
-
-      // Determine file type and get scaffold structure
-      let fileType: 'doc' | 'agent' | 'plan' | 'skill';
-      let documentName: string;
-
-      if (parentDir === 'docs') {
-        fileType = 'doc';
-        documentName = path.basename(fileName, '.md');
-      } else if (parentDir === 'agents') {
-        fileType = 'agent';
-        documentName = path.basename(fileName, '.md');
-      } else if (parentDir === 'plans') {
-        fileType = 'plan';
-        documentName = path.basename(fileName, '.md');
-      } else if (parentDir === 'skills') {
-        fileType = 'skill';
-        documentName = path.basename(fileName, '.md');
-      } else {
-        fileType = 'doc';
-        documentName = path.basename(fileName, '.md');
-      }
+      const fileInfo = resolveScaffoldFileInfo(path.join(resolvedRepoPath, '.context'), resolvedFilePath);
+      const fileType = fileInfo.type;
+      const documentName = fileInfo.documentName;
 
       // Get scaffold structure and serialize for AI
       const structure = getScaffoldStructure(documentName);
@@ -256,7 +190,7 @@ Use this context to generate intelligent content, then write the content to the 
 const FillScaffoldingInputSchema = z.object({
   repoPath: z.string().describe('Repository path'),
   outputDir: z.string().optional().describe('Scaffold directory (default: ./.context)'),
-  target: z.enum(['docs', 'agents', 'plans', 'all']).default('all').optional()
+  target: z.enum(['docs', 'agents', 'skills', 'plans', 'all']).default('all').optional()
     .describe('Which scaffolding to fill'),
   offset: z.number().optional().describe('Skip first N files (for pagination)'),
   limit: z.number().optional().describe('Max files to return (default: 3, use 0 for all)')
@@ -312,55 +246,7 @@ Supports pagination with offset/limit. Generate content for each file using its 
       const semanticContext = await getOrBuildContext(resolvedRepoPath);
 
       // Collect all file paths first
-      const allFiles: { path: string; relativePath: string; type: 'doc' | 'agent' | 'plan' }[] = [];
-
-      // Collect docs
-      if (target === 'all' || target === 'docs') {
-        const docsDir = path.join(outputDir, 'docs');
-        if (await fs.pathExists(docsDir)) {
-          const docFiles = await fs.readdir(docsDir);
-          for (const file of docFiles) {
-            if (!file.endsWith('.md')) continue;
-            allFiles.push({
-              path: path.join(docsDir, file),
-              relativePath: path.relative(outputDir, path.join(docsDir, file)),
-              type: 'doc'
-            });
-          }
-        }
-      }
-
-      // Collect agents
-      if (target === 'all' || target === 'agents') {
-        const agentsDir = path.join(outputDir, 'agents');
-        if (await fs.pathExists(agentsDir)) {
-          const agentFiles = await fs.readdir(agentsDir);
-          for (const file of agentFiles) {
-            if (!file.endsWith('.md') || file.toLowerCase() === 'readme.md') continue;
-            allFiles.push({
-              path: path.join(agentsDir, file),
-              relativePath: path.relative(outputDir, path.join(agentsDir, file)),
-              type: 'agent'
-            });
-          }
-        }
-      }
-
-      // Collect plans
-      if (target === 'all' || target === 'plans') {
-        const plansDir = path.join(outputDir, 'plans');
-        if (await fs.pathExists(plansDir)) {
-          const planFiles = await fs.readdir(plansDir);
-          for (const file of planFiles) {
-            if (!file.endsWith('.md') || file.toLowerCase() === 'readme.md') continue;
-            allFiles.push({
-              path: path.join(plansDir, file),
-              relativePath: path.relative(outputDir, path.join(plansDir, file)),
-              type: 'plan'
-            });
-          }
-        }
-      }
+      const allFiles = await collectScaffoldFiles(outputDir, target);
 
       const totalCount = allFiles.length;
 

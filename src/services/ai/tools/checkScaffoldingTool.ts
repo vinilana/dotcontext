@@ -15,6 +15,23 @@ async function hasContent(dirPath: string): Promise<boolean> {
   }
 }
 
+async function hasSkillContent(skillsDir: string): Promise<boolean> {
+  try {
+    const entries = await fs.readdir(skillsDir);
+    for (const entry of entries) {
+      const skillDir = path.join(skillsDir, entry);
+      const stat = await fs.stat(skillDir).catch(() => null);
+      if (!stat?.isDirectory()) continue;
+      if (await fs.pathExists(path.join(skillDir, 'SKILL.md'))) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export const checkScaffoldingTool = tool({
   description: 'Check if .context scaffolding exists and return granular status',
   inputSchema: CheckScaffoldingInputSchema,
@@ -26,7 +43,7 @@ export const checkScaffoldingTool = tool({
     const outputDir = path.resolve(repoPath, '.context');
 
     try {
-      const [initialized, docs, agents, plans] = await Promise.all([
+      const [initialized, docs, agents, skills, plans, workflow, harness] = await Promise.all([
         fs.pathExists(outputDir),
         fs.pathExists(path.join(outputDir, 'docs')).then(exists =>
           exists ? hasContent(path.join(outputDir, 'docs')) : false
@@ -34,8 +51,17 @@ export const checkScaffoldingTool = tool({
         fs.pathExists(path.join(outputDir, 'agents')).then(exists =>
           exists ? hasContent(path.join(outputDir, 'agents')) : false
         ),
+        fs.pathExists(path.join(outputDir, 'skills')).then(exists =>
+          exists ? hasSkillContent(path.join(outputDir, 'skills')) : false
+        ),
         fs.pathExists(path.join(outputDir, 'plans')).then(exists =>
           exists ? hasContent(path.join(outputDir, 'plans')) : false
+        ),
+        fs.pathExists(path.join(outputDir, 'workflow')).then(exists =>
+          exists ? hasContent(path.join(outputDir, 'workflow')) : false
+        ),
+        fs.pathExists(path.join(outputDir, 'harness')).then(exists =>
+          exists ? hasContent(path.join(outputDir, 'harness')) : false
         )
       ]);
 
@@ -43,7 +69,10 @@ export const checkScaffoldingTool = tool({
         initialized,
         docs,
         agents,
+        skills,
         plans,
+        workflow,
+        harness,
         outputDir
       };
     } catch (error) {
@@ -51,7 +80,10 @@ export const checkScaffoldingTool = tool({
         initialized: false,
         docs: false,
         agents: false,
+        skills: false,
         plans: false,
+        workflow: false,
+        harness: false,
         outputDir,
         error: error instanceof Error ? error.message : String(error)
       };
