@@ -541,7 +541,7 @@ Once configured, your AI assistant will have access to 9 gateway tools with acti
 | Gateway | Description | Actions |
 |---------|-------------|---------|
 | **explore** | File and code exploration | `read`, `list`, `analyze`, `search`, `getStructure` |
-| **context** | Context scaffolding and semantic context | `check`, `init`, `fill`, `fillSingle`, `listToFill`, `getMap`, `buildSemantic`, `scaffoldPlan` |
+| **context** | Context scaffolding, semantic context, and Q&A/flow utilities | `check`, `bootstrapStatus`, `init`, `fill`, `fillSingle`, `listToFill`, `getMap`, `buildSemantic`, `scaffoldPlan`, `searchQA`, `generateQA`, `getFlow`, `detectPatterns` |
 | **plan** | Plan management and execution tracking | `link`, `getLinked`, `getDetails`, `getForPhase`, `updatePhase`, `recordDecision`, `updateStep`, `getStatus`, `syncMarkdown`, `commitPhase` |
 | **agent** | Agent orchestration and discovery | `discover`, `getInfo`, `orchestrate`, `getSequence`, `getDocs`, `getPhaseDocs`, `listTypes` |
 | **skill** | Skill management for on-demand expertise | `list`, `getContent`, `getForPhase`, `scaffold`, `export`, `fill` |

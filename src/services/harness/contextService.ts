@@ -206,6 +206,7 @@ export class HarnessContextService {
     exclude?: string[];
     autoFill?: boolean;
     skipContentGeneration?: boolean;
+    generateQA?: boolean;
   }): Promise<HarnessContextInitResult> {
     const repoPath = params.repoPath || this.repoPath;
     const result = await initializeContextTool.execute!(
@@ -217,7 +218,8 @@ export class HarnessContextService {
         include: params.include,
         exclude: params.exclude,
         autoFill: params.autoFill,
-        skipContentGeneration: params.skipContentGeneration
+        skipContentGeneration: params.skipContentGeneration,
+        generateQA: params.generateQA,
       },
       toolExecutionContext
     ) as Record<string, unknown>;

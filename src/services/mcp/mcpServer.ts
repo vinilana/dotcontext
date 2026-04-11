@@ -154,13 +154,17 @@ export class AIContextMCPServer {
       description: `Context scaffolding and semantic context. Actions:
 - check: Check if .context scaffolding exists (params: repoPath?)
 - bootstrapStatus: Summarize scaffold, workflow, and harness bootstrap readiness (params: repoPath?)
-- init: Initialize .context scaffolding (params: repoPath?, type?, outputDir?, semantic?, autoFill?, skipContentGeneration?)
-- fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?)
+- init: Initialize .context scaffolding (params: repoPath?, type?, outputDir?, semantic?, autoFill?, skipContentGeneration?, generateQA?)
+- fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?) Generated Q&A docs under .context/docs/qa are already populated and are not returned unless you add custom unfilled docs there.
 - fillSingle: Fill a single scaffold file (params: repoPath?, filePath)
 - listToFill: List files that need filling (params: repoPath?, outputDir?, target?)
 - getMap: Get codebase map section (params: repoPath?, section?)
 - buildSemantic: Build semantic context (params: repoPath?, contextType?, targetFile?, options?)
 - scaffoldPlan: Create a plan template (params: planName, repoPath?, title?, summary?, autoFill?)
+- searchQA: Search generated Q&A docs (params: repoPath?, query)
+- generateQA: Generate Q&A docs from the codebase (params: repoPath?, options?)
+- getFlow: Trace a code path from an entry file/function (params: repoPath?, entryFile, entryFunction?, options?)
+- detectPatterns: Detect functional patterns in the codebase (params: repoPath?, options?)
 
 **Important:** Agents should provide repoPath on the FIRST call, then it will be cached:
 1. First call: context({ action: "check", repoPath: "/path/to/project" })
@@ -168,7 +172,7 @@ export class AIContextMCPServer {
 3. After context init, call fillSingle for each pending file
 4. Call workflow-init to enable PREVC workflow (unless trivial change)`,
       inputSchema: {
-        action: z.enum(['check', 'bootstrapStatus', 'init', 'fill', 'fillSingle', 'listToFill', 'getMap', 'buildSemantic', 'scaffoldPlan'])
+        action: z.enum(['check', 'bootstrapStatus', 'init', 'fill', 'fillSingle', 'listToFill', 'getMap', 'buildSemantic', 'scaffoldPlan', 'searchQA', 'generateQA', 'getFlow', 'detectPatterns'])
           .describe('Action to perform'),
         repoPath: z.string().optional()
           .describe('Repository path (defaults to cwd)'),
@@ -186,6 +190,8 @@ export class AIContextMCPServer {
           .describe('(init, scaffoldPlan) Auto-fill with codebase content'),
         skipContentGeneration: z.boolean().optional()
           .describe('(init) Skip pre-generating content'),
+        generateQA: z.boolean().optional()
+          .describe('(init) Generate Q&A docs under .context/docs/qa; these are pre-filled and do not require fillSingle'),
         target: z.enum(['docs', 'agents', 'skills', 'plans', 'all']).optional()
           .describe('(fill, listToFill) Which scaffolding to target, including nested skills'),
         offset: z.number().optional()
@@ -210,13 +216,19 @@ export class AIContextMCPServer {
           includeDocumentation: z.boolean().optional(),
           includeSignatures: z.boolean().optional()
         }).optional()
-          .describe('(buildSemantic) Builder options'),
+          .describe('(buildSemantic, generateQA, searchQA, getFlow, detectPatterns) Builder/analyzer options'),
         planName: z.string().optional()
           .describe('(scaffoldPlan) Name of the plan'),
         title: z.string().optional()
           .describe('(scaffoldPlan) Plan title'),
         summary: z.string().optional()
           .describe('(scaffoldPlan) Plan summary/goal'),
+        query: z.string().optional()
+          .describe('(searchQA) Query string used to search generated Q&A docs'),
+        entryFile: z.string().optional()
+          .describe('(getFlow) Entry file path for flow tracing'),
+        entryFunction: z.string().optional()
+          .describe('(getFlow) Optional entry function for flow tracing'),
       }
     }, wrap('context', async (params): Promise<MCPToolResponse> => {
       return handleContext(params as ContextParams, { repoPath: this.getRepoPath((params as ContextParams).repoPath), contextBuilder: this.contextBuilder });

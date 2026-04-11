@@ -53,6 +53,7 @@ export async function handleContext(
           exclude: params.exclude,
           autoFill: params.autoFill,
           skipContentGeneration: params.skipContentGeneration,
+          generateQA: params.generateQA,
         });
         return createScaffoldResponse(result, scaffold || {});
       }

@@ -78,6 +78,7 @@ export interface ContextParams {
   exclude?: string[];
   autoFill?: boolean;
   skipContentGeneration?: boolean;
+  generateQA?: boolean;
   target?: 'docs' | 'agents' | 'skills' | 'plans' | 'all';
   offset?: number;
   limit?: number;
