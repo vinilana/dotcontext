@@ -47,7 +47,7 @@ npm run smoke:packages
 If you touch `mcp:install`, keep these aligned:
 
 - `src/services/cli/mcpInstallService.ts`
-- `src/services/mcp/mcpInstallService.test.ts`
+- `src/services/cli/mcpInstallService.test.ts`
 - `README.md`
 - `docs/GUIDE.md`
 - `CHANGELOG.md`

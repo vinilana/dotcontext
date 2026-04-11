@@ -12,11 +12,16 @@ describe('CLI Commands', () => {
   describe('Main CLI', () => {
     it('should display help when --help flag is used', () => {
       const output = execSync(`node ${cliPath} --help`, { encoding: 'utf8' });
-      expect(output).toContain('Manage MCP integration, workflow, sync, and context imports');
+      expect(output).toContain('Sync .context assets, reverse-sync tool state, and install MCP integrations');
       expect(output).toContain('Commands:');
+      expect(output).toContain('sync');
+      expect(output).toContain('reverse-sync');
       expect(output).toContain('mcp:install');
-      expect(output).toContain('workflow');
-      expect(output).toContain('skill');
+      expect(output).toContain('admin');
+      expect(output).not.toContain('sync-agents');
+      expect(output).not.toContain('preview-splash');
+      expect(output).not.toMatch(/\n\s+workflow\b/);
+      expect(output).not.toMatch(/\n\s+skill\b/);
       expect(output).not.toMatch(/\n\s+init\b/);
       expect(output).not.toMatch(/\n\s+plan\b/);
       expect(output).not.toMatch(/\n\s+start\b/);
@@ -31,7 +36,7 @@ describe('CLI Commands', () => {
 
     it('should render the splash preview command', () => {
       const output = execSync(
-        `FORCE_COLOR=0 node ${cliPath} preview-splash --title "AI Coders CLI" --directory ${process.cwd()}`,
+        `FORCE_COLOR=0 node ${cliPath} admin preview-splash --title "AI Coders CLI" --directory ${process.cwd()}`,
         { encoding: 'utf8' }
       );
 
@@ -40,9 +45,17 @@ describe('CLI Commands', () => {
     });
   });
 
-  describe('skill command', () => {
+  describe('admin commands', () => {
+    it('should expose advanced commands under admin', () => {
+      const output = execSync(`node ${cliPath} admin --help`, { encoding: 'utf8' });
+      expect(output).toContain('workflow');
+      expect(output).toContain('skill');
+      expect(output).toContain('report');
+      expect(output).toContain('preview-splash');
+    });
+
     it('should only expose supported utility subcommands', () => {
-      const output = execSync(`node ${cliPath} skill --help`, { encoding: 'utf8' });
+      const output = execSync(`node ${cliPath} admin skill --help`, { encoding: 'utf8' });
       expect(output).toContain('list');
       expect(output).toContain('export');
       expect(output).not.toMatch(/\n\s+init\b/);

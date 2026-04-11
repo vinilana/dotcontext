@@ -66,7 +66,7 @@ If you change `mcp:install`, update all of the following together:
 - `docs/GUIDE.md`
 - `CHANGELOG.md`
 - `src/services/cli/mcpInstallService.ts`
-- `src/services/mcp/mcpInstallService.test.ts`
+- `src/services/cli/mcpInstallService.test.ts`
 
 The installer is the source of truth for supported clients and config formats. Documentation should describe what the installer actually writes, not what we hope clients support.
 

@@ -386,14 +386,14 @@ args = ["-y", "@dotcontext/cli@latest", "mcp"]
 
 ### Local Development
 
-For local development, point directly to the built distribution:
+For local development, point directly to the built distribution (after `npm run build`, from the repository root — the MCP server is the `mcp` subcommand on the main CLI entry):
 
 ```json
 {
   "mcpServers": {
     "dotcontext-dev": {
       "command": "node",
-      "args": ["/path/to/dotcontext-cli/dist/index.js", "mcp"]
+      "args": ["/absolute/path/to/this-repo/dist/index.js", "mcp"]
     }
   }
 }
