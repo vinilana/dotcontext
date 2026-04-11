@@ -37,6 +37,8 @@ describe('WorkflowService harness integration', () => {
     expect(harness?.session.name).toBe('alpha');
     expect(harness?.session.status).toBe('active');
     expect(await fs.pathExists(path.join(tempDir, '.context', 'workflow', 'harness-session.json'))).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, '.context', 'harness', 'workflows', 'prevc.json'))).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, '.context', 'workflow', 'status.yaml'))).toBe(false);
   });
 
   it('blocks workflow advance when required harness checks are missing', async () => {

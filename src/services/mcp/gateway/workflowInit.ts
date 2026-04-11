@@ -60,7 +60,7 @@ export async function handleWorkflowInit(
       archivePrevious: params.archive_previous,
     });
 
-    const statusFilePath = path.join(contextPath, 'workflow', 'status.yaml');
+    const workflowStatePath = path.join(contextPath, 'harness', 'workflows', 'prevc.json');
     const settings = await service.getSettings();
     const scale = getScaleName(status.project.scale as ProjectScale);
     const isAutonomous = settings.autonomous_mode;
@@ -97,7 +97,7 @@ export async function handleWorkflowInit(
         require_plan: settings.require_plan,
         require_approval: settings.require_approval,
       },
-      statusFilePath,
+      workflowStatePath,
       contextPath,
       orchestration,
       harness: harness ? {

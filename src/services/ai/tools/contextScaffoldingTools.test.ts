@@ -154,7 +154,6 @@ describe('context scaffolding tools', () => {
     expect(initial.readiness.harnessReady).toBe(false);
 
     await fs.ensureDir(path.join(tempDir, '.context', 'workflow'));
-    await fs.writeFile(path.join(tempDir, '.context', 'workflow', 'status.yaml'), 'name: test\n', 'utf-8');
     await fs.writeJson(path.join(tempDir, '.context', 'workflow', 'harness-session.json'), { sessionId: 's1' }, { spaces: 2 });
     await fs.ensureDir(path.join(tempDir, '.context', 'harness', 'sessions'));
     await fs.writeJson(path.join(tempDir, '.context', 'harness', 'sessions', 's1.json'), { id: 's1' }, { spaces: 2 });

@@ -1,11 +1,14 @@
 /**
  * MCP Action Logger
  *
- * Records MCP tool activity to a JSONL log under .context/workflow/.
+ * Records MCP tool activity into harness session traces instead of maintaining
+ * a separate workflow-local actions.jsonl log.
  */
 
-import * as path from 'path';
 import * as fs from 'fs-extra';
+import * as path from 'path';
+
+import { HarnessRuntimeStateService } from '../harness/runtimeStateService';
 import { resolveContextRoot } from '../shared/contextRootResolver';
 
 type ActionStatus = 'success' | 'error';
@@ -34,6 +37,9 @@ const SENSITIVE_KEYS = new Set([
 const MAX_DEPTH = 4;
 const MAX_ARRAY = 20;
 const MAX_STRING = 200;
+const MCP_ACTIVITY_NAME = 'mcp-activity';
+
+const sessionCache = new Map<string, string>();
 
 async function resolveContextPath(repoPath: string): Promise<string> {
   const resolution = await resolveContextRoot({
@@ -84,29 +90,86 @@ function sanitizeDetails(details?: Record<string, unknown>): Record<string, unkn
   return sanitizeValue(details) as Record<string, unknown>;
 }
 
+async function resolveWorkflowSessionId(contextPath: string): Promise<string | null> {
+  const bindingPath = path.join(contextPath, 'workflow', 'harness-session.json');
+  if (!(await fs.pathExists(bindingPath))) {
+    return null;
+  }
+
+  try {
+    const binding = await fs.readJson(bindingPath) as { sessionId?: string };
+    return typeof binding.sessionId === 'string' && binding.sessionId.length > 0
+      ? binding.sessionId
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveMcpActivitySessionId(
+  repoPath: string,
+  state: HarnessRuntimeStateService
+): Promise<string> {
+  const cached = sessionCache.get(repoPath);
+  if (cached) {
+    try {
+      await state.getSession(cached);
+      return cached;
+    } catch {
+      sessionCache.delete(repoPath);
+    }
+  }
+
+  const existing = (await state.listSessions()).find((session) =>
+    session.name === MCP_ACTIVITY_NAME &&
+    session.metadata?.transport === 'mcp'
+  );
+
+  if (existing) {
+    sessionCache.set(repoPath, existing.id);
+    return existing.id;
+  }
+
+  const created = await state.createSession({
+    name: MCP_ACTIVITY_NAME,
+    metadata: {
+      transport: 'mcp',
+      purpose: 'tool-audit',
+    },
+  });
+  sessionCache.set(repoPath, created.id);
+  return created.id;
+}
+
 export async function logMcpAction(
   repoPath: string,
   entry: Omit<MCPActionLogEntry, 'timestamp'> & { timestamp?: string }
 ): Promise<void> {
   try {
     const contextPath = await resolveContextPath(repoPath);
-    const contextExists = await fs.pathExists(contextPath);
-    if (!contextExists) {
+    if (!(await fs.pathExists(contextPath))) {
       return;
     }
-    const logPath = path.join(contextPath, 'workflow', 'actions.jsonl');
 
-    const payload: MCPActionLogEntry = {
-      timestamp: entry.timestamp || new Date().toISOString(),
-      tool: entry.tool,
-      action: entry.action,
-      status: entry.status,
-      ...(entry.details ? { details: sanitizeDetails(entry.details) } : {}),
-      ...(entry.error ? { error: entry.error } : {}),
-    };
+    const state = new HarnessRuntimeStateService({ repoPath });
+    const workflowSessionId = await resolveWorkflowSessionId(contextPath);
+    const sessionId = workflowSessionId || await resolveMcpActivitySessionId(repoPath, state);
+    const timestamp = entry.timestamp || new Date().toISOString();
 
-    await fs.ensureDir(path.dirname(logPath));
-    await fs.appendFile(logPath, `${JSON.stringify(payload)}\n`, 'utf-8');
+    await state.appendTrace(sessionId, {
+      level: entry.status === 'error' ? 'error' : 'info',
+      event: entry.status === 'error' ? 'mcp.tool.failed' : 'mcp.tool.succeeded',
+      message: `${entry.tool}.${entry.action} ${entry.status}`,
+      data: {
+        transport: 'mcp',
+        tool: entry.tool,
+        action: entry.action,
+        status: entry.status,
+        timestamp,
+        ...(entry.details ? { details: sanitizeDetails(entry.details) } : {}),
+        ...(entry.error ? { error: entry.error } : {}),
+      },
+    });
   } catch {
     // Logging should never block tool execution.
   }

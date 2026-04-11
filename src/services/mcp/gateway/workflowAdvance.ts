@@ -53,7 +53,7 @@ export async function handleWorkflowAdvance(
         success: false,
         error: 'No workflow found. Initialize a workflow first.',
         suggestion: 'Use workflow-init({ name: "feature-name" }) to start.',
-        statusFilePath: path.join(contextPath, 'workflow', 'status.yaml')
+        workflowStatePath: path.join(contextPath, 'harness', 'workflows', 'prevc.json')
       });
     }
 

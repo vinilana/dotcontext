@@ -88,3 +88,8 @@ export {
   type HarnessPolicyEvaluationInput,
   type HarnessPolicyEvaluationResult,
 } from './policyService';
+export {
+  HarnessWorkflowStateService,
+  type HarnessWorkflowStateServiceOptions,
+  type HarnessWorkflowRecord,
+} from './workflowStateService';

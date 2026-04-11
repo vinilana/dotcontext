@@ -82,6 +82,9 @@ export {
   type CreateHarnessPolicyRuleInput,
   type HarnessPolicyEvaluationInput,
   type HarnessPolicyEvaluationResult,
+  HarnessWorkflowStateService,
+  type HarnessWorkflowStateServiceOptions,
+  type HarnessWorkflowRecord,
 } from '../services/harness';
 
 export {
