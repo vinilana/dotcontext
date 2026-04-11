@@ -21,6 +21,8 @@ export interface ToolCapabilities {
 export interface ToolPaths {
   /** Primary export path for rules (relative to repo root) */
   rulesExport?: string;
+  /** File extension to use when exporting rules directories */
+  rulesFileExtension?: string;
   /** Import patterns for rules detection */
   rulesImport?: string[];
   /** Additional import paths for rules */
@@ -30,6 +32,8 @@ export interface ToolPaths {
 
   /** Primary export path for agents (relative to repo root) */
   agentsExport?: string;
+  /** Optional filename suffix to apply before `.md` when exporting agents */
+  agentsFilenameSuffix?: string;
   /** Import patterns for agents detection */
   agentsImport?: string[];
 
@@ -90,7 +94,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     paths: {
       rulesExport: '.cursor/rules',
       rulesFormat: 'directory',
-      rulesImport: ['**/.cursorrules', '**/.cursor/.cursorrules', '**/.cursor/rules/**/*.md'],
+      rulesFileExtension: '.mdc',
+      rulesImport: ['**/.cursorrules', '**/.cursor/.cursorrules', '**/.cursor/rules/**/*.md', '**/.cursor/rules/**/*.mdc'],
       rulesImportPaths: ['.cursorrules', '.cursor/.cursorrules', '.cursor/rules'],
       agentsExport: '.cursor/agents',
       agentsImport: ['**/.cursor/agents/**/*.md'],
@@ -104,14 +109,17 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     id: 'github',
     displayName: 'GitHub Copilot',
     directoryPrefix: '.github',
-    capabilities: { rules: true, agents: true, skills: false },
+    capabilities: { rules: true, agents: true, skills: true },
     paths: {
       rulesExport: '.github/copilot-instructions.md',
       rulesFormat: 'single',
-      rulesImport: ['**/.github/copilot-instructions.md', '**/.github/copilot/**/*', '**/.github/.copilot/**/*'],
-      rulesImportPaths: ['.github/copilot-instructions.md', '.github/copilot'],
+      rulesImport: ['**/.github/copilot-instructions.md', '**/.github/instructions/**/*.instructions.md', '**/.github/copilot/**/*', '**/.github/.copilot/**/*'],
+      rulesImportPaths: ['.github/copilot-instructions.md', '.github/instructions', '.github/copilot'],
       agentsExport: '.github/agents',
-      agentsImport: ['**/.github/agents/**/*.md'],
+      agentsFilenameSuffix: '.agent',
+      agentsImport: ['**/.github/agents/**/*.md', '**/.github/agents/**/*.agent.md'],
+      skillsExport: '.github/skills',
+      skillsImport: ['**/.github/skills/*/SKILL.md'],
     },
     description: 'GitHub Copilot instructions',
   },
@@ -121,7 +129,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     id: 'windsurf',
     displayName: 'Windsurf (Codeium)',
     directoryPrefix: '.windsurf',
-    capabilities: { rules: true, agents: true, skills: false },
+    capabilities: { rules: true, agents: true, skills: true },
     paths: {
       rulesExport: '.windsurf/rules',
       rulesFormat: 'directory',
@@ -129,6 +137,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       rulesImportPaths: ['.windsurfrules', '.windsurf/rules', '.windsurf/.windsurfrules'],
       agentsExport: '.windsurf/agents',
       agentsImport: ['**/.windsurf/agents/**/*.md'],
+      skillsExport: '.windsurf/skills',
+      skillsImport: ['**/.windsurf/skills/*/SKILL.md'],
     },
     description: 'Windsurf rules directory',
     specialFiles: ['.windsurfrules'],
@@ -177,17 +187,16 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     directoryPrefix: '.agent',
     capabilities: { rules: true, agents: true, skills: true },
     paths: {
-      rulesExport: '.agent/rules',
+      rulesExport: '.agents/rules',
       rulesFormat: 'directory',
-      rulesImport: ['**/.agent/rules/**/*.md', '**/GEMINI.md'],
-      rulesImportPaths: ['.agent/rules', path.join(os.homedir(), '.gemini', 'GEMINI.md')],
-      agentsExport: '.agent/agents',
-      agentsImport: ['**/.agent/agents/**/*.md'],
-      skillsExport: '.agent/workflows',
-      skillsImport: ['**/.agent/workflows/*/SKILL.md', '**/.agent/workflows/**/*.md'],
+      rulesImport: ['**/.agents/rules/**/*.md', '**/.agent/rules/**/*.md', '**/GEMINI.md'],
+      rulesImportPaths: ['.agents/rules', '.agent/rules', path.join(os.homedir(), '.gemini', 'GEMINI.md')],
+      agentsExport: '.agents/agents',
+      agentsImport: ['**/.agents/agents/**/*.md', '**/.agent/agents/**/*.md'],
+      skillsExport: '.agents/workflows',
+      skillsImport: ['**/.agents/workflows/*/SKILL.md', '**/.agents/workflows/**/*.md', '**/.agent/workflows/*/SKILL.md', '**/.agent/workflows/**/*.md'],
     },
     description: 'Google Antigravity rules directory',
-    specialFiles: ['GEMINI.md'],
   },
 
   // Trae AI
@@ -212,12 +221,16 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     id: 'gemini',
     displayName: 'Gemini CLI',
     directoryPrefix: '.gemini',
-    capabilities: { rules: false, agents: false, skills: true },
+    capabilities: { rules: true, agents: false, skills: true },
     paths: {
+      rulesExport: 'GEMINI.md',
+      rulesFormat: 'single',
+      rulesImport: ['**/GEMINI.md'],
+      rulesImportPaths: ['GEMINI.md'],
       skillsExport: '.gemini/skills',
       skillsImport: ['**/.gemini/skills/*/SKILL.md', '**/.gemini/skills/**/*.md'],
     },
-    description: 'Gemini CLI skills directory',
+    description: 'Gemini CLI project instructions',
   },
 
   // Codex CLI
@@ -227,14 +240,14 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     directoryPrefix: '.codex',
     capabilities: { rules: true, agents: false, skills: true },
     paths: {
-      rulesExport: '.codex/instructions.md',
+      rulesExport: 'AGENTS.md',
       rulesFormat: 'single',
-      rulesImport: ['**/.codex/instructions.md', '**/.codex/config.toml', '**/.codex/**/*.md'],
-      rulesImportPaths: ['.codex/instructions.md', '.codex/config.toml'],
+      rulesImport: ['**/AGENTS.md', '**/.codex/instructions.md', '**/.codex/config.toml', '**/.codex/**/*.md'],
+      rulesImportPaths: ['AGENTS.md', '.codex/instructions.md', '.codex/config.toml'],
       skillsExport: '.codex/skills',
       skillsImport: ['**/.codex/skills/*/SKILL.md', '**/.codex/skills/**/*.md'],
     },
-    description: 'Codex CLI skills directory',
+    description: 'Codex project instructions',
   },
 
   // Agent Skills (Cross-Client) - agentskills.io interoperability standard
@@ -413,6 +426,10 @@ export function getToolsWithCapability(capability: keyof ToolCapabilities): Tool
 export function getToolIdFromPath(filePath: string): string {
   const normalizedPath = filePath.replace(/\\/g, '/');
 
+  if (normalizedPath.includes('.agents/') || normalizedPath.startsWith('.agents')) {
+    return 'antigravity';
+  }
+
   // Check directory prefixes
   for (const tool of TOOL_REGISTRY) {
     if (normalizedPath.includes(`${tool.directoryPrefix}/`) ||
@@ -495,9 +512,10 @@ export function getRulesExportPresets(): Record<string, Array<{
   name: string;
   path: string;
   format: 'single' | 'directory';
+  fileExtension?: string;
   description: string;
 }>> {
-  const presets: Record<string, Array<{ name: string; path: string; format: 'single' | 'directory'; description: string }>> = {};
+  const presets: Record<string, Array<{ name: string; path: string; format: 'single' | 'directory'; fileExtension?: string; description: string }>> = {};
 
   for (const tool of getToolsWithCapability('rules')) {
     if (tool.paths.rulesExport) {
@@ -505,6 +523,7 @@ export function getRulesExportPresets(): Record<string, Array<{
         name: `${tool.id}-rules`,
         path: tool.paths.rulesExport,
         format: tool.paths.rulesFormat || 'single',
+        fileExtension: tool.paths.rulesFileExtension,
         description: tool.description,
       }];
     }
@@ -519,15 +538,17 @@ export function getRulesExportPresets(): Record<string, Array<{
 export function getAgentsSyncPresets(): Record<string, {
   name: string;
   path: string;
+  filenameSuffix?: string;
   description: string;
 }> {
-  const presets: Record<string, { name: string; path: string; description: string }> = {};
+  const presets: Record<string, { name: string; path: string; filenameSuffix?: string; description: string }> = {};
 
   for (const tool of getToolsWithCapability('agents')) {
     if (tool.paths.agentsExport) {
       presets[tool.id] = {
         name: tool.id,
         path: tool.paths.agentsExport,
+        filenameSuffix: tool.paths.agentsFilenameSuffix,
         description: `${tool.displayName} agents directory`,
       };
     }

@@ -193,6 +193,9 @@ export class RulesDetector {
     if (sourceName.includes('aider')) return 'aider';
     if (sourceName.includes('continue')) return 'continue';
     if (sourceName.includes('codex')) return 'codex';
+    if (sourceName.includes('gemini')) return 'gemini';
+    if (sourceName.includes('antigravity')) return 'antigravity';
+    if (sourceName.includes('trae')) return 'trae';
     if (sourceName.includes('zed')) return 'zed';
     return 'generic';
   }
@@ -207,13 +210,16 @@ export class RulesDetector {
     if (normalized.includes('.aider') || normalized.includes('conventions.md')) return 'aider';
     if (normalized.includes('.continuerules') || normalized.includes('.continue/')) return 'continue';
     if (normalized.includes('.codex/')) return 'codex';
+    if (normalized.endsWith('/gemini.md') || normalized === 'gemini.md') return 'gemini';
+    if (normalized.includes('.agent/') || normalized.includes('.agents/')) return 'antigravity';
+    if (normalized.includes('.trae/')) return 'trae';
     if (normalized.includes('.zed/')) return 'zed';
     return 'generic';
   }
 
   private generateTargetFilename(sourcePath: string, type: RuleType): string {
     const basename = path.basename(sourcePath, path.extname(sourcePath));
-    const ext = path.extname(sourcePath) || '.md';
+    const ext = '.md';
     
     // Generate meaningful filename based on rule type
     const prefixMap: Record<RuleType, string> = {
@@ -225,6 +231,9 @@ export class RulesDetector {
       'aider': 'aider-conventions',
       'continue': 'continue-rules',
       'codex': 'codex-instructions',
+      'gemini': 'gemini-instructions',
+      'antigravity': 'antigravity-rules',
+      'trae': 'trae-rules',
       'zed': 'zed-settings',
       'generic': 'rules'
     };

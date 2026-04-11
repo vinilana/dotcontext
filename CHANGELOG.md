@@ -8,11 +8,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.0] - 2026-04-11
 
+### Why this release matters
+
+`0.9.0` is the release where `dotcontext` stops being described primarily as a CLI plus MCP installer and becomes a harness engineering runtime for agent-driven software delivery.
+
+The reason for this shift is practical:
+
+- The project already had three distinct responsibilities in the same codebase: operator commands, MCP transport, and runtime orchestration/state.
+- Keeping those concerns blurred made the product harder to evolve, harder to reason about, and harder to make reliable for long-running agent workflows.
+- The new harness layer makes the execution model explicit: sessions, traces, artifacts, sensors, task contracts, handoffs, policy, replay, and workflow state are now first-class runtime concerns instead of incidental side effects spread across the CLI and MCP adapters.
+
+In product terms, this release establishes the architecture the project was already converging toward:
+
+- `dotcontext` CLI for operator-facing sync, reverse-sync, install, and local admin flows
+- `dotcontext/harness` as the reusable runtime and control plane
+- `dotcontext/mcp` as the transport adapter agents talk to
+
+This release does not just add new commands. It changes what the product is for:
+
+- from scaffolding and sync around `.context`
+- to a runtime that can govern how agents operate, validate work, exchange artifacts, persist execution state, and expose that behavior consistently through MCP and workflow layers
+
+That is why many of the changes below are structural. The value of `0.9.0` is not only new functionality, but that the system now has a coherent runtime model instead of multiple partially overlapping ones.
+
 ### Added
 
 - **Harness runtime foundation**: added a transport-agnostic harness layer with durable sessions, traces, artifacts, and checkpoints under `.context/harness`
   - New runtime state service for persistent execution state shared by CLI, workflow, and MCP adapters
   - Session quality snapshots with backpressure evaluation and task completion checks
+
+- **Current tool-surface support in sync/export flows**
+  - Added primary-surface support for `GEMINI.md` exports/imports for Gemini CLI
+  - Added GitHub Copilot skill export/import support via `.github/skills`
+  - Added Windsurf skill export/import support via `.windsurf/skills`
+  - Added support for GitHub Copilot agent filename compatibility using `.agent.md`
+  - Added support for per-tool agent filename suffixes and per-tool rules file extensions in the unified tool registry
+
+- **Bootstrap policy scaffolding**: `context init` now also materializes a project-local harness policy document
+  - Repositories now start with explicit `.context/harness/policy.json` instead of relying on implicit runtime defaults
+  - Bootstrap readiness now distinguishes configuration readiness from runtime readiness
 
 - **Harness quality controls**: added first-class sensors, backpressure policies, task contracts, and handoff contracts
   - Sensors can persist execution evidence and block completion when critical checks fail
@@ -40,10 +74,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `src/harness` is the reusable runtime/domain boundary
   - `src/mcp` is the transport adapter boundary
 
+- Updated CLI-facing documentation to reflect current public and hidden command surfaces, including `admin workflow`, `admin skill`, `sync`, `reverse-sync`, and the newer AI-tool context file conventions.
+
+- **Sync/export surfaces updated toward current conventions**
+  - Cursor rules directory exports now use `.mdc` files
+  - Codex rules now export to `AGENTS.md`, while still importing legacy `.codex/instructions.md`
+  - Google Antigravity now exports to `.agents/rules` and `.agents/workflows` while continuing to import legacy `.agent/*` layouts
+  - Quick sync defaults and prompts now reflect the newer rules/skills target set for GitHub Copilot, Gemini, Windsurf, Codex, and Antigravity
+
+- **PREVC workflow state is now harness-native**
+  - Canonical workflow state and workflow-to-session binding now live together under `.context/harness/workflows/prevc.json`
+  - Legacy workflow-side binding files are treated only as migration inputs and are no longer part of the active runtime model
+
 - **Workflow integration now uses harness runtime controls**
   - PREVC workflow initialization creates and binds harness sessions
   - Workflow advance can be blocked by harness completion checks
   - Workflow management records artifacts, checkpoints, tasks, handoffs, and sensor runs through the harness runtime
+
+- **Failure dataset generation is now canonical and side-effect free**
+  - Failure datasets are generated exclusively through `datasetService`
+  - Replay generation for datasets no longer persists replay artifacts as a side effect
+
+- **Package root is now library-safe**
+  - The package root export now points at the CLI boundary instead of the process-bootstrapping entrypoint
+  - MCP shutdown handling was centralized to avoid duplicate signal handlers and race conditions during server stop
 
 - **MCP gateway surface expanded**
   - Added explicit harness operations for replay, dataset building, and policy document management
@@ -54,9 +108,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Policy enforcement consistency**
   - Aligned workflow and MCP policy handling around a single harness policy model
   - Fixed policy document operations through the MCP harness gateway
+  - Sensor execution now goes through harness policy authorization
+  - MCP `evaluatePolicy` now maps target/action/path/approval inputs correctly
+
+- **Sync/export metrics and auditability**
+  - `SyncService.run()` now returns aggregate results instead of only printing UI output
+  - `ContextExportService` now reports the real number of exported agent files instead of a placeholder count
+  - `ReverseQuickSyncService` now uses real import results for rules and agents instead of detection counts
+
+- **Reverse-sync signal quality**
+  - Skill detection now imports only canonical `SKILL.md` files instead of treating any markdown file under skill directories as a skill
+  - Agent import normalizes `.agent.md` filenames back into canonical `.context/agents/*.md`
+  - Rules imported from non-markdown sources now normalize to `.md` targets in `.context/docs`
+  - Skill merge mode now avoids re-appending identical imported content
 
 - **Packaging validation coverage**
   - Added smoke checks for generated `cli`, `harness`, and `mcp` package bundles before local release preparation
+
+- **Workflow-plan approval drift**
+  - `workflow-manage approvePlan` now persists approval metadata into workflow plan tracking instead of mutating transient in-memory refs
+  - Re-linking an already approved plan now preserves approval metadata
+
+- **Headless MCP installation**
+  - `mcp:install` no longer no-ops in non-interactive contexts when no installed tools are detected
+  - Headless installs now fall back deterministically to supported tool targets
+
+- **MCP execution logging**
+  - MCP activity now resolves workflow session binding through canonical harness state before appending traces
+  - Logging falls back cleanly when stale workflow bindings point at missing sessions
 
 ### Technical Details
 

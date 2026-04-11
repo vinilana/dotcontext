@@ -5,7 +5,7 @@
 This guide reflects the current product shape in `0.9.x`:
 
 - Context creation and AI-generated fills happen through MCP-connected AI tools.
-- The standalone CLI is still useful for workflow tracking, sync/import operations, and MCP setup.
+- The standalone CLI is still useful for sync/import operations, MCP setup, and hidden `admin` utilities.
 - The public product name is `dotcontext`, and the package name is `@dotcontext/cli`.
 
 ## Start Here
@@ -23,7 +23,7 @@ npx -y @dotcontext/cli@latest mcp:install
 #   start the workflow
 
 # 3. For non-trivial work, track execution from the CLI
-npx -y @dotcontext/cli@latest workflow init "feature-name"
+npx -y @dotcontext/cli@latest admin workflow init "feature-name"
 ```
 
 If you are using the MCP path, you usually do not need an API key. Your AI tool provides the model.
@@ -34,9 +34,9 @@ If you are using the MCP path, you usually do not need an API key. Your AI tool 
 | --- | --- |
 | MCP setup | Installs and configures the `dotcontext` MCP server across supported AI clients with client-specific config formats |
 | Context scaffolding | Creates and fills `.context/` content through MCP-connected AI tools |
-| Workflow tracking | Manages PREVC phase progression from the CLI or MCP |
+| Workflow tracking | Manages PREVC phase progression from the hidden `admin workflow` surface or MCP |
 | Sync and imports | Exports rules and agents to AI tools, and imports existing tool-specific content back into `.context/` |
-| Skills | Lists and exports built-in or project skills |
+| Skills | Lists and exports built-in or project skills through the hidden `admin skill` surface |
 
 ## What Changed
 
@@ -87,9 +87,9 @@ Typical prompts:
 For work that needs structure, use the workflow commands:
 
 ```bash
-npx -y @dotcontext/cli@latest workflow init "feature-name"
-npx -y @dotcontext/cli@latest workflow status
-npx -y @dotcontext/cli@latest workflow advance
+npx -y @dotcontext/cli@latest admin workflow init "feature-name"
+npx -y @dotcontext/cli@latest admin workflow status
+npx -y @dotcontext/cli@latest admin workflow advance
 ```
 
 The workflow uses PREVC:
@@ -105,8 +105,8 @@ The workflow uses PREVC:
 For larger tasks, the workflow can also record handoffs and collaboration:
 
 ```bash
-npx -y @dotcontext/cli@latest workflow handoff feature-developer code-reviewer
-npx -y @dotcontext/cli@latest workflow collaborate "API contract review"
+npx -y @dotcontext/cli@latest admin workflow handoff feature-developer code-reviewer
+npx -y @dotcontext/cli@latest admin workflow collaborate "API contract review"
 ```
 
 ### 4. Sync or Import Context As Needed
@@ -116,13 +116,13 @@ Use the CLI when you need to move rules or agents between `.context/` and tool-s
 Export rules:
 
 ```bash
-npx -y @dotcontext/cli@latest export-rules --preset cursor
+npx -y @dotcontext/cli@latest sync --preset cursor
 ```
 
 Export agents:
 
 ```bash
-npx -y @dotcontext/cli@latest sync-agents --preset claude
+npx -y @dotcontext/cli@latest sync --preset claude
 ```
 
 Import rules or agents from existing tool configs:
@@ -153,7 +153,7 @@ The quick sync flow can export docs, agents, and skills together. It is part of 
 Generate a workflow report when you want a quick status snapshot:
 
 ```bash
-npx -y @dotcontext/cli@latest report
+npx -y @dotcontext/cli@latest admin report
 ```
 
 You can also export the report as Markdown or JSON.
@@ -182,15 +182,15 @@ These are the main commands currently exposed by the CLI:
 | `npx -y @dotcontext/cli@latest` | Launch the interactive CLI, including quick sync |
 | `npx -y @dotcontext/cli@latest mcp:install` | Install MCP configuration for supported AI tools |
 | `npx -y @dotcontext/cli@latest mcp` | Start the MCP server manually |
-| `npx -y @dotcontext/cli@latest workflow ...` | Manage PREVC workflow state |
-| `npx -y @dotcontext/cli@latest skill list` | List available skills |
-| `npx -y @dotcontext/cli@latest skill export` | Export skills to AI tool directories |
-| `npx -y @dotcontext/cli@latest sync-agents` | Export agent playbooks to AI tools |
+| `npx -y @dotcontext/cli@latest admin workflow ...` | Manage PREVC workflow state |
+| `npx -y @dotcontext/cli@latest admin skill list` | List available skills |
+| `npx -y @dotcontext/cli@latest admin skill export` | Export skills to AI tool directories |
+| `npx -y @dotcontext/cli@latest sync` | Export agent playbooks to AI tools |
 | `npx -y @dotcontext/cli@latest export-rules` | Export `.context/docs` rules to AI tools |
 | `npx -y @dotcontext/cli@latest import-rules` | Import rules into `.context/docs` |
 | `npx -y @dotcontext/cli@latest import-agents` | Import agents into `.context/agents` |
 | `npx -y @dotcontext/cli@latest reverse-sync` | Import rules, agents, and skills into `.context/` |
-| `npx -y @dotcontext/cli@latest report` | Generate workflow progress reports |
+| `npx -y @dotcontext/cli@latest admin report` | Generate workflow progress reports |
 
 ## MCP Reference
 
@@ -216,8 +216,8 @@ For AI-agent use, provide `repoPath` on the first context-heavy MCP call so dotc
 The current standalone skill commands are intentionally narrow:
 
 ```bash
-npx -y @dotcontext/cli@latest skill list
-npx -y @dotcontext/cli@latest skill export
+npx -y @dotcontext/cli@latest admin skill list
+npx -y @dotcontext/cli@latest admin skill export
 ```
 
 Use the MCP `skill` tool when you want skill scaffolding or AI-assisted fill behavior. The CLI remains focused on discovery and export.
@@ -237,7 +237,7 @@ Install MCP and ask your AI tool to initialize context first. If you already hav
 Initialize the workflow after `.context/` exists:
 
 ```bash
-npx -y @dotcontext/cli@latest workflow init "feature-name"
+npx -y @dotcontext/cli@latest admin workflow init "feature-name"
 ```
 
 ### "I only need exports/imports"
@@ -255,13 +255,13 @@ You do not need the full PREVC workflow for that. Use the sync and import comman
 ```bash
 npx -y @dotcontext/cli@latest
 npx -y @dotcontext/cli@latest mcp:install
-npx -y @dotcontext/cli@latest workflow init "feature-name"
-npx -y @dotcontext/cli@latest workflow status
-npx -y @dotcontext/cli@latest workflow advance
-npx -y @dotcontext/cli@latest skill list
-npx -y @dotcontext/cli@latest skill export
-npx -y @dotcontext/cli@latest sync-agents --preset claude
+npx -y @dotcontext/cli@latest admin workflow init "feature-name"
+npx -y @dotcontext/cli@latest admin workflow status
+npx -y @dotcontext/cli@latest admin workflow advance
+npx -y @dotcontext/cli@latest admin skill list
+npx -y @dotcontext/cli@latest admin skill export
+npx -y @dotcontext/cli@latest sync --preset claude
 npx -y @dotcontext/cli@latest export-rules --preset cursor
 npx -y @dotcontext/cli@latest reverse-sync --dry-run
-npx -y @dotcontext/cli@latest report
+npx -y @dotcontext/cli@latest admin report
 ```

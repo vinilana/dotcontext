@@ -554,8 +554,8 @@ Actions:
           .describe('(list) Include full content'),
         includeBuiltIn: z.boolean().optional()
           .describe('(export, fill) Include built-in skills'),
-        preset: z.enum(['claude', 'gemini', 'codex', 'antigravity', 'all']).optional()
-          .describe('(export) Target AI tool'),
+        preset: z.string().optional()
+          .describe('(export) Target AI tool preset'),
         force: z.boolean().optional()
           .describe('(scaffold, export) Overwrite existing'),
       }

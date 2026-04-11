@@ -7,6 +7,7 @@ export type {
   SyncServiceDependencies,
   SyncOptions,
   SyncResult,
+  SyncRunResult,
   AgentFileInfo,
   HandlerOptions,
   HandlerResult

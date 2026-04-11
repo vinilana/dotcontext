@@ -52,18 +52,18 @@ The main architecture reference, with Mermaid diagrams for runtime flow, boundar
 
 ### 1. Context Fragmentation
 
-Every AI coding tool invented its own way to organize context:
+Every AI coding tool now has a primary surface plus older compatibility paths that still show up in the wild. Dotcontext keeps track of both so teams can write against the current surface without losing legacy imports.
 
-```
-.cursor/rules/          # Cursor
-.claude/                # Claude Code
-.windsurf/rules/        # Windsurf
-.github/agents/         # Copilot
-.cline/                 # Cline
-.agent/rules/           # Google Antigravity
-.trae/rules/            # Trae AI
-AGENTS.md               # Codex
-```
+| Tool | Primary surface | Legacy / compatibility surface |
+| --- | --- | --- |
+| Cursor | `.cursor/rules/*.mdc`, `AGENTS.md`-scoped instructions | `.cursorrules`, `.cursor/rules/*.md` |
+| Claude Code | `CLAUDE.md`, `.claude/agents`, `.claude/skills` | older memory-style files under `.claude/` |
+| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/skills` | `.github/copilot/*` and `.github/.copilot/*` |
+| Windsurf | `AGENTS.md`, `.windsurf/rules`, `.windsurf/skills` | `.windsurfrules`, older `.windsurf/` rule files |
+| Gemini | `GEMINI.md`, `.gemini/commands`, `.gemini/settings.json`, `.gemini/skills` | older `.gemini/` config layouts |
+| Codex | `AGENTS.md`, `.codex/skills`, `.codex/config.toml` | `.codex/instructions.md` |
+| Google Antigravity | `.agents/rules`, `.agents/workflows` | older `.agent/` layouts |
+| Trae AI | `.trae/rules`, `.trae/agents` | older `.trae/` rule files |
 
 Using multiple tools means duplicating rules, playbooks, and documentation across incompatible formats.
 
@@ -180,18 +180,18 @@ For the full system view, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 **Sem necessidade de API key.** Sua ferramenta de IA fornece o LLM.
 
-### Path 2: Standalone CLI — workflow, sync, imports, and MCP setup
+### Path 2: Standalone CLI — sync, imports, and admin tools
 
 #### English
 
 1. Run `npx -y @dotcontext/cli@latest`
-2. Use the interactive CLI for workflow, sync, reverse sync, and MCP setup
+2. Use the interactive CLI for sync, reverse sync, hidden admin tools, and MCP setup
 3. When you need context creation or AI-generated content, use your MCP-connected AI tool
 
 #### Português
 
 1. Execute `npx -y @dotcontext/cli@latest`
-2. Use a CLI interativa para workflow, sincronização, reverse sync e configuração MCP
+2. Use a CLI interativa para sincronização, reverse sync, ferramentas administrativas ocultas e configuração MCP
 3. Quando precisar criar contexto ou gerar conteúdo com IA, use sua ferramenta conectada via MCP
 
 ## MCP Server Setup
@@ -584,8 +584,8 @@ Skills are task-specific procedures that AI agents activate when needed:
 | `security-audit` | Security review checklist | R, V |
 
 ```bash
-npx -y @dotcontext/cli@latest skill list   # List available skills
-npx -y @dotcontext/cli@latest skill export # Export to AI tools
+npx -y @dotcontext/cli@latest admin skill list   # List available skills
+npx -y @dotcontext/cli@latest admin skill export # Export to AI tools
 ```
 
 Use MCP tools from your AI assistant to scaffold, fill, or refresh skills and other context files.

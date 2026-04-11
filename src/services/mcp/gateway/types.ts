@@ -160,7 +160,7 @@ export interface SkillParams {
   skills?: string[];
   includeContent?: boolean;
   includeBuiltIn?: boolean;
-  preset?: 'claude' | 'gemini' | 'codex' | 'antigravity' | 'all';
+  preset?: string;
 }
 
 export interface HarnessParams {

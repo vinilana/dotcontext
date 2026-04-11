@@ -27,6 +27,7 @@ export interface ExportTarget {
   name: string;
   path: string;
   format: 'single' | 'directory';
+  fileExtension?: string;
   filename?: string;
   description: string;
 }
@@ -78,11 +79,27 @@ function buildExportPresets(): Record<string, ExportTarget[]> {
   ];
 
   // Build 'all' preset
-  presets.all = Object.entries(presets)
+  presets.all = deduplicateTargets(
+    Object.entries(presets)
     .filter(([key]) => key !== 'all')
-    .flatMap(([, targets]) => targets);
+    .flatMap(([, targets]) => targets)
+  );
 
   return presets;
+}
+
+function deduplicateTargets(targets: ExportTarget[]): ExportTarget[] {
+  const seen = new Set<string>();
+  const deduplicated: ExportTarget[] = [];
+
+  for (const target of targets) {
+    const key = `${target.path}:${target.format}:${target.fileExtension || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduplicated.push(target);
+  }
+
+  return deduplicated;
 }
 
 /**
@@ -188,7 +205,7 @@ export class ExportRulesService {
         await ensureParentDirectory(targetPath);
         await fs.writeFile(targetPath, combinedContent, 'utf-8');
       } else {
-        await this.exportToDirectory(targetPath, rules);
+        await this.exportToDirectory(targetPath, rules, target.fileExtension);
       }
 
       result.filesCreated++;
@@ -241,15 +258,15 @@ export class ExportRulesService {
         }
       }
 
-      return resolved;
+      return deduplicateTargets(resolved);
     }
 
     // Default: export to common targets
-    return [
+    return deduplicateTargets([
       EXPORT_PRESETS.cursor[0],
       ...EXPORT_PRESETS.claude,
       ...EXPORT_PRESETS.github,
-    ];
+    ]);
   }
 
   /**
@@ -354,11 +371,15 @@ export class ExportRulesService {
   /**
    * Export rules to a directory (multiple files)
    */
-  private async exportToDirectory(targetPath: string, rules: RuleFile[]): Promise<void> {
+  private async exportToDirectory(
+    targetPath: string,
+    rules: RuleFile[],
+    fileExtension = '.md'
+  ): Promise<void> {
     await ensureDirectory(targetPath);
 
     for (const rule of rules) {
-      const filePath = path.join(targetPath, `${rule.name}.md`);
+      const filePath = path.join(targetPath, `${rule.name}${fileExtension}`);
       await fs.writeFile(filePath, rule.content, 'utf-8');
     }
   }

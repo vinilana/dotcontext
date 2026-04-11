@@ -18,8 +18,8 @@ function buildRuleSources(): RuleSource[] {
   // Add generic AI rules files (not in registry)
   const genericSource: RuleSource = {
     name: 'generic',
-    paths: ['AI_RULES.md', 'CODING_RULES.md', 'AI_INSTRUCTIONS.md', 'CLAUDE.md'],
-    patterns: ['**/AI_RULES.md', '**/CODING_RULES.md', '**/AI_INSTRUCTIONS.md', '**/CLAUDE.md'],
+    paths: ['AI_RULES.md', 'CODING_RULES.md', 'AI_INSTRUCTIONS.md', 'CLAUDE.md', 'AGENTS.md'],
+    patterns: ['**/AI_RULES.md', '**/CODING_RULES.md', '**/AI_INSTRUCTIONS.md', '**/CLAUDE.md', '**/AGENTS.md'],
     description: 'Generic AI coding rules files'
   };
 

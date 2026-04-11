@@ -225,7 +225,7 @@ export class HarnessSkillsService {
   }
 
   async export(params: {
-    preset?: 'claude' | 'gemini' | 'codex' | 'antigravity' | 'all';
+    preset?: string;
     includeBuiltIn?: boolean;
   }): Promise<Record<string, unknown>> {
     const { SkillExportService } = require('../export/skillExportService');

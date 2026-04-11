@@ -18,6 +18,7 @@ describe('CLI Commands', () => {
       expect(output).toContain('reverse-sync');
       expect(output).toContain('mcp:install');
       expect(output).toContain('admin');
+      expect(output).not.toContain('report');
       expect(output).not.toContain('sync-agents');
       expect(output).not.toContain('preview-splash');
       expect(output).not.toMatch(/\n\s+workflow\b/);

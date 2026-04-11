@@ -471,7 +471,7 @@ function registerSkillCommands(parent: Command, hidden = false): Command {
     .command('export')
     .description(t('commands.skill.export.description'))
     .argument('[repo-path]', 'Repository path', process.cwd())
-    .option('-p, --preset <preset>', 'Export preset: claude, gemini, codex, all', 'all')
+    .option('-p, --preset <preset>', 'Export preset, for example: claude, github, windsurf, codex, antigravity, all', 'all')
     .option('-f, --force', 'Overwrite existing files')
     .option('--include-builtin', 'Include built-in skills even if not scaffolded')
     .option('--dry-run', 'Preview changes without writing')
@@ -1002,8 +1002,8 @@ async function runQuickSync(): Promise<void> {
       skipSkills: false,
       skipDocs: false,
       agentTargets: ['claude', 'github'],
-      skillTargets: ['claude', 'gemini', 'codex'],
-      docTargets: ['cursor', 'claude', 'agents'],
+      skillTargets: ['claude', 'github', 'windsurf', 'codex', 'antigravity'],
+      docTargets: ['cursor', 'claude', 'github', 'gemini', 'agents'],
       force: false,
       dryRun: false,
       verbose: false,
@@ -1059,8 +1059,11 @@ async function runQuickSync(): Promise<void> {
           message: t('prompts.quickSync.selectSkillTargets'),
           choices: [
             { name: '.claude/skills (Claude Code)', value: 'claude', checked: true },
-            { name: '.gemini/skills (Gemini CLI)', value: 'gemini', checked: true },
-            { name: '.codex/skills (Codex CLI)', value: 'codex', checked: true },
+            { name: '.github/skills (GitHub Copilot)', value: 'github', checked: true },
+            { name: '.windsurf/skills (Windsurf)', value: 'windsurf', checked: true },
+            { name: '.codex/skills (Codex compatibility)', value: 'codex', checked: true },
+            { name: '.agents/workflows (Google Antigravity)', value: 'antigravity', checked: true },
+            { name: '.gemini/skills (Gemini compatibility)', value: 'gemini', checked: false },
           ],
         },
       ]);
@@ -1074,10 +1077,12 @@ async function runQuickSync(): Promise<void> {
           name: 'targets',
           message: t('prompts.quickSync.selectDocTargets'),
           choices: [
-            { name: '.cursorrules (Cursor AI)', value: 'cursor', checked: true },
+            { name: '.cursor/rules (Cursor AI)', value: 'cursor', checked: true },
             { name: 'CLAUDE.md (Claude Code)', value: 'claude', checked: true },
+            { name: '.github/copilot-instructions.md (GitHub Copilot)', value: 'github', checked: true },
+            { name: 'GEMINI.md (Gemini CLI)', value: 'gemini', checked: true },
             { name: 'AGENTS.md (Universal)', value: 'agents', checked: true },
-            { name: '.windsurfrules (Windsurf)', value: 'windsurf', checked: false },
+            { name: '.windsurf/rules (Windsurf)', value: 'windsurf', checked: false },
             { name: '.clinerules (Cline)', value: 'cline', checked: false },
             { name: 'CONVENTIONS.md (Aider)', value: 'aider', checked: false },
           ],

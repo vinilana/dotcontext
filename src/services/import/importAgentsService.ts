@@ -26,7 +26,7 @@ export class ImportAgentsService {
     this.detector = new AgentsDetector();
   }
 
-  async run(rawOptions: ImportAgentsCommandFlags, repoPath: string = process.cwd()): Promise<void> {
+  async run(rawOptions: ImportAgentsCommandFlags, repoPath: string = process.cwd()): Promise<ImportResult> {
     const options = await this.resolveOptions(rawOptions, repoPath);
 
     this.displayConfig(options);
@@ -47,7 +47,13 @@ export class ImportAgentsService {
 
     if (detectionResult.files.length === 0) {
       this.ui.displayWarning(this.t('warnings.import.noAgentsFound'));
-      return;
+      return {
+        targetPath: options.targetPath,
+        filesCreated: 0,
+        filesSkipped: 0,
+        filesFailed: 0,
+        errors: [],
+      };
     }
 
     this.ui.displayInfo(
@@ -69,6 +75,8 @@ export class ImportAgentsService {
     if (!options.dryRun) {
       this.ui.displaySuccess(this.t('success.import.completed'));
     }
+
+    return result;
   }
 
   private async resolveOptions(

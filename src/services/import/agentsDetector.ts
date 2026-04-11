@@ -4,6 +4,14 @@ import { glob } from 'glob';
 import type { RuleFileInfo, DetectionResult } from './types';
 import { AGENT_SOURCES } from './presets';
 
+function normalizeAgentFilename(filePath: string): string {
+  return path.basename(filePath).replace(/\.agent\.md$/i, '.md');
+}
+
+function normalizeAgentName(filePath: string): string {
+  return normalizeAgentFilename(filePath).replace(/\.md$/i, '');
+}
+
 export class AgentsDetector {
   /**
    * Detect agent files in the repository and common locations
@@ -38,10 +46,10 @@ export class AgentsDetector {
 
               for (const file of files) {
                 detectedFiles.push({
-                  name: path.basename(file, '.md'),
+                  name: normalizeAgentName(file),
                   sourcePath: file,
                   relativePath: path.relative(absoluteRepoPath, file),
-                  filename: path.basename(file),
+                  filename: normalizeAgentFilename(file),
                   type: 'generic'
                 });
               }
@@ -69,10 +77,10 @@ export class AgentsDetector {
             const exists = detectedFiles.some(f => f.sourcePath === match);
             if (!exists) {
               detectedFiles.push({
-                name: path.basename(match, '.md'),
+                name: normalizeAgentName(match),
                 sourcePath: match,
                 relativePath: path.relative(absoluteRepoPath, match),
-                filename: path.basename(match),
+                filename: normalizeAgentFilename(match),
                 type: 'generic'
               });
               const dir = path.dirname(match);
@@ -116,10 +124,10 @@ export class AgentsDetector {
         
         if (stat.isFile() && fullPath.endsWith('.md')) {
           detectedFiles.push({
-            name: path.basename(fullPath, '.md'),
+            name: normalizeAgentName(fullPath),
             sourcePath: fullPath,
             relativePath: path.relative(absoluteRepoPath, fullPath),
-            filename: path.basename(fullPath),
+            filename: normalizeAgentFilename(fullPath),
             type: 'generic'
           });
           sources.push(path.dirname(fullPath));
@@ -133,10 +141,10 @@ export class AgentsDetector {
 
           for (const file of files) {
             detectedFiles.push({
-              name: path.basename(file, '.md'),
+              name: normalizeAgentName(file),
               sourcePath: file,
               relativePath: path.relative(absoluteRepoPath, file),
-              filename: path.basename(file),
+              filename: normalizeAgentFilename(file),
               type: 'generic'
             });
           }

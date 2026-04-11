@@ -13,6 +13,7 @@ function buildTargetPresets(): Record<Exclude<PresetName, 'all'>, TargetPreset> 
     presets[toolId] = {
       name: toolId as PresetName,
       path: preset.path,
+      filenameSuffix: preset.filenameSuffix,
       description: preset.description,
     };
   }
