@@ -60,6 +60,21 @@ describe('contextTools sensors scaffolding', () => {
     expect(listed.files[0].type).toBe('sensor');
   });
 
+  it('keeps Q&A helper docs opt-in during init', async () => {
+    const result = await initializeContextTool.execute!(
+      {
+        repoPath: tempDir,
+        type: 'docs',
+        skipContentGeneration: true,
+      },
+      toolExecutionContext
+    ) as Record<string, any>;
+
+    expect(result.qaGenerated).toBe(0);
+    expect(result.checklist).toContain('[ ] Generate optional Q&A helper docs (opt-in)');
+    await expect(fs.pathExists(path.join(tempDir, '.context', 'docs', 'qa'))).resolves.toBe(false);
+  });
+
   it('generates a repo-specific harness policy during init', async () => {
     await initializeContextTool.execute!(
       {

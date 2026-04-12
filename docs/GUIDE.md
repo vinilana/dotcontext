@@ -201,7 +201,7 @@ The MCP server exposes focused tools instead of a large set of one-off commands.
 | MCP Tool | Purpose |
 | --- | --- |
 | `explore` | Read files, list paths, search code, analyze symbols, inspect structure |
-| `context` | Check/init/fill context, list pending files, build semantic context, scaffold plans |
+| `context` | Check/init/fill context, build semantic context, scaffold plans, and use optional Q&A/flow helpers |
 | `workflow-init` | Start PREVC workflow tracking |
 | `workflow-status` | Read current workflow status |
 | `workflow-advance` | Advance to the next PREVC phase |

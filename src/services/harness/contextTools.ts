@@ -595,7 +595,7 @@ export const initializeContextTool = createInternalTool<
       disableFiltering = false,
       autoFill = true,
       skipContentGeneration = true,
-      generateQA = true,
+      generateQA = false,
       generateSkills = true,
     } = input;
 
@@ -818,7 +818,9 @@ export const initializeContextTool = createInternalTool<
               : `[x] Loaded ${sensorsGenerated} project-specific harness sensors`)
           : '[ ] Generate harness sensors',
         policyGenerated ? '[x] Created harness bootstrap policy' : '[x] Reused existing harness bootstrap policy',
-        qaGenerated > 0 ? `[x] Generated ${qaGenerated} Q&A docs in ${qaOutputDir}` : '[ ] Generate Q&A docs',
+        qaGenerated > 0
+          ? `[x] Generated ${qaGenerated} optional Q&A helper docs in ${qaOutputDir}`
+          : '[ ] Generate optional Q&A helper docs (opt-in)',
       ];
 
       return {

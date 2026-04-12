@@ -154,15 +154,15 @@ export class AIContextMCPServer {
       description: `Context scaffolding and semantic context. Actions:
 - check: Check if .context scaffolding exists (params: repoPath?)
 - bootstrapStatus: Summarize scaffold, workflow, and harness bootstrap readiness (params: repoPath?)
-- init: Initialize .context scaffolding (params: repoPath?, type?, outputDir?, semantic?, autoFill?, skipContentGeneration?, generateQA?)
-- fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?) Generated Q&A docs under .context/docs/qa are already populated and are not returned unless you add custom unfilled docs there. Bootstrap .context/harness/sensors.json is returned until customized.
+- init: Initialize .context scaffolding (params: repoPath?, type?, outputDir?, semantic?, autoFill?, skipContentGeneration?, generateQA?) Q&A helper docs are opt-in.
+- fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?) Generated Q&A helper docs under .context/docs/qa are only created when generateQA is enabled and are not returned unless you add custom unfilled docs there. Bootstrap .context/harness/sensors.json is returned until customized.
 - fillSingle: Fill a single scaffold file (params: repoPath?, filePath)
 - listToFill: List files that need filling (params: repoPath?, outputDir?, target?)
 - getMap: Get codebase map section with on-read auto-refresh (params: repoPath?, section?)
 - buildSemantic: Build semantic context (params: repoPath?, contextType?, targetFile?, options?)
 - scaffoldPlan: Create a plan template (params: planName, repoPath?, title?, summary?, autoFill?) Plan creation does NOT start execution. For non-trivial work, immediately follow with workflow-init so PREVC starts on the harness and persists state under .context/harness/workflows/prevc.json.
-- searchQA: Search generated Q&A docs (params: repoPath?, query)
-- generateQA: Generate Q&A docs from the codebase (params: repoPath?, options?)
+- searchQA: Search generated Q&A helper docs with keyword ranking (params: repoPath?, query)
+- generateQA: Generate optional Q&A helper docs from the codebase (params: repoPath?, options?)
 - getFlow: Trace a code path from an entry file/function (params: repoPath?, entryFile, entryFunction?, options?)
 - detectPatterns: Detect functional patterns in the codebase (params: repoPath?, options?)
 
@@ -191,7 +191,7 @@ export class AIContextMCPServer {
         skipContentGeneration: z.boolean().optional()
           .describe('(init) Skip pre-generating content'),
         generateQA: z.boolean().optional()
-          .describe('(init) Generate Q&A docs under .context/docs/qa; these are pre-filled and do not require fillSingle'),
+          .describe('(init) Generate optional Q&A helper docs under .context/docs/qa; these are pre-filled and do not require fillSingle'),
         target: z.enum(['docs', 'agents', 'skills', 'plans', 'sensors', 'all']).optional()
           .describe('(fill, listToFill) Which scaffolding to target, including nested skills and harness sensors'),
         offset: z.number().optional()
@@ -223,7 +223,7 @@ export class AIContextMCPServer {
         summary: z.string().optional()
           .describe('(scaffoldPlan) Plan summary/goal'),
         query: z.string().optional()
-          .describe('(searchQA) Query string used to search generated Q&A docs'),
+          .describe('(searchQA) Query string used to rank generated Q&A helper docs'),
         entryFile: z.string().optional()
           .describe('(getFlow) Entry file path for flow tracing'),
         entryFunction: z.string().optional()

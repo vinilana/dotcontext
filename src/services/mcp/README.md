@@ -21,7 +21,7 @@ The MCP tools follow a simple, explicit pattern:
 | Tool | Description |
 |------|-------------|
 | `explore` | File and code exploration (read, list, analyze, search, getStructure) |
-| `context` | Context scaffolding, semantic context, and Q&A/flow helpers (check, bootstrapStatus, init, fill, fillSingle, listToFill, getMap, buildSemantic, scaffoldPlan, searchQA, generateQA, getFlow, detectPatterns) |
+| `context` | Context scaffolding, semantic context, and optional Q&A/flow helpers (check, bootstrapStatus, init, fill, fillSingle, listToFill, getMap, buildSemantic, scaffoldPlan, searchQA, generateQA, getFlow, detectPatterns) |
 | `sync` | Import/export synchronization with AI tools |
 | `plan` | Plan management and execution tracking |
 | `agent` | Agent orchestration and discovery |
@@ -61,8 +61,9 @@ Do the template files have content?
 │       └─ AI generates content based on context
 └─ Yes → Skip to Step 3
 
-Note: generated Q&A files in `.context/docs/qa/` are already populated by `context({ action: "init", generateQA: true })` and do not appear in `listToFill`/`fill` unless you create custom nested docs there with `status: unfilled`.
+Note: generated Q&A files in `.context/docs/qa/` are optional helper artifacts created only by `context({ action: "init", generateQA: true })`. They do not appear in `listToFill`/`fill` unless you create custom nested docs there with `status: unfilled`.
 Note: `.context/harness/sensors.json` is bootstrap-generated during `init` and can appear in `listToFill`/`fill` until it is customized for the project.
+Note: `searchQA` performs keyword ranking over those generated helper docs. It is not embedding-based semantic search.
 ```
 
 ### Step 3: Initialize Workflow

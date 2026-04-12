@@ -4,7 +4,6 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-## [Unreleased]
 
 ## [0.9.0] - 2026-04-11
 
@@ -68,6 +67,11 @@ That is why many of the changes below are structural. The value of `0.9.0` is no
   - `release:packages:patch|minor|major` prepares local release directories in `.release/releases/<version>`
 
 ### Changed
+
+- **Repositioned generated Q&A as an optional helper layer instead of a default context path**
+  - `context init` no longer enables `generateQA` by default
+  - MCP and README descriptions now emphasize semantic context and snapshots as the primary codebase-understanding surface
+  - `searchQA` is documented as keyword ranking over generated Q&A helper docs, not embedding-based semantic search
 
 - **Architectural split is now explicit**: the codebase now follows `cli -> harness <- mcp`
   - `src/cli` is the operator-facing boundary
