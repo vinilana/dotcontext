@@ -87,7 +87,7 @@ interface SnapshotArtifacts {
 }
 
 const SNAPSHOT_SCHEMA_VERSION = '2.0.0';
-const SNAPSHOT_DIRNAME = path.join('cache', 'semantic-index.v2');
+const SNAPSHOT_DIRNAME = path.join('cache', 'semantic');
 const MANIFEST_FILENAME = 'manifest.json';
 const SUMMARY_FILENAME = 'summary.json';
 const VERSIONS_DIRNAME = 'versions';
@@ -168,7 +168,7 @@ export class SemanticSnapshotService {
     options: SemanticSnapshotWriteOptions = {}
   ): Promise<SemanticSnapshotWriteResult> {
     const outputDir = this.resolveOutputDir(repoStructure.rootPath, options.outputDir);
-    const snapshotDir = path.join(outputDir, SNAPSHOT_DIRNAME);
+    const snapshotDir = this.getSnapshotDir(outputDir);
     const publishedSummaryPath = path.join(outputDir, 'docs', 'codebase-map.json');
 
     const repoFingerprint =
@@ -299,7 +299,7 @@ export class SemanticSnapshotService {
 
     const refreshPromise = (async () => {
       const fileMapper = new FileMapper();
-      const snapshotDir = path.join(outputDir, SNAPSHOT_DIRNAME);
+      const snapshotDir = this.getSnapshotDir(outputDir);
       const publishedSummaryPath = path.join(outputDir, 'docs', 'codebase-map.json');
 
       for (let attempt = 1; attempt <= MAX_REFRESH_ATTEMPTS; attempt += 1) {
@@ -360,7 +360,7 @@ export class SemanticSnapshotService {
     manifest?: SemanticSnapshotManifest;
   } | null> {
     const outputDir = this.resolveOutputDir(repoPath, options.outputDir);
-    const snapshotDir = path.join(outputDir, SNAPSHOT_DIRNAME);
+    const snapshotDir = this.getSnapshotDir(outputDir);
     const manifestPath = path.join(snapshotDir, MANIFEST_FILENAME);
 
     if (!(await fs.pathExists(manifestPath))) {
@@ -394,7 +394,7 @@ export class SemanticSnapshotService {
     options: SemanticSnapshotReadOptions = {}
   ): Promise<SemanticSnapshotSectionResult | null> {
     const outputDir = this.resolveOutputDir(repoPath, options.outputDir);
-    const snapshotDir = path.join(outputDir, SNAPSHOT_DIRNAME);
+    const snapshotDir = this.getSnapshotDir(outputDir);
     const manifestPath = path.join(snapshotDir, MANIFEST_FILENAME);
 
     if (!(await fs.pathExists(manifestPath))) {
@@ -661,6 +661,10 @@ export class SemanticSnapshotService {
     } catch {
       await this.replaceFile(targetPath, sourcePath);
     }
+  }
+
+  private getSnapshotDir(outputDir: string): string {
+    return path.join(outputDir, SNAPSHOT_DIRNAME);
   }
 
   private buildPublishedManifest(

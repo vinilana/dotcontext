@@ -36,14 +36,14 @@ describe('SemanticSnapshotService', () => {
     const service = new SemanticSnapshotService();
 
     const result = await service.writeSnapshot(repoStructure, { outputDir });
-    const manifestPath = path.join(outputDir, 'cache', 'semantic-index.v2', 'manifest.json');
+    const manifestPath = path.join(outputDir, 'cache', 'semantic', 'manifest.json');
     const manifest = await fs.readJson(manifestPath);
 
     expect(result.summary.functionalPatterns.hasAuthPattern).toBe(true);
     expect(result.summary).not.toHaveProperty('symbols');
     expect(result.summary).not.toHaveProperty('publicAPI');
 
-    const snapshotDir = path.join(outputDir, 'cache', 'semantic-index.v2');
+    const snapshotDir = path.join(outputDir, 'cache', 'semantic');
     expect(await fs.pathExists(manifestPath)).toBe(true);
     expect(await fs.pathExists(path.join(snapshotDir, manifest.sections.functionalPatterns))).toBe(true);
     expect(await fs.pathExists(path.join(snapshotDir, manifest.sections.summary))).toBe(true);
@@ -64,7 +64,7 @@ describe('SemanticSnapshotService', () => {
     expect(result.refreshReason).toBe('missing');
     expect(result.fresh).toBe(true);
     expect(result.summary.functionalPatterns.hasAuthPattern).toBe(true);
-    expect(await fs.pathExists(path.join(outputDir, 'cache', 'semantic-index.v2', 'manifest.json'))).toBe(true);
+    expect(await fs.pathExists(path.join(outputDir, 'cache', 'semantic', 'manifest.json'))).toBe(true);
   });
 
   it('invalidates the snapshot when hidden config files change', async () => {
@@ -182,7 +182,7 @@ describe('SemanticSnapshotService', () => {
     const originalPromoteFile = (service as any).promoteFile.bind(service);
     jest.spyOn(service as any, 'promoteFile').mockImplementation(async (...args: unknown[]) => {
       const [sourcePath, targetPath] = args as [string, string];
-      if (targetPath === path.join(outputDir, 'cache', 'semantic-index.v2', 'manifest.json')) {
+      if (targetPath === path.join(outputDir, 'cache', 'semantic', 'manifest.json')) {
         observedDuringPublish = await reader.readSummary(repoPath, { outputDir, allowStale: true });
       }
 
