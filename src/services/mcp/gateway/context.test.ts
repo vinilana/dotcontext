@@ -56,4 +56,29 @@ describe('handleContext', () => {
     expect(payload.qaNote).toBeUndefined();
     await expect(fs.pathExists(path.join(tempDir, '.context', 'docs', 'qa'))).resolves.toBe(false);
   });
+
+  it('directs scaffoldPlan responses to start workflow-init on the harness', async () => {
+    const response = await handleContext(
+      {
+        action: 'scaffoldPlan',
+        repoPath: tempDir,
+        planName: 'feature-rollout',
+        autoFill: false,
+      },
+      {
+        repoPath: tempDir,
+        contextBuilder,
+      }
+    );
+
+    const payload = parseResponse(response);
+
+    expect(payload.success).toBe(true);
+    expect(payload._actionRequired).toBe(true);
+    expect(payload.enhancementPrompt).toContain('workflow-init({ name: "feature-rollout" })');
+    expect(payload.enhancementPrompt).toContain('.context/harness/workflows/prevc.json');
+    expect(payload.nextSteps).toContain(
+      'REQUIRED: Call workflow-init({ name: "feature-rollout" }) to start the harness-backed PREVC workflow'
+    );
+  });
 });

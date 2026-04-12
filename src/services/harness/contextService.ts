@@ -47,6 +47,8 @@ export interface HarnessContextPlanScaffoldResult {
     filesGenerated?: number;
     pendingFiles?: string[];
     repoPath?: string;
+    enhancementPrompt?: string;
+    nextSteps?: string[];
   } | null;
 }
 
@@ -385,13 +387,28 @@ Skip ONLY for trivial changes (typos, single-line edits).`,
     ) as Record<string, unknown>;
 
     const planPath = result.planPath as string | undefined;
+    const planSlug = planPath
+      ? path.basename(planPath, path.extname(planPath))
+      : params.planName;
+    const requiresPlanFill = result.complete !== true;
+
     return {
       result,
       scaffold: result.success && planPath
         ? {
-            filesGenerated: 1,
-            pendingFiles: [planPath],
+            filesGenerated: requiresPlanFill ? 1 : 0,
+            pendingFiles: requiresPlanFill ? [planPath] : [],
             repoPath,
+            enhancementPrompt: buildPlanWorkflowPrompt({
+              planPath,
+              planSlug,
+              requiresPlanFill,
+            }),
+            nextSteps: buildPlanWorkflowNextSteps({
+              planPath,
+              planSlug,
+              requiresPlanFill,
+            }),
           }
         : null,
     };
@@ -509,4 +526,51 @@ Skip ONLY for trivial changes (typos, single-line edits).`,
       await analyzer.shutdown();
     }
   }
+}
+
+function buildPlanWorkflowPrompt(params: {
+  planPath: string;
+  planSlug: string;
+  requiresPlanFill: boolean;
+}): string {
+  const { planPath, planSlug, requiresPlanFill } = params;
+  const fillStep = requiresPlanFill
+    ? `1. Fill or refine the plan via context({ action: "fillSingle", filePath: "${planPath}" })
+2. Start the harness-backed workflow via workflow-init({ name: "${planSlug}" })
+3. Link the plan into the active workflow via plan({ action: "link", planSlug: "${planSlug}" })
+4. Confirm harness state via workflow-status()`
+    : `1. Start the harness-backed workflow via workflow-init({ name: "${planSlug}" })
+2. Link the plan into the active workflow via plan({ action: "link", planSlug: "${planSlug}" })
+3. Confirm harness state via workflow-status()`;
+
+  return `PLAN CREATED - START HARNESS WORKFLOW
+
+The plan file exists, but planning is not operational until PREVC is started through workflow-init.
+
+workflow-init is the MCP entry point that creates the canonical harness workflow state at:
+.context/harness/workflows/prevc.json
+
+NEXT ACTIONS:
+${fillStep}
+
+Skip workflow-init only for trivial work that does not need PREVC tracking.`;
+}
+
+function buildPlanWorkflowNextSteps(params: {
+  planPath: string;
+  planSlug: string;
+  requiresPlanFill: boolean;
+}): string[] {
+  const { planPath, planSlug, requiresPlanFill } = params;
+  const steps: string[] = [];
+
+  if (requiresPlanFill) {
+    steps.push(`REQUIRED: Call context({ action: "fillSingle", filePath: "${planPath}" }) to complete the plan`);
+  }
+
+  steps.push(`REQUIRED: Call workflow-init({ name: "${planSlug}" }) to start the harness-backed PREVC workflow`);
+  steps.push(`REQUIRED: Call plan({ action: "link", planSlug: "${planSlug}" }) after workflow-init so gates use the plan`);
+  steps.push('THEN: Call workflow-status() to confirm the workflow and harness binding are active');
+
+  return steps;
 }

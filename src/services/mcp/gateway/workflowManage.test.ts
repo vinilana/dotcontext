@@ -173,6 +173,8 @@ describe('workflow MCP harness integration', () => {
     }, { repoPath: tempDir }));
 
     expect(linkResponse.success).toBe(true);
+    expect(linkResponse.workflowActive).toBe(true);
+    expect(linkResponse.planCreatedForGates).toBe(true);
 
     const approveResponse = parseResponse(await handleWorkflowManage({
       action: 'approvePlan',
@@ -211,6 +213,30 @@ describe('workflow MCP harness integration', () => {
     expect(workflowState.status.approval.plan_approved).toBe(true);
     expect(workflowState.status.approval.approved_by).toBe('reviewer');
     expect(workflowState.status.approval.approved_at).toBeDefined();
+  });
+
+  it('instructs the caller to start workflow-init before relying on a linked plan', async () => {
+    await fs.ensureDir(path.join(tempDir, '.context', 'plans'));
+    await fs.writeFile(
+      path.join(tempDir, '.context', 'plans', 'standalone-plan.md'),
+      '# Standalone Plan\n\n> Created before workflow initialization.\n',
+      'utf-8'
+    );
+
+    const linkResponse = parseResponse(await handlePlan({
+      action: 'link',
+      planSlug: 'standalone-plan',
+    }, { repoPath: tempDir }));
+
+    expect(linkResponse.success).toBe(true);
+    expect(linkResponse.workflowActive).toBe(false);
+    expect(linkResponse.planCreatedForGates).toBe(false);
+    expect(linkResponse.enhancementPrompt).toContain('workflow-init({ name: "standalone-plan" })');
+    expect(linkResponse.enhancementPrompt).toContain('Call plan({ action: "link", planSlug: "standalone-plan" }) again');
+    expect(linkResponse.workflowStatePath).toContain('.context/harness/workflows/prevc.json');
+    expect(linkResponse.nextSteps).toContain(
+      'REQUIRED: Call workflow-init({ name: "standalone-plan" }) to start the harness-backed PREVC workflow'
+    );
   });
 
   it('rejects approval when the requested plan slug diverges from the linked workflow plan', async () => {

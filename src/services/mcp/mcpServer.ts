@@ -160,7 +160,7 @@ export class AIContextMCPServer {
 - listToFill: List files that need filling (params: repoPath?, outputDir?, target?)
 - getMap: Get codebase map section with on-read auto-refresh (params: repoPath?, section?)
 - buildSemantic: Build semantic context (params: repoPath?, contextType?, targetFile?, options?)
-- scaffoldPlan: Create a plan template (params: planName, repoPath?, title?, summary?, autoFill?)
+- scaffoldPlan: Create a plan template (params: planName, repoPath?, title?, summary?, autoFill?) Plan creation does NOT start execution. For non-trivial work, immediately follow with workflow-init so PREVC starts on the harness and persists state under .context/harness/workflows/prevc.json.
 - searchQA: Search generated Q&A docs (params: repoPath?, query)
 - generateQA: Generate Q&A docs from the codebase (params: repoPath?, options?)
 - getFlow: Trace a code path from an entry file/function (params: repoPath?, entryFile, entryFunction?, options?)
@@ -170,7 +170,7 @@ export class AIContextMCPServer {
 1. First call: context({ action: "check", repoPath: "/path/to/project" })
 2. Subsequent calls can omit repoPath - it will use cached value from step 1
 3. After context init, call fillSingle for each pending file
-4. Call workflow-init to enable PREVC workflow (unless trivial change)`,
+4. If you create a plan with scaffoldPlan, call workflow-init immediately after planning to start the harness-backed PREVC workflow (unless trivial change)`,
       inputSchema: {
         action: z.enum(['check', 'bootstrapStatus', 'init', 'fill', 'fillSingle', 'listToFill', 'getMap', 'buildSemantic', 'scaffoldPlan', 'searchQA', 'generateQA', 'getFlow', 'detectPatterns'])
           .describe('Action to perform'),
@@ -239,9 +239,12 @@ export class AIContextMCPServer {
     this.server.registerTool('workflow-init', {
       description: `Initialize a PREVC workflow for structured development.
 
+This is the harness-backed entry point for planned work. If the user asked to create a plan for non-trivial work, do not stop at scaffoldPlan: call workflow-init so the plan runs under PREVC with canonical state in .context/harness/workflows/prevc.json.
+
 **What it does:**
 - Creates .context/workflow/ folder (automatically, if it doesn't exist)
 - Initializes workflow status file with phase tracking
+- Creates canonical harness workflow state and session binding
 - Detects project scale and configures gates
 - Sets up PREVC phases (Plan → Review → Execute → Verify → Complete)
 
@@ -466,7 +469,11 @@ Actions:
 
     // Gateway 6: plan - Plan management and execution tracking
     this.server.registerTool('plan', {
-      description: `Plan management and execution tracking. Actions:
+      description: `Plan management and execution tracking for PREVC workflows.
+
+This tool does not start workflows. When a user asks for a plan for non-trivial work, start the harness-backed workflow with workflow-init first, or immediately after scaffoldPlan. If you link a plan before workflow-init, re-link it after workflow-init so PREVC gates and harness state use that plan.
+
+Actions:
 - link: Link plan to workflow (params: planSlug)
 - getLinked: Get all linked plans
 - getDetails: Get detailed plan info (params: planSlug)

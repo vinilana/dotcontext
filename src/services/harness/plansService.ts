@@ -42,21 +42,57 @@ export class HarnessPlansService {
     }
 
     const service = new WorkflowService(this.repoPath);
-    if (await service.hasWorkflow()) {
+    const workflowActive = await service.hasWorkflow();
+    if (workflowActive) {
       await service.markPlanCreated(planSlug);
     }
 
     let canAdvanceToReview = false;
-    if (await service.hasWorkflow()) {
+    if (workflowActive) {
       const gateResult = await service.checkGates();
       canAdvanceToReview = gateResult.gates.plan_required.passed;
     }
 
+    const workflowStatePath = path.join(this.repoPath, '.context', 'harness', 'workflows', 'prevc.json');
+    const enhancementPrompt = workflowActive
+      ? `PLAN LINKED TO ACTIVE WORKFLOW
+
+The linked plan is now attached to the harness-backed PREVC workflow.
+
+Next:
+1. Use workflow-status() to confirm the active phase and harness binding
+2. Continue planning work
+3. Use workflow-advance() when the planning phase is complete`
+      : `PLAN LINKED - WORKFLOW NOT STARTED
+
+The plan reference was created, but no PREVC workflow is active yet.
+Until workflow-init runs, the harness does not have canonical workflow state and plan gates are not armed.
+
+Next:
+1. Call workflow-init({ name: "${planSlug}" }) to create the harness-backed PREVC workflow
+2. Call plan({ action: "link", planSlug: "${planSlug}" }) again after workflow-init
+3. Use workflow-status() to verify the plan is bound to the harness workflow`;
+
+    const nextSteps = workflowActive
+      ? [
+          'RECOMMENDED: Call workflow-status() to confirm the linked plan and harness binding',
+          'THEN: Continue planning and call workflow-advance() when ready to leave phase P',
+        ]
+      : [
+          `REQUIRED: Call workflow-init({ name: "${planSlug}" }) to start the harness-backed PREVC workflow`,
+          `REQUIRED: Call plan({ action: "link", planSlug: "${planSlug}" }) again after workflow-init so gates see the plan`,
+          'THEN: Call workflow-status() to confirm the workflow and harness binding are active',
+        ];
+
     return {
       success: true,
       plan: ref,
-      planCreatedForGates: true,
+      workflowActive,
+      workflowStatePath,
+      planCreatedForGates: workflowActive,
       canAdvanceToReview,
+      enhancementPrompt,
+      nextSteps,
     };
   }
 
