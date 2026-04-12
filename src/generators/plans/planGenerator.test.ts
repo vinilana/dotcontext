@@ -37,6 +37,10 @@ describe('PlanGenerator', () => {
     expect(await fs.pathExists(planPath)).toBe(true);
 
     const content = await fs.readFile(planPath, 'utf8');
+    expect(content).toContain('type: plan');
+    expect(content).toContain('planSlug: new-initiative');
+    expect(content).toContain('steps:');
+    expect(content).toContain('deliverables:');
     expect(content).toContain('# New Initiative Plan');
     expect(content).toContain('## Task Snapshot');
     expect(content).toContain('## Working Phases');

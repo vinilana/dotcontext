@@ -23,10 +23,15 @@ import {
   PlanApproval,
   GateCheckResult,
   PhaseOrchestration,
+  createPlanLinker,
+  getPhaseDefinition,
   getScaleName,
   getScaleFromName,
   PHASE_NAMES_PT,
   ROLE_DISPLAY_NAMES,
+  type LinkedPlan,
+  type PlanPhase,
+  type PlanStep,
 } from '../../workflow';
 import {
   HarnessRuntimeStateService,
@@ -45,6 +50,14 @@ import {
 } from '../harness';
 
 const exec = promisify(execCallback);
+
+function uniqueStrings(values: Array<string | undefined | null>): string[] {
+  return Array.from(new Set(
+    values
+      .map((value) => typeof value === 'string' ? value.trim() : '')
+      .filter((value) => value.length > 0)
+  ));
+}
 
 export interface WorkflowHarnessStatus {
   binding: WorkflowHarnessBinding;
@@ -75,6 +88,24 @@ export class HarnessWorkflowBlockedError extends Error {
     super(message);
     this.name = 'HarnessWorkflowBlockedError';
   }
+}
+
+interface DerivedTaskContractInput {
+  title: string;
+  description?: string;
+  owner?: string;
+  inputs: string[];
+  expectedOutputs: string[];
+  acceptanceCriteria: string[];
+  requiredSensors: string[];
+  requiredArtifacts: string[];
+  metadata: Record<string, unknown>;
+}
+
+interface WorkflowPlanLinkResult {
+  workflowActive: boolean;
+  planCreatedForGates: boolean;
+  taskContract: HarnessTaskContract | null;
 }
 
 /**
@@ -333,24 +364,61 @@ export class WorkflowService {
       }
     }
 
-    const nextPhase = await this.orchestrator.completePhase(outputs, options);
     const binding = await this.requireHarnessBinding();
+    const activeTaskBeforeAdvance = binding.activeTaskId
+      ? await this.taskContractsService.getTaskContract(binding.activeTaskId)
+      : null;
+    const plannedNextPhase = await this.orchestrator.getNextPhase();
+    const nextContract = plannedNextPhase
+      ? await this.createDerivedPlanTaskContract({
+          phase: plannedNextPhase,
+          sessionId: binding.sessionId,
+        })
+      : null;
+    const nextPhase = await this.orchestrator.completePhase(outputs, options);
 
     if (nextPhase) {
+      binding.activeTaskId = nextContract?.id;
       const session = await this.runtimeStateService.checkpointSession(binding.sessionId, {
         note: `Advanced workflow phase ${currentPhase} -> ${nextPhase}`,
-        data: { from: currentPhase, to: nextPhase, outputs },
+        data: {
+          from: currentPhase,
+          to: nextPhase,
+          outputs,
+          nextTaskContractId: nextContract?.id,
+        },
       });
       binding.updatedAt = session.updatedAt;
       await this.saveHarnessBinding(binding);
+
+      if (activeTaskBeforeAdvance && !['completed', 'failed'].includes(activeTaskBeforeAdvance.status)) {
+        await this.taskContractsService.updateTaskContract(activeTaskBeforeAdvance.id, {
+          status: 'completed',
+          metadata: {
+            ...activeTaskBeforeAdvance.metadata,
+            completionReason: `Workflow advanced from ${currentPhase} to ${nextPhase}`,
+          },
+        });
+      }
 
       this.deps.ui?.displaySuccess(
         `Advanced from ${PHASE_NAMES_PT[currentPhase]} to ${PHASE_NAMES_PT[nextPhase]}`
       );
     } else {
       const session = await this.runtimeStateService.completeSession(binding.sessionId, 'Workflow completed');
+      binding.activeTaskId = undefined;
       binding.updatedAt = session.updatedAt;
       await this.saveHarnessBinding(binding);
+
+      if (activeTaskBeforeAdvance && !['completed', 'failed'].includes(activeTaskBeforeAdvance.status)) {
+        await this.taskContractsService.updateTaskContract(activeTaskBeforeAdvance.id, {
+          status: 'completed',
+          metadata: {
+            ...activeTaskBeforeAdvance.metadata,
+            completionReason: 'Workflow completed',
+          },
+        });
+      }
 
       this.deps.ui?.displaySuccess('Workflow completed!');
     }
@@ -420,6 +488,119 @@ export class WorkflowService {
       metadata: { planSlug },
     });
     return this.orchestrator.markPlanCreated(planSlug);
+  }
+
+  async linkPlanToActiveWorkflow(planSlug: string): Promise<WorkflowPlanLinkResult> {
+    const workflowActive = await this.hasWorkflow();
+    if (!workflowActive) {
+      return {
+        workflowActive: false,
+        planCreatedForGates: false,
+        taskContract: null,
+      };
+    }
+
+    const taskContract = await this.syncActivePlanTaskContract(planSlug);
+    await this.markPlanCreated(planSlug);
+
+    return {
+      workflowActive: true,
+      planCreatedForGates: true,
+      taskContract,
+    };
+  }
+
+  async syncActivePlanTaskContract(
+    planSlug?: string,
+    phase?: PrevcPhase
+  ): Promise<HarnessTaskContract | null> {
+    const binding = await this.requireHarnessBinding();
+    const resolvedPhase = phase || await this.orchestrator.getCurrentPhase();
+    const activeTask = binding.activeTaskId
+      ? await this.taskContractsService.getTaskContract(binding.activeTaskId)
+      : null;
+    const contract = await this.upsertDerivedPlanTaskContract({
+      planSlug,
+      phase: resolvedPhase,
+      sessionId: binding.sessionId,
+      activeTask,
+    });
+
+    if (!contract) {
+      return null;
+    }
+
+    binding.activeTaskId = contract.id;
+    binding.updatedAt = contract.updatedAt;
+    await this.saveHarnessBinding(binding);
+    return contract;
+  }
+
+  private async upsertDerivedPlanTaskContract(params: {
+    planSlug?: string;
+    phase: PrevcPhase;
+    sessionId: string;
+    activeTask?: HarnessTaskContract | null;
+  }): Promise<HarnessTaskContract | null> {
+    const linkedPlan = await this.resolveLinkedPlan(params.planSlug);
+    if (!linkedPlan) {
+      return null;
+    }
+
+    const contractInput = this.buildDerivedTaskContract(linkedPlan, params.phase);
+    if (this.isSameDerivedPlanTask(params.activeTask, linkedPlan.ref.slug, params.phase)) {
+      return this.taskContractsService.updateTaskContract(params.activeTask.id, {
+        title: contractInput.title,
+        description: contractInput.description,
+        owner: contractInput.owner,
+        inputs: contractInput.inputs,
+        expectedOutputs: contractInput.expectedOutputs,
+        acceptanceCriteria: contractInput.acceptanceCriteria,
+        requiredSensors: contractInput.requiredSensors,
+        requiredArtifacts: contractInput.requiredArtifacts,
+        status: params.activeTask.status === 'completed' || params.activeTask.status === 'failed'
+          ? 'ready'
+          : params.activeTask.status,
+        metadata: contractInput.metadata,
+      });
+    }
+
+    return this.taskContractsService.createTaskContract({
+      ...contractInput,
+      sessionId: params.sessionId,
+      status: 'ready',
+    });
+  }
+
+  private async createDerivedPlanTaskContract(params: {
+    planSlug?: string;
+    phase: PrevcPhase;
+    sessionId: string;
+  }): Promise<HarnessTaskContract | null> {
+    const linkedPlan = await this.resolveLinkedPlan(params.planSlug);
+    if (!linkedPlan) {
+      return null;
+    }
+
+    const contractInput = this.buildDerivedTaskContract(linkedPlan, params.phase);
+    return this.taskContractsService.createTaskContract({
+      ...contractInput,
+      sessionId: params.sessionId,
+      status: 'ready',
+    });
+  }
+
+  private isSameDerivedPlanTask(
+    activeTask: HarnessTaskContract | null | undefined,
+    planSlug: string,
+    phase: PrevcPhase
+  ): activeTask is HarnessTaskContract {
+    return Boolean(
+      activeTask &&
+      activeTask.metadata?.source === 'workflow.plan' &&
+      activeTask.metadata?.planSlug === planSlug &&
+      activeTask.metadata?.prevcPhase === phase
+    );
   }
 
   /**
@@ -813,6 +994,117 @@ export class WorkflowService {
   private async requireHarnessBinding(): Promise<WorkflowHarnessBinding> {
     const summary = await this.getSummary();
     return this.ensureHarnessSession(summary.name);
+  }
+
+  private async resolveLinkedPlan(planSlug?: string): Promise<LinkedPlan | null> {
+    const status = await this.getStatus();
+    const linker = createPlanLinker(this.repoPath);
+    const linkedPlans = await linker.getLinkedPlans();
+    const resolvedPlanSlug = planSlug
+      || status.project.plan
+      || linkedPlans.primary
+      || (linkedPlans.active.length === 1 ? linkedPlans.active[0].slug : undefined);
+
+    if (!resolvedPlanSlug) {
+      return null;
+    }
+
+    return linker.getLinkedPlan(resolvedPlanSlug);
+  }
+
+  private buildDerivedTaskContract(plan: LinkedPlan, phase: PrevcPhase): DerivedTaskContractInput {
+    const matchingPlanPhases = plan.phases.filter((planPhase) => planPhase.prevcPhase === phase);
+    const phaseDefinition = getPhaseDefinition(phase);
+    const flattenedSteps = matchingPlanPhases.flatMap((planPhase) => planPhase.steps);
+    const explicitOutputs = [
+      ...matchingPlanPhases.flatMap((planPhase) => planPhase.deliverables ?? []),
+      ...flattenedSteps.flatMap((step) => step.outputs || step.deliverables || []),
+    ];
+    const expectedOutputs = uniqueStrings(
+      explicitOutputs.length > 0
+        ? explicitOutputs
+        : phaseDefinition.outputs
+    );
+    const acceptanceCriteria = uniqueStrings(
+      flattenedSteps.length > 0
+        ? flattenedSteps.map((step) => step.description)
+        : matchingPlanPhases.length > 0
+          ? matchingPlanPhases.map((planPhase) => planPhase.summary || `Complete ${planPhase.name}`)
+          : [`Complete ${phaseDefinition.name}`]
+    );
+    const owners = uniqueStrings(
+      flattenedSteps
+        .map((step) => step.assignee)
+        .filter((assignee): assignee is string => typeof assignee === 'string' && assignee.trim().length > 0)
+    );
+    const owner = owners.length === 1 ? owners[0] : phaseDefinition.roles[0];
+    const title = this.buildDerivedTaskTitle(plan, phase, matchingPlanPhases);
+    const description = this.buildDerivedTaskDescription(plan, phase, matchingPlanPhases, flattenedSteps, expectedOutputs);
+
+    return {
+      title,
+      description,
+      owner,
+      inputs: plan.docs.map((doc) => `docs/${doc}`),
+      expectedOutputs,
+      acceptanceCriteria,
+      requiredSensors: [],
+      requiredArtifacts: [],
+      metadata: {
+        source: 'workflow.plan',
+        planSlug: plan.ref.slug,
+        prevcPhase: phase,
+        planPhaseIds: matchingPlanPhases.map((planPhase) => planPhase.id),
+        planPhaseNames: matchingPlanPhases.map((planPhase) => planPhase.name),
+        planPhaseSummaries: matchingPlanPhases.map((planPhase) => planPhase.summary).filter(Boolean),
+        derivedFrom: matchingPlanPhases.length > 0 ? 'linked-plan' : 'workflow-phase-defaults',
+      },
+    };
+  }
+
+  private buildDerivedTaskTitle(plan: LinkedPlan, phase: PrevcPhase, matchingPlanPhases: PlanPhase[]): string {
+    if (matchingPlanPhases.length === 1) {
+      return `${plan.ref.title}: ${matchingPlanPhases[0].name}`;
+    }
+
+    if (matchingPlanPhases.length > 1) {
+      return `${plan.ref.title}: ${getPhaseDefinition(phase).name} (${matchingPlanPhases.length} plan phases)`;
+    }
+
+    return `${plan.ref.title}: ${getPhaseDefinition(phase).name}`;
+  }
+
+  private buildDerivedTaskDescription(
+    plan: LinkedPlan,
+    phase: PrevcPhase,
+    matchingPlanPhases: PlanPhase[],
+    flattenedSteps: PlanStep[],
+    expectedOutputs: string[]
+  ): string {
+    const lines = [
+      `Derived from linked plan "${plan.ref.slug}" for PREVC phase ${phase} (${getPhaseDefinition(phase).name}).`,
+    ];
+
+    if (matchingPlanPhases.length > 0) {
+      lines.push(`Plan phases: ${matchingPlanPhases.map((planPhase) => planPhase.name).join(', ')}.`);
+    }
+
+    const summaries = matchingPlanPhases
+      .map((planPhase) => planPhase.summary)
+      .filter((summary): summary is string => typeof summary === 'string' && summary.trim().length > 0);
+    if (summaries.length > 0) {
+      lines.push(`Phase objectives: ${summaries.join(' ')}.`);
+    }
+
+    if (flattenedSteps.length > 0) {
+      lines.push(`Key steps: ${flattenedSteps.map((step) => step.description).join('; ')}.`);
+    }
+
+    if (expectedOutputs.length > 0) {
+      lines.push(`Expected outputs: ${expectedOutputs.join(', ')}.`);
+    }
+
+    return lines.join(' ');
   }
 
   private async loadHarnessBinding(): Promise<WorkflowHarnessBinding | null> {

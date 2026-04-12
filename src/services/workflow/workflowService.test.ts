@@ -2,6 +2,7 @@ import * as fs from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 
+import { HarnessPlansService } from '../harness';
 import { HarnessWorkflowStateService } from '../harness/workflowStateService';
 import { HarnessWorkflowBlockedError, WorkflowService } from './workflowService';
 
@@ -83,6 +84,92 @@ describe('WorkflowService harness integration', () => {
     expect(binding?.activeTaskId).toBeUndefined();
     expect(binding?.sessionId).not.toBe(firstHarness?.session.id);
     expect(firstTask.id).not.toBe(binding?.activeTaskId);
+  });
+
+  it('bootstraps a task contract for the linked plan phase and rotates it on workflow advance', async () => {
+    await service.init({
+      name: 'plan-bootstrap',
+      scale: 'MEDIUM',
+      autonomous: true,
+    });
+
+    await fs.ensureDir(path.join(tempDir, '.context', 'plans'));
+    await fs.writeFile(
+      path.join(tempDir, '.context', 'plans', 'plan-bootstrap.md'),
+      `---
+type: plan
+name: "Plan Bootstrap"
+description: "Bootstrap contract regression."
+generated: "2026-04-12"
+status: filled
+scaffoldVersion: "2.0.0"
+planSlug: "plan-bootstrap"
+summary: "Bootstrap contract regression."
+phases:
+  - id: "phase-1"
+    name: "Discovery & Alignment"
+    prevc: "P"
+    summary: "Review the current system state and capture the discovery outputs."
+    deliverables:
+      - "discovery-brief"
+    steps:
+      - order: 1
+        description: "Review the current system state"
+        deliverables:
+          - "system-review"
+      - order: 2
+        description: "Capture the phase bootstrap outputs"
+        deliverables:
+          - "bootstrap-output"
+  - id: "phase-2"
+    name: "Implementation"
+    prevc: "R"
+    summary: "Validate the implementation approach before execution."
+    deliverables:
+      - "review-signoff"
+    steps:
+      - order: 1
+        description: "Validate the implementation approach"
+        deliverables:
+          - "implementation-review"
+---
+
+# Plan Bootstrap
+`,
+      'utf-8'
+    );
+
+    await new HarnessPlansService({ repoPath: tempDir }).link('plan-bootstrap');
+
+    const beforeAdvance = await service.getHarnessStatus();
+    expect(beforeAdvance).not.toBeNull();
+    expect(beforeAdvance?.binding.activeTaskId).toBeDefined();
+    expect(beforeAdvance?.taskContracts).toHaveLength(1);
+
+    const bootstrapTaskId = beforeAdvance?.binding.activeTaskId;
+    const bootstrapTask = beforeAdvance?.taskContracts.find((task) => task.id === bootstrapTaskId);
+
+    expect(bootstrapTask).toBeTruthy();
+    expect(bootstrapTask?.status).toBe('ready');
+    expect(bootstrapTask?.expectedOutputs).toEqual(['discovery-brief', 'system-review', 'bootstrap-output']);
+    expect(bootstrapTask?.acceptanceCriteria).toEqual([
+      'Review the current system state',
+      'Capture the phase bootstrap outputs',
+    ]);
+
+    const nextPhase = await service.advance();
+    const afterAdvance = await service.getHarnessStatus();
+
+    expect(nextPhase).toBe('R');
+    expect(afterAdvance?.taskContracts).toHaveLength(2);
+    expect(afterAdvance?.binding.activeTaskId).toBeDefined();
+    expect(afterAdvance?.binding.activeTaskId).not.toBe(bootstrapTaskId);
+    expect(afterAdvance?.taskContracts.find((task) => task.id === bootstrapTaskId)?.status).toBe('completed');
+    expect(afterAdvance?.taskContracts.find((task) => task.id === afterAdvance?.binding.activeTaskId)?.status).toBe('ready');
+    expect(afterAdvance?.taskContracts.find((task) => task.id === afterAdvance?.binding.activeTaskId)?.expectedOutputs).toEqual([
+      'review-signoff',
+      'implementation-review',
+    ]);
   });
 
   it('blocks workflow advance when required harness checks are missing', async () => {

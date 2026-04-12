@@ -6,6 +6,7 @@ import { handlePlan } from './plan';
 import { handleWorkflowAdvance } from './workflowAdvance';
 import { handleWorkflowInit } from './workflowInit';
 import { handleWorkflowManage } from './workflowManage';
+import { handleWorkflowStatus } from './workflowStatus';
 
 function parseResponse(response: { content: Array<{ text: string }> }) {
   return JSON.parse(response.content[0].text);
@@ -213,6 +214,62 @@ describe('workflow MCP harness integration', () => {
     expect(workflowState.status.approval.plan_approved).toBe(true);
     expect(workflowState.status.approval.approved_by).toBe('reviewer');
     expect(workflowState.status.approval.approved_at).toBeDefined();
+  });
+
+  it('bootstraps a task contract for the linked plan and rotates it on workflow advance', async () => {
+    await handleWorkflowInit({
+      name: 'bootstrap-rotation',
+      scale: 'MEDIUM',
+      autonomous: true,
+      repoPath: tempDir,
+    }, { repoPath: tempDir });
+
+    await fs.ensureDir(path.join(tempDir, '.context', 'plans'));
+    await fs.writeFile(
+      path.join(tempDir, '.context', 'plans', 'bootstrap-rotation.md'),
+      '# Bootstrap Rotation\n\n> Contract rotation regression.\n\n### Phase 1 - Discovery & Alignment\n1. Review the current system state\n2. Capture the phase bootstrap outputs\n\n### Phase 2 - Implementation\n1. Execute the implementation work\n',
+      'utf-8'
+    );
+
+    const linkResponse = parseResponse(await handlePlan({
+      action: 'link',
+      planSlug: 'bootstrap-rotation',
+    }, { repoPath: tempDir }));
+
+    expect(linkResponse.success).toBe(true);
+    expect(linkResponse.workflowActive).toBe(true);
+    expect(linkResponse.planCreatedForGates).toBe(true);
+
+    const beforeAdvance = parseResponse(await handleWorkflowStatus({
+      repoPath: tempDir,
+    }, { repoPath: tempDir }));
+
+    expect(beforeAdvance.success).toBe(true);
+    expect(beforeAdvance.harness.binding.activeTaskId).toBeDefined();
+    expect(beforeAdvance.harness.taskContracts).toHaveLength(1);
+
+    const bootstrapTaskId = beforeAdvance.harness.binding.activeTaskId;
+    expect(beforeAdvance.harness.taskContracts[0].id).toBe(bootstrapTaskId);
+    expect(beforeAdvance.harness.taskContracts[0].status).toBe('ready');
+
+    const advanceResponse = parseResponse(await handleWorkflowAdvance({
+      repoPath: tempDir,
+    }, { repoPath: tempDir }));
+
+    expect(advanceResponse.success).toBe(true);
+    expect(advanceResponse.nextPhase.code).toBe('R');
+
+    const afterAdvance = parseResponse(await handleWorkflowStatus({
+      repoPath: tempDir,
+    }, { repoPath: tempDir }));
+
+    expect(afterAdvance.success).toBe(true);
+    expect(afterAdvance.currentPhase.code).toBe('R');
+    expect(afterAdvance.harness.taskContracts).toHaveLength(2);
+    expect(afterAdvance.harness.binding.activeTaskId).toBeDefined();
+    expect(afterAdvance.harness.binding.activeTaskId).not.toBe(bootstrapTaskId);
+    expect(afterAdvance.harness.taskContracts.find((task: { id: string; status: string }) => task.id === bootstrapTaskId)?.status).toBe('completed');
+    expect(afterAdvance.harness.taskContracts.find((task: { id: string; status: string }) => task.id === afterAdvance.harness.binding.activeTaskId)?.status).toBe('ready');
   });
 
   it('instructs the caller to start workflow-init before relying on a linked plan', async () => {

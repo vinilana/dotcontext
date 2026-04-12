@@ -11,6 +11,7 @@ import {
   PlanReference,
   LinkedPlan,
   PlanPhase,
+  PlanStep,
   PlanDecision,
   WorkflowPlans,
   PLAN_PHASE_TO_PREVC,
@@ -22,6 +23,7 @@ import { PrevcPhase, StatusType } from '../types';
 import { AgentRegistry, AgentMetadata, createAgentRegistry } from '../agents';
 import { PrevcStatusManager } from '../status/statusManager';
 import { GitService } from '../../utils/gitService';
+import { parseScaffoldFrontMatter } from '../../utils/frontMatter';
 
 /**
  * Plan Linker class
@@ -902,7 +904,7 @@ export class PlanLinker {
   /**
    * Parse frontmatter from plan content
    */
-  private parseFrontMatter(content: string): {
+  private parseLegacyPlanFrontMatter(content: string): {
     agents: Array<{ type: string; role?: string }>;
     docs: string[];
     phases: Array<{ id: string; name: string; prevc: string }>;
@@ -1001,26 +1003,35 @@ export class PlanLinker {
    * Parse plan file into LinkedPlan structure
    */
   private parsePlanToLinked(content: string, ref: PlanReference): LinkedPlan {
-    // Try frontmatter first, then fallback to body parsing
-    const frontMatter = this.parseFrontMatter(content);
+    const scaffoldFrontMatter = parseScaffoldFrontMatter(content).frontMatter;
+    const hasCanonicalPlanFrontMatter = scaffoldFrontMatter?.type === 'plan' && !!scaffoldFrontMatter.planSlug;
+    const legacyFrontMatter = hasCanonicalPlanFrontMatter ? null : this.parseLegacyPlanFrontMatter(content);
 
-    const phases = frontMatter?.phases.length
-      ? frontMatter.phases.map(p => ({
-          id: p.id,
-          name: p.name,
-          prevcPhase: p.prevc as PrevcPhase,
-          steps: [],
-          status: 'pending' as const,
-        }))
-      : this.extractPhasesFromBody(content);
+    const bodyPhases = this.extractPhasesFromBody(content);
+    const phases = hasCanonicalPlanFrontMatter
+      ? this.buildPhasesFromCanonicalFrontMatter(scaffoldFrontMatter!, bodyPhases)
+      : legacyFrontMatter?.phases.length
+        ? legacyFrontMatter.phases.map(p => ({
+            id: p.id,
+            name: p.name,
+            prevcPhase: p.prevc as PrevcPhase,
+            steps: bodyPhases.find(phase => phase.id === p.id)?.steps ?? [],
+            deliverables: bodyPhases.find(phase => phase.id === p.id)?.deliverables,
+            status: 'pending' as const,
+          }))
+        : bodyPhases;
 
-    const agents = frontMatter?.agents.length
-      ? frontMatter.agents.map(a => a.type)
-      : this.extractAgentsFromBody(content);
+    const agents = hasCanonicalPlanFrontMatter && scaffoldFrontMatter?.agents?.length
+      ? scaffoldFrontMatter.agents.map(a => a.type)
+      : legacyFrontMatter?.agents.length
+        ? legacyFrontMatter.agents.map(a => a.type)
+        : this.extractAgentsFromBody(content);
 
-    const docs = frontMatter?.docs.length
-      ? frontMatter.docs
-      : this.extractDocsFromBody(content);
+    const docs = hasCanonicalPlanFrontMatter && scaffoldFrontMatter?.docs?.length
+      ? scaffoldFrontMatter.docs
+      : legacyFrontMatter?.docs.length
+        ? legacyFrontMatter.docs
+        : this.extractDocsFromBody(content);
 
     const decisions = this.extractDecisions();
 
@@ -1039,7 +1050,14 @@ export class PlanLinker {
       progress,
       currentPhase,
       // Include full agent lineup with roles from frontmatter
-      agentLineup: frontMatter?.agents || agents.map(a => ({ type: a })),
+      agentLineup: hasCanonicalPlanFrontMatter && scaffoldFrontMatter?.agents?.length
+        ? scaffoldFrontMatter.agents.map(agent => ({
+            type: agent.type,
+            role: agent.role || undefined,
+          }))
+        : legacyFrontMatter?.agents.length
+          ? legacyFrontMatter.agents
+          : agents.map(a => ({ type: a })),
     };
   }
 
@@ -1047,47 +1065,262 @@ export class PlanLinker {
    * Extract phases from plan markdown body (fallback)
    */
   private extractPhasesFromBody(content: string): PlanPhase[] {
-    const phases: PlanPhase[] = [];
+    const lines = content.split('\n');
+    const phaseHeaders: Array<{ lineIndex: number; id: string; name: string; prevcPhase: PrevcPhase }> = [];
 
-    // Match "### Phase N — Name" or "### Phase N - Name"
-    const phaseRegex = /###\s+Phase\s+(\d+)\s*[—-]\s*(.+)/g;
-    let match;
-
-    while ((match = phaseRegex.exec(content)) !== null) {
-      const phaseNum = match[1];
-      const phaseName = match[2].trim();
-      const phaseId = `phase-${phaseNum}`;
-
-      // Determine PREVC mapping based on phase name
-      const lowerName = phaseName.toLowerCase();
-      let prevcPhase: PrevcPhase = 'E'; // Default to Execution
-
-      for (const [keyword, phase] of Object.entries(PLAN_PHASE_TO_PREVC)) {
-        if (lowerName.includes(keyword)) {
-          prevcPhase = phase;
-          break;
-        }
+    lines.forEach((line, lineIndex) => {
+      const phaseMatch = line.match(/^###\s+Phase\s+(\d+)\s*[—-]\s*(.+)$/);
+      if (!phaseMatch) {
+        return;
       }
 
-      phases.push({
+      const phaseNum = phaseMatch[1];
+      const phaseName = phaseMatch[2].trim();
+      const phaseId = `phase-${phaseNum}`;
+      phaseHeaders.push({
+        lineIndex,
         id: phaseId,
         name: phaseName,
-        prevcPhase,
-        steps: [],
-        status: 'pending',
+        prevcPhase: this.inferPrevcPhaseFromPhaseName(phaseName),
       });
+    });
+
+    if (phaseHeaders.length === 0) {
+      return [
+        { id: 'phase-1', name: 'Discovery & Alignment', prevcPhase: 'P', deliverables: [], steps: [], status: 'pending' },
+        { id: 'phase-2', name: 'Implementation', prevcPhase: 'E', deliverables: [], steps: [], status: 'pending' },
+        { id: 'phase-3', name: 'Validation & Handoff', prevcPhase: 'V', deliverables: [], steps: [], status: 'pending' }
+      ];
     }
 
-    // If no phases found, create default structure
-    if (phases.length === 0) {
-      phases.push(
-        { id: 'phase-1', name: 'Discovery & Alignment', prevcPhase: 'P', steps: [], status: 'pending' },
-        { id: 'phase-2', name: 'Implementation', prevcPhase: 'E', steps: [], status: 'pending' },
-        { id: 'phase-3', name: 'Validation & Handoff', prevcPhase: 'V', steps: [], status: 'pending' }
+    return phaseHeaders.map((phaseHeader, index) => {
+      const nextHeader = phaseHeaders[index + 1];
+      const sectionLines = lines.slice(phaseHeader.lineIndex + 1, nextHeader?.lineIndex ?? lines.length);
+      const steps = this.extractPlanStepsFromBodySection(sectionLines);
+      const deliverables = this.uniqueStrings(
+        steps.flatMap(step => [...(step.deliverables ?? []), ...(step.outputs ?? [])])
       );
+
+      return {
+        id: phaseHeader.id,
+        name: phaseHeader.name,
+        prevcPhase: phaseHeader.prevcPhase,
+        deliverables: deliverables.length > 0 ? deliverables : undefined,
+        steps,
+        status: 'pending',
+      };
+    });
+  }
+
+  private buildPhasesFromCanonicalFrontMatter(
+    frontMatter: NonNullable<ReturnType<typeof parseScaffoldFrontMatter>['frontMatter']>,
+    bodyPhases: PlanPhase[]
+  ): PlanPhase[] {
+    const bodyPhaseMap = new Map(bodyPhases.map(phase => [phase.id, phase]));
+
+    const phases = frontMatter.planPhases?.length
+      ? frontMatter.planPhases.map((phase) => {
+          const fallbackPhase = bodyPhaseMap.get(phase.id);
+          const canonicalSteps = phase.steps ?? [];
+          const hasCanonicalSteps = canonicalSteps.length > 0;
+          const steps = hasCanonicalSteps
+            ? canonicalSteps.map((step) => this.toPlanStep(step.order, step.description, step.assignee, step.deliverables))
+            : fallbackPhase?.steps ?? [];
+          const deliverables = this.uniqueStrings([
+            ...(phase.deliverables ?? []),
+            ...(hasCanonicalSteps ? [] : (fallbackPhase?.deliverables ?? [])),
+            ...steps.flatMap(step => [...(step.deliverables ?? []), ...(step.outputs ?? [])]),
+          ]);
+
+          return {
+            id: phase.id,
+            name: phase.name,
+            prevcPhase: phase.prevc as PrevcPhase,
+            summary: phase.summary,
+            deliverables: deliverables.length > 0 ? deliverables : undefined,
+            steps,
+            status: 'pending' as const,
+          };
+        })
+      : bodyPhases;
+
+    return phases.length > 0 ? phases : bodyPhases;
+  }
+
+  private toPlanStep(
+    order: number,
+    description: string,
+    assignee?: string,
+    deliverables?: string[]
+  ): PlanStep {
+    const normalizedDeliverables = this.uniqueStrings(deliverables ?? []);
+
+    return {
+      order,
+      description,
+      assignee,
+      deliverables: normalizedDeliverables.length > 0 ? normalizedDeliverables : undefined,
+      outputs: normalizedDeliverables.length > 0 ? normalizedDeliverables : undefined,
+      status: 'pending',
+    };
+  }
+
+  private extractPlanStepsFromBodySection(sectionLines: string[]): PlanStep[] {
+    const tableSteps = this.extractPlanStepsFromTable(sectionLines);
+    if (tableSteps.length > 0) {
+      return tableSteps;
     }
 
-    return phases;
+    const numberedSteps = this.extractNumberedPlanSteps(sectionLines);
+    if (numberedSteps.length > 0) {
+      return numberedSteps;
+    }
+
+    return [];
+  }
+
+  private extractPlanStepsFromTable(sectionLines: string[]): PlanStep[] {
+    const rows = sectionLines
+      .map(line => this.parseMarkdownTableRow(line))
+      .filter((row): row is string[] => row !== null);
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    let header: string[] | null = null;
+    const steps: PlanStep[] = [];
+    let nextOrder = 1;
+
+    for (const row of rows) {
+      if (this.isTableSeparatorRow(row)) {
+        continue;
+      }
+
+      if (!header) {
+        if (this.looksLikeTaskTableHeader(row)) {
+          header = row;
+        }
+        continue;
+      }
+
+      const columnMap = this.buildColumnMap(header);
+      const description = this.readTableColumn(row, columnMap, ['task', 'description', 'step']) ?? row[1] ?? row[0] ?? '';
+      const assignee = this.stripMarkdownInline(this.readTableColumn(row, columnMap, ['agent', 'assignee', 'owner']));
+      const deliverables = this.parseDeliverableCell(this.readTableColumn(row, columnMap, ['deliverable', 'deliverables', 'output', 'outputs']));
+
+      steps.push(this.toPlanStep(nextOrder++, this.stripMarkdownInline(description), assignee || undefined, deliverables));
+    }
+
+    return steps;
+  }
+
+  private extractNumberedPlanSteps(sectionLines: string[]): PlanStep[] {
+    const steps: PlanStep[] = [];
+    let nextOrder = 1;
+
+    for (const line of sectionLines) {
+      const match = line.match(/^\s*(\d+)\.\s*(?:\[[ x]\]\s*)?(.+)$/);
+      if (!match) {
+        continue;
+      }
+
+      steps.push(this.toPlanStep(nextOrder++, this.stripMarkdownInline(match[2].trim())));
+    }
+
+    return steps;
+  }
+
+  private parseMarkdownTableRow(line: string): string[] | null {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('|')) {
+      return null;
+    }
+
+    const cells = trimmed
+      .slice(1, trimmed.endsWith('|') ? -1 : undefined)
+      .split('|')
+      .map(cell => cell.trim());
+
+    if (cells.length === 0) {
+      return null;
+    }
+
+    return cells;
+  }
+
+  private isTableSeparatorRow(row: string[]): boolean {
+    return row.every(cell => /^:?-{3,}:?$/.test(cell));
+  }
+
+  private looksLikeTaskTableHeader(row: string[]): boolean {
+    const lowered = row.map(cell => cell.toLowerCase());
+    return lowered.some(cell => cell === '#' || cell.includes('task')) && lowered.some(cell => cell.includes('deliverable') || cell.includes('output'));
+  }
+
+  private buildColumnMap(header: string[]): Record<string, number> {
+    const map: Record<string, number> = {};
+    header.forEach((cell, index) => {
+      const normalized = cell.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      if (normalized) {
+        map[normalized] = index;
+      }
+    });
+    return map;
+  }
+
+  private readTableColumn(row: string[], columnMap: Record<string, number>, names: string[]): string | undefined {
+    for (const name of names) {
+      const index = columnMap[name.replace(/[^a-z0-9]+/g, '')];
+      if (typeof index === 'number' && row[index] !== undefined) {
+        return row[index];
+      }
+    }
+    return undefined;
+  }
+
+  private parseDeliverableCell(value?: string): string[] | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const normalized = this.stripMarkdownInline(value);
+    const parts = normalized
+      .split(/(?:<br\s*\/?>|\n|;)/i)
+      .map(part => part.trim())
+      .filter(Boolean);
+
+    const unique = this.uniqueStrings(parts.length > 0 ? parts : [normalized]);
+    return unique.length > 0 ? unique : undefined;
+  }
+
+  private stripMarkdownInline(value?: string): string {
+    if (!value) {
+      return '';
+    }
+
+    return value
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+      .trim();
+  }
+
+  private uniqueStrings(values: string[]): string[] {
+    return [...new Set(values.map(value => value.trim()).filter(Boolean))];
+  }
+
+  private inferPrevcPhaseFromPhaseName(phaseName: string): PrevcPhase {
+    const lowerName = phaseName.toLowerCase();
+
+    for (const [keyword, phase] of Object.entries(PLAN_PHASE_TO_PREVC)) {
+      if (lowerName.includes(keyword)) {
+        return phase;
+      }
+    }
+
+    return 'E';
   }
 
   /**

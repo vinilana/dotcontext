@@ -84,8 +84,20 @@ export interface PlanScaffoldFrontmatter extends BaseScaffoldFrontmatter {
   agents?: Array<{ type: string; role: string }>;
   /** Linked documentation */
   docs?: string[];
-  /** Plan phases */
-  phases?: Array<{ id: string; name: string; prevc: PrevcPhase }>;
+  /** Plan phases with structured steps and deliverables */
+  phases?: Array<{
+    id: string;
+    name: string;
+    prevc: PrevcPhase;
+    summary?: string;
+    deliverables?: string[];
+    steps?: Array<{
+      order: number;
+      description: string;
+      assignee?: string;
+      deliverables?: string[];
+    }>;
+  }>;
 }
 
 /**
@@ -203,7 +215,19 @@ export function createPlanFrontmatter(
     summary?: string;
     agents?: Array<{ type: string; role: string }>;
     docs?: string[];
-    phases?: Array<{ id: string; name: string; prevc: PrevcPhase }>;
+    phases?: Array<{
+      id: string;
+      name: string;
+      prevc: PrevcPhase;
+      summary?: string;
+      deliverables?: string[];
+      steps?: Array<{
+        order: number;
+        description: string;
+        assignee?: string;
+        deliverables?: string[];
+      }>;
+    }>;
   }
 ): PlanScaffoldFrontmatter {
   return {
@@ -260,27 +284,52 @@ export function serializeFrontmatter(fm: ScaffoldFrontmatter): string {
   if (isPlanFrontmatter(fm)) {
     lines.push(`planSlug: ${fm.planSlug}`);
     if (fm.summary) {
-      lines.push(`summary: ${fm.summary}`);
+      lines.push(`summary: ${JSON.stringify(fm.summary)}`);
     }
     if (fm.agents && fm.agents.length > 0) {
       lines.push('agents:');
       for (const agent of fm.agents) {
-        lines.push(`  - type: "${agent.type}"`);
-        lines.push(`    role: "${agent.role}"`);
+        lines.push(`  - type: ${JSON.stringify(agent.type)}`);
+        lines.push(`    role: ${JSON.stringify(agent.role)}`);
       }
     }
     if (fm.docs && fm.docs.length > 0) {
       lines.push('docs:');
       for (const doc of fm.docs) {
-        lines.push(`  - "${doc}"`);
+        lines.push(`  - ${JSON.stringify(doc)}`);
       }
     }
     if (fm.phases && fm.phases.length > 0) {
       lines.push('phases:');
       for (const phase of fm.phases) {
-        lines.push(`  - id: "${phase.id}"`);
-        lines.push(`    name: "${phase.name}"`);
-        lines.push(`    prevc: "${phase.prevc}"`);
+        lines.push(`  - id: ${JSON.stringify(phase.id)}`);
+        lines.push(`    name: ${JSON.stringify(phase.name)}`);
+        lines.push(`    prevc: ${JSON.stringify(phase.prevc)}`);
+        if (phase.summary) {
+          lines.push(`    summary: ${JSON.stringify(phase.summary)}`);
+        }
+        if (phase.deliverables && phase.deliverables.length > 0) {
+          lines.push('    deliverables:');
+          for (const deliverable of phase.deliverables) {
+            lines.push(`      - ${JSON.stringify(deliverable)}`);
+          }
+        }
+        if (phase.steps && phase.steps.length > 0) {
+          lines.push('    steps:');
+          for (const step of phase.steps) {
+            lines.push(`      - order: ${step.order}`);
+            lines.push(`        description: ${JSON.stringify(step.description)}`);
+            if (step.assignee) {
+              lines.push(`        assignee: ${JSON.stringify(step.assignee)}`);
+            }
+            if (step.deliverables && step.deliverables.length > 0) {
+              lines.push('        deliverables:');
+              for (const deliverable of step.deliverables) {
+                lines.push(`          - ${JSON.stringify(deliverable)}`);
+              }
+            }
+          }
+        }
       }
     }
   }

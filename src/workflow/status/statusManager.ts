@@ -147,6 +147,31 @@ export class PrevcStatusManager {
     }
   }
 
+  private ensureExecutionHistory(status: PrevcStatus, now: string): ExecutionHistory {
+    if (!status.execution) {
+      status.execution = {
+        history: [],
+        last_activity: now,
+        resume_context: '',
+      };
+    }
+
+    return status.execution;
+  }
+
+  private getNextPhaseForStatus(status: PrevcStatus): PrevcPhase | null {
+    const currentIndex = PREVC_PHASE_ORDER.indexOf(status.project.current_phase);
+
+    for (let i = currentIndex + 1; i < PREVC_PHASE_ORDER.length; i++) {
+      const phase = PREVC_PHASE_ORDER[i];
+      if (status.phases[phase].status !== 'skipped') {
+        return phase;
+      }
+    }
+
+    return null;
+  }
+
   /**
    * Create a new workflow status
    */
@@ -257,20 +282,14 @@ export class PrevcStatusManager {
     };
 
     // Add history entry
-    if (!status.execution) {
-      status.execution = {
-        history: [],
-        last_activity: now,
-        resume_context: '',
-      };
-    }
-    status.execution.history.push({
+    const execution = this.ensureExecutionHistory(status, now);
+    execution.history.push({
       timestamp: now,
       phase,
       action: 'started',
     });
-    status.execution.last_activity = now;
-    status.execution.resume_context = generateResumeContext(phase, 'started');
+    execution.last_activity = now;
+    execution.resume_context = generateResumeContext(phase, 'started');
 
     await this.save(status);
   }
@@ -298,22 +317,59 @@ export class PrevcStatusManager {
     status.phases[phase] = phaseStatus;
 
     // Add history entry
-    if (!status.execution) {
-      status.execution = {
-        history: [],
-        last_activity: now,
-        resume_context: '',
-      };
-    }
-    status.execution.history.push({
+    const execution = this.ensureExecutionHistory(status, now);
+    execution.history.push({
       timestamp: now,
       phase,
       action: 'completed',
     });
-    status.execution.last_activity = now;
-    status.execution.resume_context = generateResumeContext(phase, 'completed');
+    execution.last_activity = now;
+    execution.resume_context = generateResumeContext(phase, 'completed');
 
     await this.save(status);
+  }
+
+  async completePhaseTransition(outputs?: string[]): Promise<PrevcPhase | null> {
+    const status = await this.load();
+    const now = new Date().toISOString();
+    const currentPhase = status.project.current_phase;
+    const nextPhase = this.getNextPhaseForStatus(status);
+
+    status.phases[currentPhase] = {
+      ...status.phases[currentPhase],
+      status: 'completed',
+      completed_at: now,
+      ...(outputs ? { outputs: outputs.map((outputPath) => ({ path: outputPath, status: 'filled' })) } : {}),
+    };
+
+    const execution = this.ensureExecutionHistory(status, now);
+    execution.history.push({
+      timestamp: now,
+      phase: currentPhase,
+      action: 'completed',
+    });
+
+    if (nextPhase) {
+      status.project.current_phase = nextPhase;
+      status.phases[nextPhase] = {
+        ...status.phases[nextPhase],
+        status: 'in_progress',
+        started_at: status.phases[nextPhase].started_at || now,
+      };
+      execution.history.push({
+        timestamp: now,
+        phase: nextPhase,
+        action: 'started',
+      });
+      execution.resume_context = generateResumeContext(nextPhase, 'started');
+    } else {
+      execution.resume_context = generateResumeContext(currentPhase, 'completed');
+    }
+
+    execution.last_activity = now;
+
+    await this.save(status);
+    return nextPhase;
   }
 
   /**
@@ -344,18 +400,7 @@ export class PrevcStatusManager {
    */
   async getNextPhase(): Promise<PrevcPhase | null> {
     const status = await this.load();
-    const currentIndex = PREVC_PHASE_ORDER.indexOf(
-      status.project.current_phase
-    );
-
-    for (let i = currentIndex + 1; i < PREVC_PHASE_ORDER.length; i++) {
-      const phase = PREVC_PHASE_ORDER[i];
-      if (status.phases[phase].status !== 'skipped') {
-        return phase;
-      }
-    }
-
-    return null;
+    return this.getNextPhaseForStatus(status);
   }
 
   /**

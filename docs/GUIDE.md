@@ -106,6 +106,16 @@ The workflow uses PREVC:
 | `V` | Validation | Tests, QA, review feedback |
 | `C` | Confirmation | Final docs, changelog, handoff |
 
+When you link a plan to an active workflow, dotcontext now bootstraps a harness task contract for the current PREVC phase. On each `workflow-advance`, the previous contract is completed and a new one is derived from the linked plan for the next phase.
+
+Structured plan metadata is canonical in frontmatter:
+
+- `phases[].summary`
+- `phases[].deliverables`
+- `phases[].steps[].description`
+- `phases[].steps[].assignee`
+- `phases[].steps[].deliverables`
+
 For larger tasks, the workflow can also record handoffs and collaboration:
 
 ```bash
@@ -205,11 +215,11 @@ The MCP server exposes focused tools instead of a large set of one-off commands.
 | `explore` | Read files, list paths, search code, analyze symbols, inspect structure |
 | `context` | Check/init/fill context, build semantic context, scaffold plans, and use optional Q&A/flow helpers |
 | `workflow-init` | Start PREVC workflow tracking |
-| `workflow-status` | Read current workflow status |
-| `workflow-advance` | Advance to the next PREVC phase |
-| `workflow-manage` | Handoffs, collaboration, docs, approvals, gate changes |
+| `workflow-status` | Read current workflow status and the active harness task contract |
+| `workflow-advance` | Advance to the next PREVC phase and rotate the active task contract |
+| `workflow-manage` | Handoffs, collaboration, docs, approvals, gate changes, and manual contract definition |
 | `sync` | Export or import docs, rules, agents, and skills |
-| `plan` | Link plans, update execution state, record decisions, commit phase artifacts |
+| `plan` | Link plans, bootstrap structured phase contracts, update execution state, record decisions, commit phase artifacts |
 | `agent` | Discover and orchestrate agents |
 | `skill` | List, scaffold, export, and fill skills |
 

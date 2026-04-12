@@ -57,6 +57,8 @@ export interface PlanStep {
   description: string;
   /** Assigned role/owner */
   assignee?: PrevcRole | string;
+  /** Deliverables expected from this step */
+  deliverables?: string[];
   /** Step status */
   status: StatusType;
   /** Output artifacts produced */
@@ -75,6 +77,10 @@ export interface PlanPhase {
   name: string;
   /** Mapped PREVC phase */
   prevcPhase: PrevcPhase;
+  /** Optional canonical phase summary/objective */
+  summary?: string;
+  /** Deliverables expected from the overall phase */
+  deliverables?: string[];
   /** Steps in this phase */
   steps: PlanStep[];
   /** Phase status */
@@ -201,6 +207,8 @@ export interface StepExecution {
   stepIndex: number;
   /** Step description */
   description: string;
+  /** Deliverables expected from the step */
+  deliverables?: string[];
   /** Current status */
   status: StatusType;
   /** When step was started */

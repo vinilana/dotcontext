@@ -381,8 +381,7 @@ export class PrevcOrchestrator {
       });
     }
 
-    // Mark current phase as complete
-    await this.statusManager.markPhaseComplete(currentPhase, outputs);
+    const advancedPhase = await this.statusManager.completePhaseTransition(outputs);
 
     // Auto-sync linked plan markdown with execution progress
     if (status.project.plan) {
@@ -393,12 +392,7 @@ export class PrevcOrchestrator {
       }
     }
 
-    // Get and transition to next phase
-    if (nextPhase) {
-      await this.statusManager.transitionToPhase(nextPhase);
-    }
-
-    return nextPhase;
+    return advancedPhase;
   }
 
   /**

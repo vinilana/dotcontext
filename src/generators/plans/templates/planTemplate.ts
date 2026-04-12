@@ -1,58 +1,30 @@
-/**
- * REFERENCE ONLY - This file is not used by generators anymore.
- *
- * Scaffold structures are now defined in:
- * src/generators/shared/scaffoldStructures.ts
- *
- * This file serves as historical reference for the structure/content
- * that should be generated for this plan type.
- *
- * @deprecated Since v2.0.0 scaffold system
- */
 import { PlanTemplateContext, CodebaseSnapshot } from './types';
 import { SemanticContext } from '../../../services/semantic';
+import {
+  createPlanFrontmatter,
+  serializeFrontmatter,
+} from '../../../types/scaffoldFrontmatter';
+import { PrevcPhase } from '../../../workflow/types';
 
-/**
- * Wrap plan content with enhanced YAML front matter including agent lineup.
- * This allows AI agents to quickly read which agents are needed for the plan.
- */
-function wrapWithPlanFrontMatter(
-  content: string,
-  options: {
-    agents: Array<{ type: string; role?: string }>;
-    docs: string[];
-    phases: Array<{ id: string; name: string; prevcPhase: string; agent?: string }>;
-  }
-): string {
-  const date = new Date().toISOString().split('T')[0];
+interface TemplateStep {
+  order: number;
+  description: string;
+  assignee: string;
+  deliverables: string[];
+}
 
-  // Format agents as YAML array
-  const agentsYaml = options.agents.length > 0
-    ? options.agents.map(a => `  - type: "${a.type}"${a.role ? `\n    role: "${a.role}"` : ''}`).join('\n')
-    : '  - type: "documentation-writer"';
+interface TemplatePhase {
+  id: string;
+  name: string;
+  prevc: PrevcPhase;
+  primaryAgent: string;
+  objective: string;
+  commitCheckpoint: string;
+  steps: TemplateStep[];
+}
 
-  // Format docs as YAML array
-  const docsYaml = options.docs.length > 0
-    ? options.docs.map(d => `  - "${d}"`).join('\n')
-    : '  - "README.md"';
-
-  // Format phases as YAML array (includes agent placeholder)
-  const phasesYaml = options.phases.map(p =>
-    `  - id: "${p.id}"\n    name: "${p.name}"\n    prevc: "${p.prevcPhase}"\n    agent: "${p.agent || 'TODO: assign-agent'}"`
-  ).join('\n');
-
-  return `---
-status: unfilled
-generated: ${date}
-agents:
-${agentsYaml}
-docs:
-${docsYaml}
-phases:
-${phasesYaml}
----
-
-${content}`;
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }
 
 function renderCodebaseSnapshot(snapshot?: CodebaseSnapshot): string {
@@ -62,7 +34,7 @@ function renderCodebaseSnapshot(snapshot?: CodebaseSnapshot): string {
 
   const lines = [
     `- **Total files analyzed:** ${snapshot.totalFiles}`,
-    `- **Total symbols discovered:** ${snapshot.totalSymbols}`
+    `- **Total symbols discovered:** ${snapshot.totalSymbols}`,
   ];
 
   if (snapshot.layers.length > 0) {
@@ -86,8 +58,8 @@ function renderKeyComponents(semantics?: SemanticContext): string {
   }
 
   const { symbols } = semantics;
-  const keyClasses = symbols.classes.filter(s => s.exported).slice(0, 5);
-  const keyInterfaces = symbols.interfaces.filter(s => s.exported).slice(0, 5);
+  const keyClasses = symbols.classes.filter((symbol) => symbol.exported).slice(0, 5);
+  const keyInterfaces = symbols.interfaces.filter((symbol) => symbol.exported).slice(0, 5);
 
   if (keyClasses.length === 0 && keyInterfaces.length === 0) {
     return '';
@@ -97,43 +69,135 @@ function renderKeyComponents(semantics?: SemanticContext): string {
 
   if (keyClasses.length > 0) {
     lines.push('**Core Classes:**');
-    keyClasses.forEach(cls => {
+    keyClasses.forEach((cls) => {
       lines.push(`- \`${cls.name}\` — ${cls.location.file}:${cls.location.line}`);
     });
   }
 
   if (keyInterfaces.length > 0) {
     lines.push('', '**Key Interfaces:**');
-    keyInterfaces.forEach(iface => {
+    keyInterfaces.forEach((iface) => {
       lines.push(`- \`${iface.name}\` — ${iface.location.file}:${iface.location.line}`);
     });
   }
 
-  return lines.join('\n') + '\n';
+  return `${lines.join('\n')}\n`;
+}
+
+function renderPhaseSection(phase: TemplatePhase, phaseNumber: number): string {
+  const taskRows = phase.steps
+    .map((step) => `| ${phaseNumber}.${step.order} | ${step.description} | \`${step.assignee}\` | pending | ${step.deliverables.join(', ')} |`)
+    .join('\n');
+
+  return `### Phase ${phaseNumber} — ${phase.name}
+> **Primary Agent:** \`${phase.primaryAgent}\` - [Playbook](../agents/${phase.primaryAgent}.md)
+
+**Objective:** ${phase.objective}
+
+**Tasks**
+
+| # | Task | Agent | Status | Deliverable |
+|---|------|-------|--------|-------------|
+${taskRows}
+
+**Commit Checkpoint**
+- ${phase.commitCheckpoint}`;
 }
 
 export function renderPlanTemplate(context: PlanTemplateContext): string {
   const { title, slug, summary, agents, docs, semantics, codebaseSnapshot } = context;
+  const planSummary = summary?.trim() || 'TODO: Summarize the desired outcome and the problem this plan addresses.';
 
-  const relatedAgents = agents.length
-    ? agents.map(agent => `  - "${agent.type}"`).join('\n')
-    : '  - "documentation-writer"';
+  const phases: TemplatePhase[] = [
+    {
+      id: 'phase-1',
+      name: 'Discovery & Alignment',
+      prevc: 'P',
+      primaryAgent: 'TODO-agent',
+      objective: 'TODO: Define the goal for this phase.',
+      commitCheckpoint: 'After completing this phase, capture the agreed context and create a commit (for example, `git commit -m "chore(plan): complete phase 1 discovery"`).',
+      steps: [
+        {
+          order: 1,
+          description: 'TODO: Outline discovery task',
+          assignee: 'TODO: agent',
+          deliverables: ['TODO: Expected output'],
+        },
+        {
+          order: 2,
+          description: 'TODO: Capture open questions',
+          assignee: 'TODO: agent',
+          deliverables: ['TODO: Expected output'],
+        },
+      ],
+    },
+    {
+      id: 'phase-2',
+      name: 'Implementation & Iteration',
+      prevc: 'E',
+      primaryAgent: 'TODO-agent',
+      objective: 'TODO: Define the goal for this phase.',
+      commitCheckpoint: 'Summarize progress, update cross-links, and create a commit documenting the outcomes of this phase (for example, `git commit -m "chore(plan): complete phase 2 implementation"`).',
+      steps: [
+        {
+          order: 1,
+          description: 'TODO: Build task description',
+          assignee: 'TODO: agent',
+          deliverables: ['TODO: Expected output'],
+        },
+        {
+          order: 2,
+          description: 'TODO: Reference docs or playbooks',
+          assignee: 'TODO: agent',
+          deliverables: ['TODO: Expected output'],
+        },
+      ],
+    },
+    {
+      id: 'phase-3',
+      name: 'Validation & Handoff',
+      prevc: 'V',
+      primaryAgent: 'TODO-agent',
+      objective: 'TODO: Define the goal for this phase.',
+      commitCheckpoint: 'Record the validation evidence and create a commit signalling the handoff completion (for example, `git commit -m "chore(plan): complete phase 3 validation"`).',
+      steps: [
+        {
+          order: 1,
+          description: 'TODO: Testing and verification',
+          assignee: 'TODO: agent',
+          deliverables: ['TODO: Expected output'],
+        },
+        {
+          order: 2,
+          description: 'TODO: Documentation updates',
+          assignee: 'TODO: agent',
+          deliverables: ['TODO: Expected output'],
+        },
+        {
+          order: 3,
+          description: 'TODO: Capture evidence for maintainers',
+          assignee: 'TODO: agent',
+          deliverables: ['TODO: Expected output'],
+        },
+      ],
+    },
+  ];
 
   const agentTableRows = agents.length
     ? agents
-        .map(agent => `| ${agent.title} | TODO: Describe why this agent is involved. | [${agent.title}](../agents/${agent.type}.md) | ${agent.responsibility} |`)
-        .join('\n')
+      .map((agent) => `| ${agent.title} | TODO: Describe why this agent is involved. | [${agent.title}](../agents/${agent.type}.md) | ${agent.responsibility} |`)
+      .join('\n')
     : '| Documentation Writer | TODO: Describe why this agent is involved. | [Documentation Writer](../agents/documentation-writer.md) | Create clear, comprehensive documentation |';
 
   const docsTableRows = docs.length
     ? docs
-        .map(doc => `| ${doc.title} | [${doc.file}](../docs/${doc.file}) | ${doc.primaryInputs} |`)
-        .join('\n')
+      .map((doc) => `| ${doc.title} | [${doc.file}](../docs/${doc.file}) | ${doc.primaryInputs} |`)
+      .join('\n')
     : '| Documentation Index | [README.md](../docs/README.md) | Current docs directory listing |';
 
   const content = `# ${title} Plan
 
-> ${summary?.trim() || 'TODO: Summarize the desired outcome and the problem this plan addresses.'}
+> ${planSummary}
 
 ## Task Snapshot
 - **Primary goal:** TODO: Describe the outcome to achieve.
@@ -195,55 +259,7 @@ Identify potential blockers, dependencies, and mitigation strategies before begi
 
 ## Working Phases
 
-### Phase 1 — Discovery & Alignment
-> **Primary Agent:** \`TODO: assign-agent\` - [Playbook](../agents/TODO-agent.md)
-
-**Objective:** TODO: Define the goal for this phase.
-
-**Tasks**
-
-| # | Task | Agent | Status | Deliverable |
-|---|------|-------|--------|-------------|
-| 1.1 | TODO: Outline discovery task | \`TODO: agent\` | pending | TODO: Expected output |
-| 1.2 | TODO: Capture open questions | \`TODO: agent\` | pending | TODO: Expected output |
-
-**Commit Checkpoint**
-- After completing this phase, capture the agreed context and create a commit (for example, \`git commit -m "chore(plan): complete phase 1 discovery"\`).
-
----
-
-### Phase 2 — Implementation & Iteration
-> **Primary Agent:** \`TODO: assign-agent\` - [Playbook](../agents/TODO-agent.md)
-
-**Objective:** TODO: Define the goal for this phase.
-
-**Tasks**
-
-| # | Task | Agent | Status | Deliverable |
-|---|------|-------|--------|-------------|
-| 2.1 | TODO: Build task description | \`TODO: agent\` | pending | TODO: Expected output |
-| 2.2 | TODO: Reference docs or playbooks | \`TODO: agent\` | pending | TODO: Expected output |
-
-**Commit Checkpoint**
-- Summarize progress, update cross-links, and create a commit documenting the outcomes of this phase (for example, \`git commit -m "chore(plan): complete phase 2 implementation"\`).
-
----
-
-### Phase 3 — Validation & Handoff
-> **Primary Agent:** \`TODO: assign-agent\` - [Playbook](../agents/TODO-agent.md)
-
-**Objective:** TODO: Define the goal for this phase.
-
-**Tasks**
-
-| # | Task | Agent | Status | Deliverable |
-|---|------|-------|--------|-------------|
-| 3.1 | TODO: Testing and verification | \`TODO: agent\` | pending | TODO: Expected output |
-| 3.2 | TODO: Documentation updates | \`TODO: agent\` | pending | TODO: Expected output |
-| 3.3 | TODO: Capture evidence for maintainers | \`TODO: agent\` | pending | TODO: Expected output |
-
-**Commit Checkpoint**
-- Record the validation evidence and create a commit signalling the handoff completion (for example, \`git commit -m "chore(plan): complete phase 3 validation"\`).
+${phases.map((phase, index) => renderPhaseSection(phase, index + 1)).join('\n\n---\n\n')}
 
 ## Rollback Plan
 Document how to revert changes if issues arise during or after implementation.
@@ -292,24 +308,31 @@ When to initiate rollback:
 | TODO: Action description | \`TODO: agent\` | TODO: Date/milestone |
 `;
 
-  // Build frontmatter data
-  const frontMatterAgents = agents.length > 0
-    ? agents.map(a => ({ type: a.type, role: a.responsibility }))
-    : [{ type: 'documentation-writer' }];
+  const frontmatter = createPlanFrontmatter(
+    title,
+    planSummary,
+    slug,
+    {
+      summary: planSummary,
+      agents: agents.length > 0
+        ? agents.map((agent) => ({ type: agent.type, role: agent.responsibility }))
+        : [{ type: 'documentation-writer', role: 'Create clear, comprehensive documentation' }],
+      docs: docs.length > 0 ? docs.map((doc) => doc.file) : ['README.md'],
+      phases: phases.map((phase) => ({
+        id: phase.id,
+        name: phase.name,
+        prevc: phase.prevc,
+        summary: phase.objective,
+        deliverables: uniqueStrings(phase.steps.flatMap((step) => step.deliverables)),
+        steps: phase.steps.map((step) => ({
+          order: step.order,
+          description: step.description,
+          assignee: step.assignee,
+          deliverables: step.deliverables,
+        })),
+      })),
+    }
+  );
 
-  const frontMatterDocs = docs.length > 0
-    ? docs.map(d => d.file)
-    : ['README.md'];
-
-  const frontMatterPhases = [
-    { id: 'phase-1', name: 'Discovery & Alignment', prevcPhase: 'P', agent: 'TODO: assign-agent' },
-    { id: 'phase-2', name: 'Implementation & Iteration', prevcPhase: 'E', agent: 'TODO: assign-agent' },
-    { id: 'phase-3', name: 'Validation & Handoff', prevcPhase: 'V', agent: 'TODO: assign-agent' },
-  ];
-
-  return wrapWithPlanFrontMatter(content, {
-    agents: frontMatterAgents,
-    docs: frontMatterDocs,
-    phases: frontMatterPhases,
-  });
+  return `${serializeFrontmatter(frontmatter)}\n\n${content}`;
 }

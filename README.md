@@ -115,6 +115,14 @@ The runtime adds execution controls on top of the shared context:
 - policy enforcement
 - replay and failure dataset generation
 
+### Plan-Driven Contracts
+
+Structured plans now carry canonical phase metadata in frontmatter, including `phases[].steps[].deliverables`.
+
+- `plan link` bootstraps the active PREVC phase into a harness task contract when a workflow is already running
+- `workflow-advance` completes the previous active contract and derives the next one from the linked plan
+- the harness remains the source of truth for contract persistence and completion checks
+
 ### Multi-Surface Access
 
 The same runtime is exposed through:
@@ -544,7 +552,7 @@ Once configured, your AI assistant will have access to 9 gateway tools with acti
 |---------|-------------|---------|
 | **explore** | File and code exploration | `read`, `list`, `analyze`, `search`, `getStructure` |
 | **context** | Context scaffolding, semantic context, and optional Q&A/flow helpers | `check`, `bootstrapStatus`, `init`, `fill`, `fillSingle`, `listToFill`, `getMap`, `buildSemantic`, `scaffoldPlan`, `searchQA`, `generateQA`, `getFlow`, `detectPatterns` |
-| **plan** | Plan management and execution tracking | `link`, `getLinked`, `getDetails`, `getForPhase`, `updatePhase`, `recordDecision`, `updateStep`, `getStatus`, `syncMarkdown`, `commitPhase` |
+| **plan** | Plan management, structured step tracking, and workflow-linked bootstrap of the active task contract | `link`, `getLinked`, `getDetails`, `getForPhase`, `updatePhase`, `recordDecision`, `updateStep`, `getStatus`, `syncMarkdown`, `commitPhase` |
 | **agent** | Agent orchestration and discovery | `discover`, `getInfo`, `orchestrate`, `getSequence`, `getDocs`, `getPhaseDocs`, `listTypes` |
 | **skill** | Skill management for on-demand expertise | `list`, `getContent`, `getForPhase`, `scaffold`, `export`, `fill` |
 | **sync** | Import/export synchronization with AI tools | `exportRules`, `exportDocs`, `exportAgents`, `exportContext`, `exportSkills`, `reverseSync`, `importDocs`, `importAgents`, `importSkills` |
@@ -558,18 +566,19 @@ Once configured, your AI assistant will have access to 9 gateway tools with acti
 | Tool | Description |
 |------|-------------|
 | **workflow-init** | Initialize a PREVC workflow with scale detection, gates, and autonomous mode |
-| **workflow-status** | Get current workflow status, phases, and execution history |
-| **workflow-advance** | Advance to the next PREVC phase with gate checking |
-| **workflow-manage** | Manage handoffs, collaboration, documents, gates, and approvals |
+| **workflow-status** | Get current workflow status, phases, execution history, and the active harness task contract |
+| **workflow-advance** | Advance to the next PREVC phase with gate checking and automatic task-contract rotation |
+| **workflow-manage** | Manage handoffs, collaboration, documents, gates, approvals, and manual contract overrides |
 
 #### Key Features in v0.7.0
 
 - **Gateway Pattern**: Simplified, action-based tools reduce cognitive load
-- **Plan Execution Tracking**: Step-level tracking with `updateStep`, `getStatus`, `syncMarkdown` actions
+- **Plan Execution Tracking**: Step-level tracking with canonical `phases[].steps[].deliverables`, plus `updateStep`, `getStatus`, and `syncMarkdown` actions
 - **Git Integration**: `commitPhase` action for creating commits on phase completion
 - **Q&A & Pattern Detection**: Automatic Q&A generation and functional pattern analysis
 - **Execution History**: Comprehensive logging of all workflow actions to `.context/workflow/actions.jsonl`
 - **Workflow Gates**: Phase transition gates based on project scale with approval requirements
+- **Task Contract Rotation**: `plan link` bootstraps the current phase contract and `workflow-advance` rotates it automatically
 - **Export/Import Tools**: Granular control over docs, agents, and skills sync with merge strategies
 
 ### Skills (On-Demand Expertise)

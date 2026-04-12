@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Structured plan metadata now supports canonical phase steps and deliverables**
+  - Plan frontmatter can now persist `phases[].summary`, `phases[].deliverables`, and `phases[].steps[].deliverables`
+  - Plan parsing now prefers canonical frontmatter metadata and falls back to markdown task tables or numbered lists only for legacy plans
+
+### Changed
+
+- **Workflow-linked plans now bootstrap and rotate harness task contracts automatically**
+  - `plan link` creates a bootstrap task contract for the current PREVC phase when a workflow is active
+  - `workflow-advance` completes the previous active contract and derives the next phase contract from the linked plan
+  - The harness remains the persistence and evaluation layer for task contracts while workflow owns the phase-driven rotation logic
+
 ## [v0.9.2]
 
 ### Fixed

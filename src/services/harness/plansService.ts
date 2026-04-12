@@ -42,10 +42,9 @@ export class HarnessPlansService {
     }
 
     const service = new WorkflowService(this.repoPath);
-    const workflowActive = await service.hasWorkflow();
-    if (workflowActive) {
-      await service.markPlanCreated(planSlug);
-    }
+    const workflowLink = await service.linkPlanToActiveWorkflow(planSlug);
+    const workflowActive = workflowLink.workflowActive;
+    const taskContract = workflowLink.taskContract;
 
     let canAdvanceToReview = false;
     if (workflowActive) {
@@ -89,8 +88,9 @@ Next:
       plan: ref,
       workflowActive,
       workflowStatePath,
-      planCreatedForGates: workflowActive,
+      planCreatedForGates: workflowLink.planCreatedForGates,
       canAdvanceToReview,
+      taskContract,
       enhancementPrompt,
       nextSteps,
     };

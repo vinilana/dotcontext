@@ -4,6 +4,7 @@ import * as os from 'os';
 import {
   needsFill,
   parseFrontMatter,
+  parseScaffoldFrontMatter,
   addFrontMatter,
   removeFrontMatter,
   hasFrontMatter,
@@ -91,6 +92,77 @@ describe('frontMatter', () => {
 
       expect(frontMatter).toEqual({});
       expect(body).toBe('# Content');
+    });
+  });
+
+  describe('parseScaffoldFrontMatter', () => {
+    it('should parse structured plan frontmatter with nested phases and steps', () => {
+      const content = `---
+type: plan
+name: "Structured Delivery"
+description: "Plan for structured delivery"
+generated: "2026-04-12"
+status: filled
+scaffoldVersion: "2.0.0"
+planSlug: "structured-delivery"
+summary: "Ship structured metadata"
+agents:
+  - type: "planner"
+    role: "Define scope"
+docs:
+  - "README.md"
+phases:
+  - id: "phase-1"
+    name: "Discovery & Alignment"
+    prevc: "P"
+    deliverables:
+      - "discovery-note"
+    steps:
+      - order: 1
+        description: "Gather requirements"
+        assignee: "planner"
+        deliverables:
+          - "requirements-summary"
+      - order: 2
+        description: "Validate constraints"
+        deliverables:
+          - "constraint-matrix"
+---
+
+# Structured Delivery`;
+
+      const { frontMatter, body } = parseScaffoldFrontMatter(content);
+
+      expect(frontMatter).not.toBeNull();
+      expect(frontMatter).toMatchObject({
+        type: 'plan',
+        planSlug: 'structured-delivery',
+        summary: 'Ship structured metadata',
+        agents: [{ type: 'planner', role: 'Define scope' }],
+        docs: ['README.md'],
+        planPhases: [
+          {
+            id: 'phase-1',
+            name: 'Discovery & Alignment',
+            prevc: 'P',
+            deliverables: ['discovery-note'],
+            steps: [
+              {
+                order: 1,
+                description: 'Gather requirements',
+                assignee: 'planner',
+                deliverables: ['requirements-summary'],
+              },
+              {
+                order: 2,
+                description: 'Validate constraints',
+                deliverables: ['constraint-matrix'],
+              },
+            ],
+          },
+        ],
+      });
+      expect(body).toBe('# Structured Delivery');
     });
   });
 
