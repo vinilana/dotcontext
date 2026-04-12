@@ -149,10 +149,10 @@ flowchart LR
 For the full system view, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 > **Using GitHub Copilot, Cursor, Claude, or another AI tool?**
-> Just run `npx -y @dotcontext/cli@latest mcp:install` — no API key needed!
+> Just run `npx @dotcontext/mcp install` — no API key needed!
 >
 > **Usando GitHub Copilot, Cursor, Claude ou outra ferramenta de IA?**
-> Execute `npx -y @dotcontext/cli@latest mcp:install` — sem necessidade de API key!
+> Execute `npx @dotcontext/mcp install` — sem necessidade de API key!
 
 > **Note / Nota**
 > Standalone CLI generation is no longer supported. Use MCP-enabled AI tools to create, fill, or refresh context.
@@ -164,7 +164,7 @@ For the full system view, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 #### English
 
-1. Run `npx -y @dotcontext/cli@latest mcp:install`
+1. Run `npx @dotcontext/mcp install`
 2. Prompt your AI agent: `init the context`
 3. Then: `plan [YOUR TASK] using dotcontext`
 4. After planned: `start the workflow`
@@ -173,7 +173,7 @@ For the full system view, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 #### Português
 
-1. Execute `npx -y @dotcontext/cli@latest mcp:install`
+1. Execute `npx @dotcontext/mcp install`
 2. Diga ao seu agente de IA: `init the context`
 3. Depois: `plan [SUA TAREFA] using dotcontext`
 4. Após o planejamento: `start the workflow`
@@ -203,10 +203,10 @@ This package includes an MCP (Model Context Protocol) server that provides AI co
 Use the installer. It is the source of truth for supported tools and config formats:
 
 ```bash
-npx -y @dotcontext/cli@latest mcp:install
+npx @dotcontext/mcp install
 ```
 
-If you already have the package installed globally, `dotcontext mcp:install` works too.
+If you already have the MCP package installed globally, `dotcontext-mcp install` works too. The legacy `dotcontext mcp:install` CLI flow still works as a compatibility path.
 
 The installer:
 - Detects installed AI tools on your system
@@ -220,21 +220,21 @@ Examples:
 
 ```bash
 # Interactive install for detected tools
-npx -y @dotcontext/cli@latest mcp:install
+npx @dotcontext/mcp install
 
 # Install for a specific tool
-npx -y @dotcontext/cli@latest mcp:install codex
+npx @dotcontext/mcp install codex
 
 # Install in the current project instead of your home directory
-npx -y @dotcontext/cli@latest mcp:install cursor --local
+npx @dotcontext/mcp install cursor --local
 
 # Preview without writing files
-npx -y @dotcontext/cli@latest mcp:install claude --dry-run --verbose
+npx @dotcontext/mcp install claude --dry-run --verbose
 ```
 
 ### Supported MCP Install Targets
 
-`mcp:install` currently supports these tool ids:
+`install` currently supports these tool ids:
 
 | Tool ID | Tool | Config Shape |
 | --- | --- | --- |
@@ -257,13 +257,13 @@ npx -y @dotcontext/cli@latest mcp:install claude --dry-run --verbose
 
 ### Manual Configuration
 
-Use manual configuration only when you cannot use `mcp:install`. The exact file format depends on the client.
+Use manual configuration only when you cannot use `@dotcontext/mcp install`. The exact file format depends on the client.
 
 Dotcontext writes this command into client configs:
 
 ```text
 command: npx
-args: ["-y", "@dotcontext/cli@latest", "mcp"]
+args: ["-y", "@dotcontext/mcp@latest"]
 ```
 
 #### Standard `mcpServers` JSON
@@ -275,7 +275,7 @@ Used by tools such as Claude Code, Windsurf, Claude Desktop, Roo Code, Amazon Q 
   "mcpServers": {
     "dotcontext": {
       "command": "npx",
-      "args": ["-y", "@dotcontext/cli@latest", "mcp"]
+      "args": ["-y", "@dotcontext/mcp@latest"]
     }
   }
 }
@@ -291,7 +291,7 @@ Cursor expects `type: "stdio"`:
     "dotcontext": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@dotcontext/cli@latest", "mcp"]
+      "args": ["-y", "@dotcontext/mcp@latest"]
     }
   }
 }
@@ -304,7 +304,7 @@ Continue uses a standalone per-server file:
 ```json
 {
   "command": "npx",
-  "args": ["-y", "@dotcontext/cli@latest", "mcp"],
+  "args": ["-y", "@dotcontext/mcp@latest"],
   "env": {}
 }
 ```
@@ -319,7 +319,7 @@ VS Code uses `servers` instead of `mcpServers`:
     "dotcontext": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@dotcontext/cli@latest", "mcp"]
+      "args": ["-y", "@dotcontext/mcp@latest"]
     }
   }
 }
@@ -334,7 +334,7 @@ Zed uses `context_servers`:
   "context_servers": {
     "dotcontext": {
       "command": "npx",
-      "args": ["-y", "@dotcontext/cli@latest", "mcp"],
+      "args": ["-y", "@dotcontext/mcp@latest"],
       "env": {}
     }
   }
@@ -351,7 +351,7 @@ JetBrains uses a `servers` array:
     {
       "name": "dotcontext",
       "command": "npx",
-      "args": ["-y", "@dotcontext/cli@latest", "mcp"],
+      "args": ["-y", "@dotcontext/mcp@latest"],
       "env": {}
     }
   ]
@@ -367,7 +367,7 @@ Kilo uses `mcp.dotcontext` with a command array:
   "mcp": {
     "dotcontext": {
       "type": "local",
-      "command": ["npx", "-y", "@dotcontext/cli@latest", "mcp"],
+      "command": ["npx", "-y", "@dotcontext/mcp@latest"],
       "enabled": true
     }
   }
@@ -381,19 +381,19 @@ Codex uses TOML:
 ```toml
 [mcp_servers.dotcontext]
 command = "npx"
-args = ["-y", "@dotcontext/cli@latest", "mcp"]
+args = ["-y", "@dotcontext/mcp@latest"]
 ```
 
 ### Local Development
 
-For local development, point directly to the built distribution (after `npm run build`, from the repository root — the MCP server is the `mcp` subcommand on the main CLI entry):
+For local development, point directly to the dedicated MCP binary after `npm run build`:
 
 ```json
 {
   "mcpServers": {
     "dotcontext-dev": {
       "command": "node",
-      "args": ["/absolute/path/to/this-repo/dist/index.js", "mcp"]
+      "args": ["/absolute/path/to/this-repo/dist/mcp/bin.js"]
     }
   }
 }
@@ -530,7 +530,7 @@ The system automatically detects project scale and adjusts the workflow:
 
 - Node.js 20+
 
-**Context creation, AI generation, and refresh are MCP-only.** Use `npx -y @dotcontext/cli@latest mcp:install` and let your AI tool use its own LLM.
+**Context creation, AI generation, and refresh are MCP-only.** Use `npx @dotcontext/mcp install` and let your AI tool use its own LLM.
 
 ### Available MCP Tools
 
@@ -648,9 +648,9 @@ The previous name `@ai-coders/context` caused frequent confusion with **Context7
 
 2. **Update MCP configurations** -- re-run the installer:
    ```bash
-   npx -y @dotcontext/cli@latest mcp:install
+   npx @dotcontext/mcp install
    ```
-   Or manually replace `"ai-context"` with `"dotcontext"` and `"@ai-coders/context"` with `"@dotcontext/cli"` in your MCP JSON configs.
+   Or manually replace `"ai-context"` with `"dotcontext"` and `"@ai-coders/context"` with `"@dotcontext/mcp"` in your MCP JSON configs.
 
 3. **Update shell aliases** -- replace `ai-context` with `dotcontext` in your `.bashrc`, `.zshrc`, or equivalent.
 

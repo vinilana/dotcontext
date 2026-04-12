@@ -14,7 +14,7 @@ import {
   OperationResult,
   createEmptyResult,
   addError,
-} from '../shared';
+} from '../shared/types';
 import { TOOL_REGISTRY, getToolById, ToolDefinition } from '../shared/toolRegistry';
 
 // ============================================================================
@@ -78,7 +78,7 @@ interface MCPConfigTemplate {
  */
 const AI_CONTEXT_MCP_SERVER: MCPServerConfig = {
   command: 'npx',
-  args: ['-y', '@dotcontext/cli@latest', 'mcp'],
+  args: ['-y', '@dotcontext/mcp@latest'],
   env: {},
 };
 

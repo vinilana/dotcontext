@@ -383,7 +383,7 @@ describe('MCPInstallService', () => {
       const config = await fs.readFile(configPath, 'utf-8');
       expect(config).toContain('[mcp_servers.dotcontext]');
       expect(config).toContain('command = "npx"');
-      expect(config).toContain('args = ["-y", "@dotcontext/cli@latest", "mcp"]');
+      expect(config).toContain('args = ["-y", "@dotcontext/mcp@latest"]');
     });
 
     it('should install MCP configuration for Kiro at settings path', async () => {
@@ -515,7 +515,7 @@ describe('MCPInstallService', () => {
       expect(config.mcp).toBeDefined();
       expect(config.mcp['dotcontext']).toBeDefined();
       expect(config.mcp['dotcontext'].type).toBe('local');
-      expect(config.mcp['dotcontext'].command).toEqual(['npx', '-y', '@dotcontext/cli@latest', 'mcp']);
+      expect(config.mcp['dotcontext'].command).toEqual(['npx', '-y', '@dotcontext/mcp@latest']);
       expect(config.mcp['dotcontext'].enabled).toBe(true);
       expect(config.mcpServers).toBeUndefined();
     });

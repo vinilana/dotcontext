@@ -145,11 +145,7 @@ function buildBundles() {
         {
           exports: { '.': './dist/mcp/index.js' },
           bin: { 'dotcontext-mcp': 'dist/mcp/bin.js' },
-          dependencies: packageDependencies(rootPkg, [
-            '@modelcontextprotocol/sdk',
-            'fs-extra',
-            'zod',
-          ]),
+          dependencies: rootPkg.dependencies,
         }
       ),
       readme: loadTemplate('mcp.README.md'),

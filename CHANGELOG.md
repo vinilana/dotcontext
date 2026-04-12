@@ -104,6 +104,11 @@ That is why many of the changes below are structural. The value of `0.9.0` is no
   - The package root export now points at the CLI boundary instead of the process-bootstrapping entrypoint
   - MCP shutdown handling was centralized to avoid duplicate signal handlers and race conditions during server stop
 
+- **MCP package surface is now explicit**
+  - Preferred MCP installation now uses `npx @dotcontext/mcp install`
+  - Generated AI-tool configs now start the server from `@dotcontext/mcp` instead of routing through the CLI package
+  - The dedicated MCP package now supports both `install` and default server startup flows
+
 - **MCP gateway surface expanded**
   - Added explicit harness operations for replay, dataset building, and policy document management
   - Harness-related gateway handlers are thinner and delegate to transport-agnostic services

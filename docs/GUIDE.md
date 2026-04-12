@@ -1,12 +1,14 @@
 # Dotcontext Guide
 
-`@dotcontext/cli` is an MCP-first toolkit for shared AI context, PREVC workflow tracking, and context import/export across coding tools.
+`dotcontext` ships separate CLI and MCP package surfaces for shared AI context, PREVC workflow tracking, and context import/export across coding tools.
 
 This guide reflects the current product shape in `0.9.x`:
 
 - Context creation and AI-generated fills happen through MCP-connected AI tools.
 - The standalone CLI is still useful for sync/import operations, MCP setup, and hidden `admin` utilities.
-- The public product name is `dotcontext`, and the package name is `@dotcontext/cli`.
+- The public product name is `dotcontext`.
+- The operator CLI package is `@dotcontext/cli`.
+- The MCP setup and server package is `@dotcontext/mcp`.
 
 ## Start Here
 
@@ -14,7 +16,7 @@ The fastest path for most users is:
 
 ```bash
 # 1. Install the MCP server into your AI tool
-npx -y @dotcontext/cli@latest mcp:install
+npx @dotcontext/mcp install
 
 # 2. In your AI tool, ask it to initialize context
 # Example prompts:
@@ -53,7 +55,7 @@ If you are looking for `init`, `fill`, `plan`, `update`, or `analyze` as direct 
 ### 1. Install MCP
 
 ```bash
-npx -y @dotcontext/cli@latest mcp:install
+npx @dotcontext/mcp install
 ```
 
 This configures the `dotcontext` MCP server for supported AI tools. Use `--dry-run` to preview changes, `--local` to install in the current project instead of your home directory, or pass a specific tool id such as `codex`, `cursor`, or `claude`.
@@ -61,9 +63,9 @@ This configures the `dotcontext` MCP server for supported AI tools. Use `--dry-r
 Examples:
 
 ```bash
-npx -y @dotcontext/cli@latest mcp:install codex
-npx -y @dotcontext/cli@latest mcp:install cursor --local
-npx -y @dotcontext/cli@latest mcp:install claude --dry-run --verbose
+npx @dotcontext/mcp install codex
+npx @dotcontext/mcp install cursor --local
+npx @dotcontext/mcp install claude --dry-run --verbose
 ```
 
 Currently supported install targets include Claude Code, Cursor, Windsurf, Continue.dev, Claude Desktop, VS Code (GitHub Copilot), Roo Code, Amazon Q Developer CLI, Gemini CLI, Codex CLI, Kiro, Zed, JetBrains IDEs, Trae AI, Kilo Code, and GitHub Copilot CLI.
@@ -180,8 +182,8 @@ These are the main commands currently exposed by the CLI:
 | Command | Purpose |
 | --- | --- |
 | `npx -y @dotcontext/cli@latest` | Launch the interactive CLI, including quick sync |
-| `npx -y @dotcontext/cli@latest mcp:install` | Install MCP configuration for supported AI tools |
-| `npx -y @dotcontext/cli@latest mcp` | Start the MCP server manually |
+| `npx @dotcontext/mcp install` | Install MCP configuration for supported AI tools |
+| `npx -y @dotcontext/mcp@latest` | Start the MCP server manually |
 | `npx -y @dotcontext/cli@latest admin workflow ...` | Manage PREVC workflow state |
 | `npx -y @dotcontext/cli@latest admin skill list` | List available skills |
 | `npx -y @dotcontext/cli@latest admin skill export` | Export skills to AI tool directories |
@@ -248,13 +250,13 @@ You do not need the full PREVC workflow for that. Use the sync and import comman
 
 - Node.js `>=20` is required.
 - The CLI supports English and `pt-BR`.
-- The package name is `@dotcontext/cli`, the CLI command is `dotcontext`, and the MCP server name is also `dotcontext`.
+- The CLI package is `@dotcontext/cli`, the MCP package is `@dotcontext/mcp`, the CLI command is `dotcontext`, and the MCP server name is `dotcontext`.
 
 ## Quick Reference
 
 ```bash
 npx -y @dotcontext/cli@latest
-npx -y @dotcontext/cli@latest mcp:install
+npx @dotcontext/mcp install
 npx -y @dotcontext/cli@latest admin workflow init "feature-name"
 npx -y @dotcontext/cli@latest admin workflow status
 npx -y @dotcontext/cli@latest admin workflow advance
