@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.1]
+
+### Fixed
+
+- **`@dotcontext/mcp install` now honors the guided install flow**
+  - Running `npx @dotcontext/mcp install` in an interactive terminal now opens the same tool-selection prompt used by the main CLI compatibility command
+  - Non-interactive runs without an explicit tool continue to fall back to `all` detected tools
+  - The standalone MCP package now prints the post-install restart hint after successful installs, matching the CLI flow
+
 ## [0.9.0] - 2026-04-11
 
 ### Why this release matters
