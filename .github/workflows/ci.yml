@@ -40,6 +40,27 @@ jobs:
         node dist/index.js update --help
         node dist/index.js preview --help
 
+  packages:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build package bundles
+      run: npm run build:packages
+
+    - name: Smoke test package bundles
+      run: npm run smoke:packages
+
   build-and-test:
     runs-on: ${{ matrix.os }}
     

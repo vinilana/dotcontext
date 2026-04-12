@@ -5,37 +5,61 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version type (patch, minor, major)'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
 
 jobs:
-  publish-dry-run:
-    runs-on: ubuntu-latest    
+  verify-mcp-package:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Use Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20.x'
         registry-url: 'https://registry.npmjs.org'
         cache: 'npm'
-    
+
     - name: Install dependencies
       run: npm ci
-    
-    - name: Build
-      run: npm run build
-    
-    - name: Dry run publish
-      run: npm publish --dry-run
+
+    - name: Build package bundles
+      run: npm run build:packages
+
+    - name: Smoke test package bundles
+      run: npm run smoke:packages
+
+    - name: Dry run publish @dotcontext/mcp
+      working-directory: .release/packages/mcp
+      run: npm publish --dry-run --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    - name: Upload @dotcontext/mcp bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: dotcontext-mcp-package
+        path: .release/packages/mcp/
+        overwrite: true
+
+  publish-mcp-package:
+    if: github.event_name == 'push'
+    needs: verify-mcp-package
+    runs-on: ubuntu-latest
+    steps:
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        registry-url: 'https://registry.npmjs.org'
+
+    - name: Download @dotcontext/mcp bundle
+      uses: actions/download-artifact@v4
+      with:
+        name: dotcontext-mcp-package
+        path: .release/packages/mcp
+
+    - name: Publish @dotcontext/mcp
+      working-directory: .release/packages/mcp
+      run: npm publish --access public
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
