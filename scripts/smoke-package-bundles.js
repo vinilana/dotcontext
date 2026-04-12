@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const bundlesRoot = path.join(repoRoot, '.release', 'packages');
@@ -62,6 +63,14 @@ function requireFresh(filePath) {
   return require(resolved);
 }
 
+function runBundleCommand(bundleRoot, args) {
+  return execFileSync('npm', ['exec', '--', ...args], {
+    cwd: bundleRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
 function smokeBundle(bundle) {
   const bundleRoot = path.join(bundlesRoot, bundle.slug);
   const manifestPath = path.join(bundleRoot, 'package.json');
@@ -82,6 +91,10 @@ function smokeBundle(bundle) {
       fs.existsSync(path.join(bundleRoot, manifest.bin[bundle.bin])),
       `${bundle.slug}: bin target missing`
     );
+    assert(
+      fs.existsSync(path.join(bundleRoot, 'node_modules', '.bin', bundle.bin)),
+      `${bundle.slug}: local bin shim missing`
+    );
   }
 
   if (bundle.requiresPrompts) {
@@ -91,6 +104,22 @@ function smokeBundle(bundle) {
   const mod = requireFresh(mainPath);
   for (const exportName of bundle.expectedExports) {
     assert(mod[exportName], `${bundle.slug}: missing export ${exportName}`);
+  }
+
+  if (bundle.slug === 'cli') {
+    const helpOutput = runBundleCommand(bundleRoot, ['@dotcontext/cli', '--help']);
+    assert(helpOutput.includes('dotcontext'), 'cli: local npm exec help failed');
+  }
+
+  if (bundle.slug === 'mcp') {
+    const installOutput = runBundleCommand(bundleRoot, [
+      '@dotcontext/mcp',
+      'install',
+      'codex',
+      '--local',
+      '--dry-run',
+    ]);
+    assert(installOutput.includes('Would install MCP for Codex CLI'), 'mcp: local npm exec install failed');
   }
 
   return {

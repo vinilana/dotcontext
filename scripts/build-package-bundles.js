@@ -43,6 +43,33 @@ function resetDir(dir) {
   ensureDir(dir);
 }
 
+function writeExecutable(filePath, content) {
+  ensureDir(path.dirname(filePath));
+  fs.writeFileSync(filePath, content, 'utf8');
+  fs.chmodSync(filePath, 0o755);
+}
+
+function createLocalBinShims(pkgRoot, manifest) {
+  if (!manifest.bin) {
+    return;
+  }
+
+  const binDir = path.join(pkgRoot, 'node_modules', '.bin');
+  for (const [binName, target] of Object.entries(manifest.bin)) {
+    const normalizedTarget = target.split('/').join(path.sep);
+    const posixTarget = target.split(path.sep).join('/');
+    const shellShim = `#!/usr/bin/env sh
+set -e
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+exec node "$SCRIPT_DIR/../../${posixTarget}" "$@"
+`;
+    const cmdShim = `@ECHO OFF\r\nnode "%~dp0\\..\\..\\${normalizedTarget}" %*\r\n`;
+
+    writeExecutable(path.join(binDir, binName), shellShim);
+    writeExecutable(path.join(binDir, `${binName}.cmd`), cmdShim);
+  }
+}
+
 function loadTemplate(name) {
   return fs.readFileSync(path.join(repoRoot, 'templates', 'packages', name), 'utf8');
 }
@@ -164,6 +191,7 @@ function buildBundles() {
     }
     fs.writeFileSync(path.join(pkgRoot, 'README.md'), pkg.readme, 'utf8');
     writeJson(path.join(pkgRoot, 'package.json'), pkg.manifest);
+    createLocalBinShims(pkgRoot, pkg.manifest);
   }
 
   console.log(`Prepared package bundles in ${outputRoot}`);

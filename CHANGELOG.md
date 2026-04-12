@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.9.1]
+## [v0.9.2]
 
 ### Fixed
 
@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Running `npx @dotcontext/mcp install` in an interactive terminal now opens the same tool-selection prompt used by the main CLI compatibility command
   - Non-interactive runs without an explicit tool continue to fall back to `all` detected tools
   - The standalone MCP package now prints the post-install restart hint after successful installs, matching the CLI flow
+
+- **Local release bundles are now executable through `npx` from the bundle root**
+  - `build:packages` now generates package-local `node_modules/.bin` shims for bin-bearing bundles
+  - `smoke:packages` now verifies `npm exec` against the generated `cli` and `mcp` bundle roots instead of checking only static manifest fields
 
 ## [0.9.0] - 2026-04-11
 
