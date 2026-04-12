@@ -33,7 +33,7 @@ Understanding data flow helps with debugging, performance optimization, and main
 - **Services** → Data Access, External APIs
 - **Data Access** → Database, Cache
 
-*See [\`codebase-map.json\`](./codebase-map.json) for generated dependency hotspots and architecture summaries.*`,
+*Use \`context({ action: "getMap", section: "dependencies" })\` for generated dependency hotspots and architecture summaries.*`,
     },
     {
       heading: 'Service Layer',

@@ -23,6 +23,9 @@ interface DirectoryStat {
   fileCount: number;
 }
 
+const SEMANTIC_SNAPSHOT_REFERENCE =
+  'Use `context({ action: "getMap", section: "all" })` to inspect the generated semantic snapshot for stack, architecture, key files, and dependency hotspots.';
+
 export class AutoFillService {
   /**
    * Fill a documentation scaffold with semantic data
@@ -149,7 +152,7 @@ export class AutoFillService {
         return this.generateProjectOverview(ctx);
 
       case 'Codebase Reference':
-        return '> **Generated Summary**: For stack details, architecture layers, key files, and dependency hotspots, see [`codebase-map.json`](./codebase-map.json).';
+        return `> **Semantic Snapshot**: ${SEMANTIC_SNAPSHOT_REFERENCE}`;
 
       case 'Quick Facts':
         return this.generateQuickFacts(ctx);
@@ -264,7 +267,7 @@ export class AutoFillService {
       lines.push(`- **Entry Point**: \`${ep}\``);
     }
 
-    lines.push('- **Generated summary**: [`codebase-map.json`](./codebase-map.json)');
+    lines.push(`- **Semantic Snapshot**: ${SEMANTIC_SNAPSHOT_REFERENCE}`);
 
     return lines.join('\n');
   }
@@ -287,7 +290,7 @@ export class AutoFillService {
       return `- \`${s.name}\` (${s.kind}) - ${path.basename(relPath)}:${s.location.line}`;
     });
 
-    lines.push('\n> See [`codebase-map.json`](./codebase-map.json) for generated architecture and dependency summaries.');
+    lines.push(`\n> ${SEMANTIC_SNAPSHOT_REFERENCE}`);
     return lines.join('\n');
   }
 
@@ -392,7 +395,7 @@ export class AutoFillService {
       return `- **${layer.name}**: ${layer.description} (${dirs})`;
     });
 
-    lines.push('\n> See [`codebase-map.json`](./codebase-map.json) for generated architecture and dependency summaries.');
+    lines.push(`\n> ${SEMANTIC_SNAPSHOT_REFERENCE}`);
 
     return lines.join('\n');
   }

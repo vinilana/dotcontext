@@ -103,7 +103,7 @@ export class DocumentationGenerator {
       }
     }
 
-    // Persist semantic snapshot and publish docs/codebase-map.json from it
+    // Persist semantic snapshot into the semantic cache
     if (semantics) {
       try {
         GeneratorUtils.logProgress('Persisting semantic snapshot...', verbose);
@@ -115,7 +115,7 @@ export class DocumentationGenerator {
         });
 
         GeneratorUtils.logProgress(
-          `Created semantic snapshot and published summary at ${path.relative(outputDir, snapshot.publishedSummaryPath)}`,
+          `Created semantic snapshot summary at ${path.relative(outputDir, snapshot.publishedSummaryPath)}`,
           verbose
         );
       } catch (error) {

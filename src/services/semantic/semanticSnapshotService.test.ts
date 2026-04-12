@@ -30,10 +30,12 @@ describe('SemanticSnapshotService', () => {
     await fs.remove(tempDir);
   });
 
-  it('writes a symbol-free semantic snapshot and published summary', async () => {
+  it('writes a symbol-free semantic snapshot and current summary into the semantic cache', async () => {
     const mapper = new FileMapper();
     const repoStructure = await mapper.mapRepository(repoPath);
     const service = new SemanticSnapshotService();
+    await fs.ensureDir(path.join(outputDir, 'docs'));
+    await fs.writeJson(path.join(outputDir, 'docs', 'codebase-map.json'), { legacy: true }, { spaces: 2 });
 
     const result = await service.writeSnapshot(repoStructure, { outputDir });
     const manifestPath = path.join(outputDir, 'cache', 'semantic', 'manifest.json');
@@ -45,11 +47,13 @@ describe('SemanticSnapshotService', () => {
 
     const snapshotDir = path.join(outputDir, 'cache', 'semantic');
     expect(await fs.pathExists(manifestPath)).toBe(true);
+    expect(await fs.pathExists(path.join(snapshotDir, 'summary.json'))).toBe(true);
     expect(await fs.pathExists(path.join(snapshotDir, manifest.sections.functionalPatterns))).toBe(true);
     expect(await fs.pathExists(path.join(snapshotDir, manifest.sections.summary))).toBe(true);
-    expect(await fs.pathExists(path.join(outputDir, 'docs', 'codebase-map.json'))).toBe(true);
+    expect(await fs.pathExists(path.join(outputDir, 'docs', 'codebase-map.json'))).toBe(false);
+    expect(manifest.publishedSummary).toBe(path.posix.join('cache', 'semantic', 'summary.json'));
 
-    const publishedSummary = await fs.readJson(path.join(outputDir, 'docs', 'codebase-map.json'));
+    const publishedSummary = await fs.readJson(path.join(snapshotDir, 'summary.json'));
     expect(publishedSummary).not.toHaveProperty('symbols');
     expect(publishedSummary).not.toHaveProperty('publicAPI');
     expect(publishedSummary.meta.analyzer.includesSymbolPayload).toBe(false);

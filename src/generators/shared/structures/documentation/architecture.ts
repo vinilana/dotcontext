@@ -1,5 +1,8 @@
 import { ScaffoldStructure } from '../types';
 
+const SEMANTIC_SNAPSHOT_GUIDANCE =
+  'Use `context({ action: "getMap", section: "all" })` to inspect the generated semantic snapshot for stack, architecture, key files, and dependency hotspots.';
+
 export const architectureStructure: ScaffoldStructure = {
   fileType: 'doc',
   documentName: 'architecture',
@@ -17,7 +20,7 @@ export const architectureStructure: ScaffoldStructure = {
       headingLevel: 2,
       defaultContent: `This document describes the system architecture, design patterns, and key technical decisions.
 
-For generated stack, architecture, key file, and dependency summaries, see [\`codebase-map.json\`](./codebase-map.json).`,
+${SEMANTIC_SNAPSHOT_GUIDANCE}`,
     },
     {
       heading: 'System Architecture Overview',
@@ -42,8 +45,8 @@ For generated stack, architecture, key file, and dependency summaries, see [\`co
       heading: 'Architectural Layers',
       order: 3,
       contentType: 'list',
-      guidance: 'List architecture layers with their purpose and key directories. Reference codebase-map.json for generated architecture and dependency summaries.',
-      exampleContent: '- **Services**: Core business logic (`src/services/`)\n- **Generators**: Content generation (`src/generators/`)\n\n> See [`codebase-map.json`](./codebase-map.json) for generated architecture and dependency summaries.',
+      guidance: 'List architecture layers with their purpose and key directories. Reference the semantic snapshot for generated architecture and dependency summaries.',
+      exampleContent: '- **Services**: Core business logic (`src/services/`)\n- **Generators**: Content generation (`src/generators/`)\n\n> Use `context({ action: "getMap", section: "all" })` for generated architecture and dependency summaries.',
       required: true,
       headingLevel: 2,
       defaultContent: `- **Entry Points**: Application entry and initialization (\`src/\`)
@@ -51,7 +54,7 @@ For generated stack, architecture, key file, and dependency summaries, see [\`co
 - **Models/Types**: Data structures and type definitions (\`src/types/\`)
 - **Utilities**: Shared helper functions (\`src/utils/\`)
 
-> See [\`codebase-map.json\`](./codebase-map.json) for generated architecture and dependency summaries.`,
+> Use \`context({ action: "getMap", section: "all" })\` for generated architecture and dependency summaries.`,
     },
     {
       heading: 'Detected Design Patterns',
@@ -155,7 +158,7 @@ graph TD
 - \`tests/\` — Test files
 - \`docs/\` — Documentation
 
-*See [\`codebase-map.json\`](./codebase-map.json) for detailed file counts.*`,
+*Use \`context({ action: "getMap", section: "stats" })\` for detailed file counts.*`,
     },
     {
       heading: 'Related Resources',
@@ -166,8 +169,8 @@ graph TD
       headingLevel: 2,
       defaultContent: `- [Project Overview](./project-overview.md)
 - [Data Flow](./data-flow.md) (if applicable)
-- [Codebase Map](./codebase-map.json)`,
+- Semantic snapshot via \`context({ action: "getMap", section: "all" })\``,
     },
   ],
-  linkTo: ['project-overview.md', 'data-flow.md', 'codebase-map.json'],
+  linkTo: ['project-overview.md', 'data-flow.md'],
 };

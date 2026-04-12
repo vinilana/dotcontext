@@ -66,6 +66,13 @@ export const CONTEXT_LAYOUT_REGISTRY: ContextLayoutEntry[] = [
     description: 'Context generation configuration persisted for repeatable scaffolding.',
   },
   {
+    id: 'semantic-cache',
+    path: '.context/cache/semantic/**',
+    classification: 'runtime',
+    trackedInGit: false,
+    description: 'Persisted semantic snapshot cache and versioned summary sections generated from the codebase.',
+  },
+  {
     id: 'workflow-runtime',
     path: '.context/workflow/**',
     classification: 'runtime',

@@ -212,6 +212,7 @@ describe('GitIgnoreManager', () => {
         it('should create .gitignore and append missing patterns once', async () => {
             const result = await ensureGitignorePatterns(tempDir, [
                 '.context/plans/**',
+                '.context/cache/semantic/**',
                 '.context/workflow/**',
                 '.context/harness/sessions/**',
             ]);
@@ -221,11 +222,13 @@ describe('GitIgnoreManager', () => {
             expect(result.updated).toBe(true);
             expect(result.addedPatterns).toEqual([
                 '.context/plans/',
+                '.context/cache/semantic/',
                 '.context/workflow/',
                 '.context/harness/sessions/',
             ]);
             expect(content).toContain('# dotcontext runtime state');
             expect(content).toContain('.context/plans/');
+            expect(content).toContain('.context/cache/semantic/');
             expect(content).toContain('.context/workflow/');
             expect(content).toContain('.context/harness/sessions/');
         });
@@ -235,13 +238,18 @@ describe('GitIgnoreManager', () => {
 
             const result = await ensureGitignorePatterns(tempDir, [
                 '.context/plans/**',
+                '.context/cache/semantic/**',
                 '.context/workflow/**',
                 '.context/harness/sessions/**',
             ]);
             const content = await fs.readFile(path.join(tempDir, '.gitignore'), 'utf-8');
 
             expect(result.updated).toBe(true);
-            expect(result.addedPatterns).toEqual(['.context/plans/', '.context/harness/sessions/']);
+            expect(result.addedPatterns).toEqual([
+                '.context/plans/',
+                '.context/cache/semantic/',
+                '.context/harness/sessions/',
+            ]);
             expect((content.match(/\.context\/workflow\//g) || []).length).toBe(1);
         });
     });

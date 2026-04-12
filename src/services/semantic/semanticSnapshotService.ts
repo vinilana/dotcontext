@@ -105,6 +105,8 @@ const SECTION_FILENAMES: Record<SnapshotFileSection, string> = {
   navigation: 'navigation.json',
 };
 
+const LEGACY_CODEBASE_MAP_PATH = path.join('docs', 'codebase-map.json');
+
 const FINGERPRINT_IGNORE_PATTERNS = [
   'node_modules/**',
   '.git/**',
@@ -169,7 +171,7 @@ export class SemanticSnapshotService {
   ): Promise<SemanticSnapshotWriteResult> {
     const outputDir = this.resolveOutputDir(repoStructure.rootPath, options.outputDir);
     const snapshotDir = this.getSnapshotDir(outputDir);
-    const publishedSummaryPath = path.join(outputDir, 'docs', 'codebase-map.json');
+    const publishedSummaryPath = path.join(snapshotDir, SUMMARY_FILENAME);
 
     const repoFingerprint =
       options.repoFingerprint ?? await this.computeRepoFingerprint(repoStructure.rootPath);
@@ -300,7 +302,7 @@ export class SemanticSnapshotService {
     const refreshPromise = (async () => {
       const fileMapper = new FileMapper();
       const snapshotDir = this.getSnapshotDir(outputDir);
-      const publishedSummaryPath = path.join(outputDir, 'docs', 'codebase-map.json');
+      const publishedSummaryPath = path.join(snapshotDir, SUMMARY_FILENAME);
 
       for (let attempt = 1; attempt <= MAX_REFRESH_ATTEMPTS; attempt += 1) {
         const repoFingerprint = await this.computeRepoFingerprint(repoPath);
@@ -475,7 +477,7 @@ export class SemanticSnapshotService {
         keyFiles: SECTION_FILENAMES.keyFiles,
         navigation: SECTION_FILENAMES.navigation,
       },
-      publishedSummary: path.join('docs', 'codebase-map.json'),
+      publishedSummary: path.join(SNAPSHOT_DIRNAME, SUMMARY_FILENAME),
     };
 
     return { summary, manifest };
@@ -500,7 +502,6 @@ export class SemanticSnapshotService {
 
     await fs.ensureDir(outputDir);
     await fs.ensureDir(snapshotDir);
-    await fs.ensureDir(path.dirname(publishedSummaryPath));
     await fs.ensureDir(path.dirname(versionDir));
     await fs.remove(versionDir);
     await fs.ensureDir(versionDir);
@@ -520,6 +521,7 @@ export class SemanticSnapshotService {
 
       await this.promoteFile(tempSummaryPath, publishedSummaryPath);
       await this.promoteFile(tempManifestPath, path.join(snapshotDir, MANIFEST_FILENAME));
+      await fs.remove(path.join(outputDir, LEGACY_CODEBASE_MAP_PATH));
     } catch (error) {
       await fs.remove(tempSummaryPath);
       await fs.remove(tempManifestPath);
@@ -673,6 +675,7 @@ export class SemanticSnapshotService {
   ): SemanticSnapshotManifest {
     return {
       ...manifest,
+      publishedSummary: path.posix.join(SNAPSHOT_DIRNAME, SUMMARY_FILENAME),
       sections: {
         summary: path.posix.join(versionPrefix, SUMMARY_FILENAME),
         stack: path.posix.join(versionPrefix, SECTION_FILENAMES.stack),
