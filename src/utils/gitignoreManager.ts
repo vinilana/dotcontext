@@ -152,3 +152,61 @@ export class GitIgnoreManager {
     }
   }
 }
+
+export interface EnsureGitignorePatternsOptions {
+  header?: string;
+}
+
+function normalizeGitignorePattern(pattern: string): string {
+  let normalized = pattern.replace(/\\/g, '/').trim();
+  if (!normalized) {
+    return normalized;
+  }
+
+  if (normalized.endsWith('/**')) {
+    normalized = `${normalized.slice(0, -3)}/`;
+  }
+
+  return normalized;
+}
+
+export async function ensureGitignorePatterns(
+  repoPath: string,
+  patterns: string[],
+  options: EnsureGitignorePatternsOptions = {}
+): Promise<{ updated: boolean; addedPatterns: string[]; gitignorePath: string }> {
+  const gitignorePath = path.join(path.resolve(repoPath), '.gitignore');
+  const header = options.header ?? '# dotcontext runtime state';
+  const normalizedPatterns = patterns
+    .map(normalizeGitignorePattern)
+    .filter((pattern, index, list) => Boolean(pattern) && list.indexOf(pattern) === index);
+
+  const exists = await fs.pathExists(gitignorePath);
+  const original = exists ? await fs.readFile(gitignorePath, 'utf-8') : '';
+  const lines = original.split(/\r?\n/);
+  const existingPatterns = new Set(
+    lines
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith('#'))
+  );
+
+  const missingPatterns = normalizedPatterns.filter((pattern) => !existingPatterns.has(pattern));
+  if (missingPatterns.length === 0) {
+    return { updated: false, addedPatterns: [], gitignorePath };
+  }
+
+  const outputLines = exists && original.length > 0 ? [...lines] : [];
+  while (outputLines.length > 0 && outputLines[outputLines.length - 1].trim() === '') {
+    outputLines.pop();
+  }
+
+  if (outputLines.length > 0) {
+    outputLines.push('');
+  }
+  outputLines.push(header);
+  outputLines.push(...missingPatterns);
+  outputLines.push('');
+
+  await fs.writeFile(gitignorePath, `${outputLines.join('\n')}\n`, 'utf-8');
+  return { updated: true, addedPatterns: missingPatterns, gitignorePath };
+}

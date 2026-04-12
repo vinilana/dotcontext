@@ -27,6 +27,8 @@ export {
 
 export {
   generateFrontmatter,
+  generatePortableFrontmatter,
   wrapWithFrontmatter,
+  wrapWithPortableFrontmatter,
   parseFrontmatter,
 } from './frontmatter';

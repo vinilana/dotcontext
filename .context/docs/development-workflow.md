@@ -91,7 +91,7 @@ npm install
 
 The CLI supports locale overrides via `DOTCONTEXT_LANG` (`en` or `pt-BR`).
 
-For AI-generated filling or refresh, install MCP with `npx dotcontext mcp:install` and use your connected AI tool instead of standalone CLI commands.
+For AI-generated filling or refresh, install MCP with `npx -y @dotcontext/cli@latest mcp:install` and use your connected AI tool instead of standalone CLI commands.
 
 Use a `.env` file in the project root (loaded via dotenv). Do not commit `.env` files.
 

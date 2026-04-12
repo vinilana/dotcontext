@@ -1,28 +1,21 @@
 /**
  * Codebase Map Generator
  *
- * Generates a JSON file that serves as a quick LLM-readable summary
- * of the entire codebase structure, symbols, and architecture.
+ * Generates a summary JSON file for the codebase structure, stack,
+ * architecture, dependencies, and functional capabilities.
+ *
+ * Symbol payloads are intentionally excluded. Detailed symbol data belongs
+ * to live semantic analysis, not persisted summary artifacts.
  */
 
 import * as path from 'path';
 import { RepoStructure } from '../../types';
-import { SemanticContext, ExtractedSymbol } from '../../services/semantic';
-import { StackInfo } from '../../services/stack';
+import type { SemanticContext, DetectedFunctionalPatterns } from '../../services/semantic/types';
+import type { StackInfo } from '../../services/stack/stackDetector';
 
 // ============================================================================
 // Types
 // ============================================================================
-
-export interface SymbolSummary {
-  name: string;
-  kind: string;
-  file: string;
-  line: number;
-  exported: boolean;
-  signature?: string;
-  description?: string;
-}
 
 export interface KeyFile {
   path: string;
@@ -37,9 +30,20 @@ export interface NavigationHints {
   mainLogic: string[];
 }
 
+export interface SemanticSnapshotMetadata {
+  schemaVersion: string;
+  generatedAt: string;
+  repoFingerprint: string;
+  analyzer: {
+    useLSP: boolean;
+    includesSymbolPayload: false;
+  };
+}
+
 export interface CodebaseMap {
   version: string;
   generated: string;
+  meta?: SemanticSnapshotMetadata;
 
   stack: {
     primaryLanguage: string | null;
@@ -53,6 +57,10 @@ export interface CodebaseMap {
     hasCI: boolean;
     nodeVersion?: string;
     runtimeEnvironment?: 'node' | 'browser' | 'both';
+    hasBinField?: boolean;
+    hasMainExport?: boolean;
+    hasTypesField?: boolean;
+    cliLibraries?: string[];
   };
 
   structure: {
@@ -81,21 +89,14 @@ export interface CodebaseMap {
     moduleExports?: string[];
   };
 
-  symbols: {
-    classes: SymbolSummary[];
-    interfaces: SymbolSummary[];
-    functions: SymbolSummary[];
-    types: SymbolSummary[];
-    enums: SymbolSummary[];
-  };
-
-  publicAPI: SymbolSummary[];
+  functionalPatterns: DetectedFunctionalPatterns;
 
   dependencies: {
     mostImported: Array<{ file: string; importedBy: number; description?: string }>;
   };
 
   stats: {
+    totalFiles: number;
     totalSymbols: number;
     exportedSymbols: number;
     analysisTimeMs: number;
@@ -106,70 +107,85 @@ export interface CodebaseMap {
 }
 
 export interface CodebaseMapOptions {
-  maxSymbolsPerCategory?: number;
+  maxDependencies?: number;
+  maxKeyFiles?: number;
+}
+
+export function createEmptyFunctionalPatterns(): DetectedFunctionalPatterns {
+  return {
+    hasAuthPattern: false,
+    hasDatabasePattern: false,
+    hasApiPattern: false,
+    hasCachePattern: false,
+    hasQueuePattern: false,
+    hasWebSocketPattern: false,
+    hasLoggingPattern: false,
+    hasValidationPattern: false,
+    hasErrorHandlingPattern: false,
+    hasTestingPattern: false,
+    patterns: [],
+  };
 }
 
 // ============================================================================
 // Generator
 // ============================================================================
 
-// Directory description heuristics
 const DIRECTORY_DESCRIPTIONS: Record<string, string> = {
-  'src': 'Source code root',
-  'services': 'Business logic and orchestration services',
-  'generators': 'Content and scaffold generation',
-  'utils': 'Shared utilities and helpers',
-  'types': 'TypeScript type definitions',
-  'tests': 'Test files and fixtures',
-  '__tests__': 'Unit and integration tests',
-  'components': 'UI components',
-  'hooks': 'React hooks',
-  'api': 'API endpoints and handlers',
-  'config': 'Configuration files',
-  'models': 'Data models and entities',
-  'controllers': 'Request handlers',
-  'middleware': 'Request/response middleware',
-  'routes': 'Route definitions',
-  'views': 'View templates',
-  'assets': 'Static assets (images, fonts)',
-  'styles': 'CSS/SCSS stylesheets',
-  'lib': 'Shared library code',
-  'core': 'Core application logic',
-  'shared': 'Shared code across modules',
-  'workflow': 'Workflow and orchestration',
-  'mcp': 'MCP server implementation',
-  'ai': 'AI/LLM integration',
-  'semantic': 'Semantic code analysis',
-  'plans': 'Development plans',
-  'agents': 'AI agent definitions',
-  'skills': 'Skill definitions',
-  'docs': 'Documentation files',
-  'scripts': 'Build and utility scripts',
-  'prompts': 'Prompt templates',
-  'public': 'Public static assets',
-  'dist': 'Build output directory',
-  'build': 'Build output directory',
-  'bin': 'CLI binaries and executables',
-  'test': 'Test files',
-  'spec': 'Test specifications',
-  'fixtures': 'Test fixtures and mock data',
-  'mocks': 'Mock implementations',
-  'pages': 'Page components (Next.js/Nuxt)',
-  'app': 'Application entry (Next.js app router)',
-  'store': 'State management',
-  'reducers': 'Redux reducers',
-  'actions': 'Redux actions',
-  'selectors': 'Redux selectors',
-  'contexts': 'React contexts',
-  'providers': 'Context providers',
-  'layouts': 'Layout components',
-  'templates': 'Template files',
-  'i18n': 'Internationalization',
-  'locales': 'Locale files',
-  'translations': 'Translation files',
+  src: 'Source code root',
+  services: 'Business logic and orchestration services',
+  generators: 'Content and scaffold generation',
+  utils: 'Shared utilities and helpers',
+  types: 'TypeScript type definitions',
+  tests: 'Test files and fixtures',
+  __tests__: 'Unit and integration tests',
+  components: 'UI components',
+  hooks: 'React hooks',
+  api: 'API endpoints and handlers',
+  config: 'Configuration files',
+  models: 'Data models and entities',
+  controllers: 'Request handlers',
+  middleware: 'Request/response middleware',
+  routes: 'Route definitions',
+  views: 'View templates',
+  assets: 'Static assets (images, fonts)',
+  styles: 'CSS/SCSS stylesheets',
+  lib: 'Shared library code',
+  core: 'Core application logic',
+  shared: 'Shared code across modules',
+  workflow: 'Workflow and orchestration',
+  mcp: 'MCP server implementation',
+  ai: 'AI/LLM integration',
+  semantic: 'Semantic code analysis',
+  plans: 'Development plans',
+  agents: 'AI agent definitions',
+  skills: 'Skill definitions',
+  docs: 'Documentation files',
+  scripts: 'Build and utility scripts',
+  prompts: 'Prompt templates',
+  public: 'Public static assets',
+  dist: 'Build output directory',
+  build: 'Build output directory',
+  bin: 'CLI binaries and executables',
+  test: 'Test files',
+  spec: 'Test specifications',
+  fixtures: 'Test fixtures and mock data',
+  mocks: 'Mock implementations',
+  pages: 'Page components (Next.js/Nuxt)',
+  app: 'Application entry (Next.js app router)',
+  store: 'State management',
+  reducers: 'Redux reducers',
+  actions: 'Redux actions',
+  selectors: 'Redux selectors',
+  contexts: 'React contexts',
+  providers: 'Context providers',
+  layouts: 'Layout components',
+  templates: 'Template files',
+  i18n: 'Internationalization',
+  locales: 'Locale files',
+  translations: 'Translation files',
 };
 
-// Key file pattern matchers
 const KEY_FILE_PATTERNS: Array<{ pattern: RegExp; description: string; category: KeyFile['category'] }> = [
   { pattern: /^src\/index\.(ts|js)$/, description: 'Main library entry point', category: 'entrypoint' },
   { pattern: /^src\/main\.(ts|js)$/, description: 'Application entry point', category: 'entrypoint' },
@@ -190,29 +206,33 @@ const KEY_FILE_PATTERNS: Array<{ pattern: RegExp; description: string; category:
 ];
 
 export class CodebaseMapGenerator {
-  private maxSymbols: number;
+  private readonly maxDependencies: number;
+  private readonly maxKeyFiles: number;
 
   constructor(options: CodebaseMapOptions = {}) {
-    this.maxSymbols = options.maxSymbolsPerCategory ?? 30;
+    this.maxDependencies = options.maxDependencies ?? 20;
+    this.maxKeyFiles = options.maxKeyFiles ?? 30;
   }
 
   generate(
     repoStructure: RepoStructure,
     semantics?: SemanticContext,
-    stackInfo?: StackInfo
+    stackInfo?: StackInfo,
+    functionalPatterns?: DetectedFunctionalPatterns,
+    metadata?: SemanticSnapshotMetadata
   ): CodebaseMap {
     const architecture = this.buildArchitectureSection(repoStructure.rootPath, semantics);
 
     return {
-      version: '1.0.0',
-      generated: new Date().toISOString(),
+      version: metadata?.schemaVersion ?? '2.0.0',
+      generated: metadata?.generatedAt ?? new Date().toISOString(),
+      ...(metadata ? { meta: metadata } : {}),
       stack: this.buildStackSection(stackInfo, repoStructure.rootPath),
       structure: this.buildStructureSection(repoStructure),
       architecture,
-      symbols: this.buildSymbolsSection(repoStructure.rootPath, semantics),
-      publicAPI: this.buildPublicAPISection(repoStructure.rootPath, semantics),
+      functionalPatterns: functionalPatterns ?? createEmptyFunctionalPatterns(),
       dependencies: this.buildDependenciesSection(repoStructure.rootPath, semantics),
-      stats: this.buildStatsSection(semantics),
+      stats: this.buildStatsSection(repoStructure, semantics),
       keyFiles: this.buildKeyFilesSection(repoStructure, semantics),
       navigation: this.buildNavigationSection(repoStructure, stackInfo),
     };
@@ -233,7 +253,6 @@ export class CodebaseMapGenerator {
       };
     }
 
-    // Detect node version and runtime environment from package.json
     let nodeVersion: string | undefined;
     let runtimeEnvironment: 'node' | 'browser' | 'both' | undefined;
 
@@ -243,25 +262,19 @@ export class CodebaseMapGenerator {
         const fs = require('fs-extra');
         if (fs.existsSync(packageJsonPath)) {
           const packageJson = fs.readJsonSync(packageJsonPath);
-
-          // Get node version from engines
           if (packageJson.engines?.node) {
             nodeVersion = packageJson.engines.node;
           }
 
-          // Determine runtime environment
           const hasBrowserField = !!packageJson.browser;
           const hasMainField = !!packageJson.main || !!packageJson.exports;
           const hasBinField = !!packageJson.bin;
 
-          // Check for browser-specific frameworks
-          const isBrowserFramework = stackInfo.frameworks.some(f =>
-            ['nextjs', 'nuxt', 'vue', 'angular', 'svelte', 'react', 'gatsby', 'astro'].includes(f)
+          const isBrowserFramework = stackInfo.frameworks.some((framework) =>
+            ['nextjs', 'nuxt', 'vue', 'angular', 'svelte', 'react', 'gatsby', 'astro'].includes(framework)
           );
-
-          // Check for Node-specific indicators
-          const isNodeFramework = stackInfo.frameworks.some(f =>
-            ['nestjs', 'express', 'fastify', 'koa', 'hapi'].includes(f)
+          const isNodeFramework = stackInfo.frameworks.some((framework) =>
+            ['nestjs', 'express', 'fastify', 'koa', 'hapi'].includes(framework)
           ) || hasBinField || stackInfo.frameworks.includes('cli');
 
           if (isBrowserFramework && isNodeFramework) {
@@ -289,33 +302,30 @@ export class CodebaseMapGenerator {
       hasCI: stackInfo.hasCI,
       ...(nodeVersion && { nodeVersion }),
       ...(runtimeEnvironment && { runtimeEnvironment }),
+      ...(typeof stackInfo.hasBinField === 'boolean' ? { hasBinField: stackInfo.hasBinField } : {}),
+      ...(typeof stackInfo.hasMainExport === 'boolean' ? { hasMainExport: stackInfo.hasMainExport } : {}),
+      ...(typeof stackInfo.hasTypesField === 'boolean' ? { hasTypesField: stackInfo.hasTypesField } : {}),
+      ...(stackInfo.cliLibraries?.length ? { cliLibraries: stackInfo.cliLibraries } : {}),
     };
   }
 
   private buildStructureSection(repoStructure: RepoStructure): CodebaseMap['structure'] {
-    // Filter to only include actual directories (items with multiple files or subdirectories)
-    // and exclude files at the root level
     const topDirectories = (repoStructure.topLevelDirectoryStats ?? [])
-      .filter(stat => {
-        // Check if this is actually a directory by seeing if we have files under it
-        const hasFilesUnder = repoStructure.files.some(f =>
-          f.relativePath.startsWith(stat.name + '/') || f.relativePath.startsWith(stat.name + '\\')
+      .filter((stat) => {
+        const hasFilesUnder = repoStructure.files.some((file) =>
+          file.relativePath.startsWith(stat.name + '/') || file.relativePath.startsWith(stat.name + '\\')
         );
-        // Also check if it's a directory entry itself
-        const isDirectory = repoStructure.directories.some(d =>
-          d.relativePath === stat.name || path.basename(d.relativePath) === stat.name
+        const isDirectory = repoStructure.directories.some((directory) =>
+          directory.relativePath === stat.name || path.basename(directory.relativePath) === stat.name
         );
-        // It's a directory if it has files under it or is marked as directory
-        // Also check: if fileCount > 1, it's likely a directory
         return hasFilesUnder || isDirectory || stat.fileCount > 1;
       })
-      .map(stat => ({
+      .map((stat) => ({
         name: stat.name,
         fileCount: stat.fileCount,
         description: this.getDirectoryDescription(stat.name),
       }));
 
-    // Build language distribution from files
     const extensionCounts = new Map<string, number>();
     for (const file of repoStructure.files) {
       const ext = path.extname(file.relativePath).toLowerCase();
@@ -338,20 +348,17 @@ export class CodebaseMapGenerator {
   }
 
   private getDirectoryDescription(dirName: string): string {
-    // Check direct match first
     const lowerName = dirName.toLowerCase();
     if (DIRECTORY_DESCRIPTIONS[lowerName]) {
       return DIRECTORY_DESCRIPTIONS[lowerName];
     }
 
-    // Check partial matches
     for (const [key, desc] of Object.entries(DIRECTORY_DESCRIPTIONS)) {
       if (lowerName.includes(key) || key.includes(lowerName)) {
         return desc;
       }
     }
 
-    // Infer from naming patterns
     if (lowerName.includes('test')) return 'Test files';
     if (lowerName.includes('spec')) return 'Test specifications';
     if (lowerName.endsWith('s') && !['utils', 'types', 'tests'].includes(lowerName)) {
@@ -376,41 +383,35 @@ export class CodebaseMapGenerator {
       };
     }
 
-    const layers = semantics.architecture.layers.map(layer => ({
+    const layers = semantics.architecture.layers.map((layer) => ({
       name: layer.name,
       description: layer.description,
-      directories: layer.directories.map(d => this.relativePath(repoRoot, d)),
+      directories: layer.directories.map((directory) => this.relativePath(repoRoot, directory)),
       symbolCount: layer.symbols.length,
       dependsOn: layer.dependsOn,
     }));
 
-    const patterns = semantics.architecture.patterns.map(pattern => ({
+    const patterns = semantics.architecture.patterns.map((pattern) => ({
       name: pattern.name,
       confidence: pattern.confidence,
       description: pattern.description,
       occurrences: pattern.locations.length,
     }));
 
-    // Convert all entry points to relative paths
-    const allEntryPoints = semantics.architecture.entryPoints.map(ep =>
-      this.relativePath(repoRoot, ep)
+    const allEntryPoints = semantics.architecture.entryPoints.map((entryPoint) =>
+      this.relativePath(repoRoot, entryPoint)
     );
-
-    // Separate main entry points from barrel exports (module exports)
     const { mainEntryPoints, moduleExports } = this.categorizeEntryPoints(allEntryPoints);
 
     return {
       layers,
       patterns,
-      entryPoints: allEntryPoints, // Keep for backward compatibility
+      entryPoints: allEntryPoints,
       mainEntryPoints,
       moduleExports,
     };
   }
 
-  /**
-   * Categorize entry points into main (actual CLI/server/library) vs barrel exports
-   */
   private categorizeEntryPoints(entryPoints: string[]): {
     mainEntryPoints: string[];
     moduleExports: string[];
@@ -418,80 +419,40 @@ export class CodebaseMapGenerator {
     const mainEntryPoints: string[] = [];
     const moduleExports: string[] = [];
 
-    // Patterns that indicate a MAIN entry point (not just a barrel export)
     const mainPatterns = [
-      /^src\/index\.(ts|js)$/,           // Root src/index is the library entry
-      /^index\.(ts|js)$/,                // Root index is package entry
-      /^src\/main\.(ts|js)$/,            // main.ts is usually app entry
-      /^src\/cli\.(ts|js)$/,             // CLI entry point
-      /^src\/server\.(ts|js)$/,          // Server entry point
-      /^src\/app\.(ts|js)$/,             // App entry point
-      /^bin\//,                          // Anything in bin/
-      /^cli\.(ts|js)$/,                  // Root CLI file
-      /^server\.(ts|js)$/,               // Root server file
-      /^app\.(ts|js)$/,                  // Root app file
-      /^main\.(ts|js)$/,                 // Root main file
+      /^src\/index\.(ts|js)$/,
+      /^index\.(ts|js)$/,
+      /^src\/main\.(ts|js)$/,
+      /^src\/cli\.(ts|js)$/,
+      /^src\/server\.(ts|js)$/,
+      /^src\/app\.(ts|js)$/,
+      /^bin\//,
+      /^cli\.(ts|js)$/,
+      /^server\.(ts|js)$/,
+      /^app\.(ts|js)$/,
+      /^main\.(ts|js)$/,
     ];
 
-    // Patterns that indicate a barrel export (just re-exports)
     const barrelPatterns = [
-      /\/index\.(ts|js)$/,               // Any nested index file is typically a barrel
+      /\/index\.(ts|js)$/,
     ];
 
-    for (const ep of entryPoints) {
-      const isMain = mainPatterns.some(p => p.test(ep));
-      const isBarrel = barrelPatterns.some(p => p.test(ep)) && !isMain;
+    for (const entryPoint of entryPoints) {
+      const isMain = mainPatterns.some((pattern) => pattern.test(entryPoint));
+      const isBarrel = barrelPatterns.some((pattern) => pattern.test(entryPoint)) && !isMain;
 
       if (isMain) {
-        mainEntryPoints.push(ep);
+        mainEntryPoints.push(entryPoint);
       } else if (isBarrel) {
-        moduleExports.push(ep);
+        moduleExports.push(entryPoint);
+      } else if (entryPoint.split('/').length <= 2) {
+        mainEntryPoints.push(entryPoint);
       } else {
-        // Default: if it's a top-level file, consider it main; otherwise barrel
-        const depth = ep.split('/').length;
-        if (depth <= 2) {
-          mainEntryPoints.push(ep);
-        } else {
-          moduleExports.push(ep);
-        }
+        moduleExports.push(entryPoint);
       }
     }
 
     return { mainEntryPoints, moduleExports };
-  }
-
-  private buildSymbolsSection(
-    repoRoot: string,
-    semantics?: SemanticContext
-  ): CodebaseMap['symbols'] {
-    if (!semantics) {
-      return {
-        classes: [],
-        interfaces: [],
-        functions: [],
-        types: [],
-        enums: [],
-      };
-    }
-
-    return {
-      classes: this.extractSymbols(semantics.symbols.classes, repoRoot),
-      interfaces: this.extractSymbols(semantics.symbols.interfaces, repoRoot),
-      functions: this.extractSymbols(semantics.symbols.functions, repoRoot),
-      types: this.extractSymbols(semantics.symbols.types, repoRoot),
-      enums: this.extractSymbols(semantics.symbols.enums, repoRoot),
-    };
-  }
-
-  private buildPublicAPISection(
-    repoRoot: string,
-    semantics?: SemanticContext
-  ): SymbolSummary[] {
-    if (!semantics) {
-      return [];
-    }
-
-    return this.extractSymbols(semantics.architecture.publicAPI, repoRoot);
   }
 
   private buildDependenciesSection(repoRoot: string, semantics?: SemanticContext): CodebaseMap['dependencies'] {
@@ -499,7 +460,6 @@ export class CodebaseMapGenerator {
       return { mostImported: [] };
     }
 
-    // Calculate import counts from reverse dependency graph
     const importCounts: Array<{ file: string; importedBy: number; description?: string }> = [];
 
     for (const [file, importers] of semantics.dependencies.reverseGraph.entries()) {
@@ -511,22 +471,17 @@ export class CodebaseMapGenerator {
       });
     }
 
-    // Sort by most imported and take top 20
     const mostImported = importCounts
       .sort((a, b) => b.importedBy - a.importedBy)
-      .slice(0, 20);
+      .slice(0, this.maxDependencies);
 
     return { mostImported };
   }
 
-  /**
-   * Infer a description for a file based on its path and name
-   */
   private inferFileDescription(filePath: string): string | undefined {
     const basename = path.basename(filePath, path.extname(filePath));
     const dirname = path.dirname(filePath);
 
-    // Check common naming patterns
     if (basename === 'index') {
       const parentDir = path.basename(dirname);
       if (parentDir && DIRECTORY_DESCRIPTIONS[parentDir.toLowerCase()]) {
@@ -555,7 +510,6 @@ export class CodebaseMapGenerator {
       return 'Configuration and constants';
     }
 
-    // Check directory context
     const dirName = path.basename(dirname).toLowerCase();
     if (DIRECTORY_DESCRIPTIONS[dirName]) {
       return DIRECTORY_DESCRIPTIONS[dirName];
@@ -564,16 +518,16 @@ export class CodebaseMapGenerator {
     return undefined;
   }
 
-  private buildStatsSection(semantics?: SemanticContext): CodebaseMap['stats'] {
+  private buildStatsSection(repoStructure: RepoStructure, semantics?: SemanticContext): CodebaseMap['stats'] {
     if (!semantics) {
       return {
+        totalFiles: repoStructure.totalFiles,
         totalSymbols: 0,
         exportedSymbols: 0,
         analysisTimeMs: 0,
       };
     }
 
-    // Count exported symbols
     const allSymbols = [
       ...semantics.symbols.classes,
       ...semantics.symbols.interfaces,
@@ -582,56 +536,14 @@ export class CodebaseMapGenerator {
       ...semantics.symbols.enums,
     ];
 
-    const exportedCount = allSymbols.filter(s => s.exported).length;
+    const exportedCount = allSymbols.filter((symbol) => symbol.exported).length;
 
     return {
+      totalFiles: semantics.stats.totalFiles || repoStructure.totalFiles,
       totalSymbols: semantics.stats.totalSymbols,
       exportedSymbols: exportedCount,
       analysisTimeMs: semantics.stats.analysisTimeMs,
     };
-  }
-
-  private extractSymbols(symbols: ExtractedSymbol[], repoRoot: string): SymbolSummary[] {
-    // Sort by exported first, then alphabetically
-    const sorted = [...symbols].sort((a, b) => {
-      if (a.exported !== b.exported) {
-        return a.exported ? -1 : 1;
-      }
-      return a.name.localeCompare(b.name);
-    });
-
-    return sorted.slice(0, this.maxSymbols).map(symbol => this.toSymbolSummary(symbol, repoRoot));
-  }
-
-  private toSymbolSummary(symbol: ExtractedSymbol, repoRoot: string): SymbolSummary {
-    const summary: SymbolSummary = {
-      name: symbol.name,
-      kind: symbol.kind,
-      file: this.relativePath(repoRoot, symbol.location.file),
-      line: symbol.location.line,
-      exported: symbol.exported,
-    };
-
-    // Add signature for functions
-    if (symbol.kind === 'function' && symbol.parameters) {
-      const params = symbol.parameters
-        .map(p => (p.type ? `${p.name}: ${p.type}` : p.name))
-        .join(', ');
-      const returnType = symbol.returnType ?? 'void';
-      summary.signature = `(${params}): ${returnType}`;
-    }
-
-    // Add first line of documentation
-    if (symbol.documentation) {
-      const firstLine = symbol.documentation.split('\n')[0].trim();
-      if (firstLine.length > 0) {
-        summary.description = firstLine.length > 100
-          ? firstLine.slice(0, 100) + '...'
-          : firstLine;
-      }
-    }
-
-    return summary;
   }
 
   private relativePath(repoRoot: string, filePath: string): string {
@@ -641,17 +553,12 @@ export class CodebaseMapGenerator {
     return filePath;
   }
 
-  /**
-   * Build key files section with descriptions and categories
-   */
   private buildKeyFilesSection(repoStructure: RepoStructure, semantics?: SemanticContext): KeyFile[] {
     const keyFiles: KeyFile[] = [];
     const seenPaths = new Set<string>();
 
-    // Process all files and check against key file patterns
     for (const file of repoStructure.files) {
       const relativePath = file.relativePath;
-
       for (const { pattern, description, category } of KEY_FILE_PATTERNS) {
         if (pattern.test(relativePath) && !seenPaths.has(relativePath)) {
           seenPaths.add(relativePath);
@@ -665,30 +572,27 @@ export class CodebaseMapGenerator {
       }
     }
 
-    // Add entry points that aren't already included
     if (semantics) {
-      for (const ep of semantics.architecture.entryPoints) {
-        const relativePath = this.relativePath(repoStructure.rootPath, ep);
+      for (const entryPoint of semantics.architecture.entryPoints) {
+        const relativePath = this.relativePath(repoStructure.rootPath, entryPoint);
         if (!seenPaths.has(relativePath)) {
           seenPaths.add(relativePath);
-          const category = this.inferCategory(relativePath);
           keyFiles.push({
             path: relativePath,
             description: this.inferFileDescription(relativePath) || 'Entry point',
-            category,
+            category: this.inferCategory(relativePath),
           });
         }
       }
     }
 
-    // Sort by category priority then by path
     const categoryPriority: Record<string, number> = {
-      'entrypoint': 0,
-      'config': 1,
-      'types': 2,
-      'service': 3,
-      'generator': 4,
-      'util': 5,
+      entrypoint: 0,
+      config: 1,
+      types: 2,
+      service: 3,
+      generator: 4,
+      util: 5,
     };
 
     return keyFiles
@@ -698,12 +602,9 @@ export class CodebaseMapGenerator {
         if (aPriority !== bPriority) return aPriority - bPriority;
         return a.path.localeCompare(b.path);
       })
-      .slice(0, 30); // Limit to 30 key files
+      .slice(0, this.maxKeyFiles);
   }
 
-  /**
-   * Enhance a file description with semantic context if available
-   */
   private enhanceFileDescription(
     filePath: string,
     defaultDescription: string,
@@ -711,19 +612,18 @@ export class CodebaseMapGenerator {
   ): string {
     if (!semantics) return defaultDescription;
 
-    // Try to find symbols in this file to provide more context
     const allSymbols = [
       ...semantics.symbols.classes,
       ...semantics.symbols.interfaces,
       ...semantics.symbols.functions,
     ];
 
-    const fileSymbols = allSymbols.filter(s =>
-      s.location.file.endsWith(filePath) || filePath.endsWith(path.basename(s.location.file))
+    const fileSymbols = allSymbols.filter((symbol) =>
+      symbol.location.file.endsWith(filePath) || filePath.endsWith(path.basename(symbol.location.file))
     );
 
     if (fileSymbols.length > 0) {
-      const mainSymbol = fileSymbols.find(s => s.exported) || fileSymbols[0];
+      const mainSymbol = fileSymbols.find((symbol) => symbol.exported) || fileSymbols[0];
       if (mainSymbol.documentation) {
         const firstLine = mainSymbol.documentation.split('\n')[0].trim();
         if (firstLine.length > 0 && firstLine.length <= 100) {
@@ -735,9 +635,6 @@ export class CodebaseMapGenerator {
     return defaultDescription;
   }
 
-  /**
-   * Infer category from file path
-   */
   private inferCategory(filePath: string): KeyFile['category'] {
     const lowerPath = filePath.toLowerCase();
 
@@ -747,32 +644,26 @@ export class CodebaseMapGenerator {
     if (lowerPath.includes('type') || lowerPath.endsWith('.d.ts')) return 'types';
     if (lowerPath.includes('config') || lowerPath.endsWith('.json')) return 'config';
 
-    // Check for entry point patterns
     const basename = path.basename(filePath).toLowerCase();
-    if (['index', 'main', 'cli', 'server', 'app'].some(n => basename.startsWith(n))) {
+    if (['index', 'main', 'cli', 'server', 'app'].some((name) => basename.startsWith(name))) {
       return 'entrypoint';
     }
 
-    return 'util'; // Default category
+    return 'util';
   }
 
-  /**
-   * Build navigation hints section
-   */
   private buildNavigationSection(repoStructure: RepoStructure, stackInfo?: StackInfo): NavigationHints {
-    const files = repoStructure.files.map(f => f.relativePath);
+    const files = repoStructure.files.map((file) => file.relativePath);
 
-    // Detect test pattern
     let testPattern = 'src/**/*.test.ts';
-    if (files.some(f => f.includes('__tests__'))) {
+    if (files.some((file) => file.includes('__tests__'))) {
       testPattern = '**/__tests__/**/*.ts';
-    } else if (files.some(f => f.includes('.spec.'))) {
+    } else if (files.some((file) => file.includes('.spec.'))) {
       testPattern = '**/*.spec.ts';
-    } else if (files.some(f => f.endsWith('.test.ts') || f.endsWith('.test.js'))) {
+    } else if (files.some((file) => file.endsWith('.test.ts') || file.endsWith('.test.js'))) {
       testPattern = '**/*.test.{ts,js}';
     }
 
-    // Detect config files
     const configPatterns = [
       'package.json',
       'tsconfig.json',
@@ -791,17 +682,16 @@ export class CodebaseMapGenerator {
       'next.config.ts',
     ];
 
-    const configFiles = configPatterns.filter(pattern => {
+    const configFiles = configPatterns.filter((pattern) => {
       if (pattern.includes('*')) {
-        return files.some(f => {
+        return files.some((file) => {
           const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
-          return regex.test(f);
+          return regex.test(file);
         });
       }
-      return files.some(f => f === pattern || f.endsWith('/' + pattern));
+      return files.some((file) => file === pattern || file.endsWith('/' + pattern));
     });
 
-    // Detect type definition files
     const typeFiles: string[] = [];
     for (const file of files) {
       if (
@@ -814,18 +704,14 @@ export class CodebaseMapGenerator {
       }
     }
 
-    // Detect main logic directories
     const mainLogicPatterns = ['src/services', 'src/core', 'src/lib', 'lib', 'src/modules'];
-    const mainLogic = mainLogicPatterns.filter(pattern =>
-      files.some(f => f.startsWith(pattern + '/'))
+    const mainLogic = mainLogicPatterns.filter((pattern) =>
+      files.some((file) => file.startsWith(pattern + '/'))
     );
 
-    // Add detected layers from stack info if available
-    if (stackInfo) {
-      if (stackInfo.frameworks.includes('nestjs') && !mainLogic.includes('src/modules')) {
-        if (files.some(f => f.startsWith('src/modules/'))) {
-          mainLogic.push('src/modules');
-        }
+    if (stackInfo?.frameworks.includes('nestjs') && !mainLogic.includes('src/modules')) {
+      if (files.some((file) => file.startsWith('src/modules/'))) {
+        mainLogic.push('src/modules');
       }
     }
 

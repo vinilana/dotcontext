@@ -14,11 +14,43 @@ import type { PrevcPhase, PrevcRole, AgentType } from '../../../workflow';
 // Note: Workflow uses dedicated tools (workflow-init, workflow-status, workflow-advance, workflow-manage)
 // Note: Project tools removed - use context init + workflow-init instead
 export type ExploreAction = 'read' | 'list' | 'analyze' | 'search' | 'getStructure';
-export type ContextAction = 'check' | 'init' | 'fill' | 'fillSingle' | 'listToFill' | 'getMap' | 'buildSemantic' | 'scaffoldPlan' | 'searchQA' | 'generateQA' | 'getFlow' | 'detectPatterns';
+export type ContextAction = 'check' | 'bootstrapStatus' | 'init' | 'fill' | 'fillSingle' | 'listToFill' | 'getMap' | 'buildSemantic' | 'scaffoldPlan' | 'searchQA' | 'generateQA' | 'getFlow' | 'detectPatterns';
 export type SyncAction = 'exportRules' | 'exportDocs' | 'exportAgents' | 'exportContext' | 'exportSkills' | 'reverseSync' | 'importDocs' | 'importAgents' | 'importSkills';
 export type PlanAction = 'link' | 'getLinked' | 'getDetails' | 'getForPhase' | 'updatePhase' | 'recordDecision' | 'updateStep' | 'getStatus' | 'syncMarkdown' | 'commitPhase';
 export type AgentAction = 'discover' | 'getInfo' | 'orchestrate' | 'getSequence' | 'getDocs' | 'getPhaseDocs' | 'listTypes';
 export type SkillAction = 'list' | 'getContent' | 'getForPhase' | 'scaffold' | 'export' | 'fill';
+export type HarnessAction =
+  | 'createSession'
+  | 'listSessions'
+  | 'getSession'
+  | 'appendTrace'
+  | 'listTraces'
+  | 'addArtifact'
+  | 'listArtifacts'
+  | 'checkpoint'
+  | 'resumeSession'
+  | 'completeSession'
+  | 'failSession'
+  | 'recordSensor'
+  | 'getSessionQuality'
+  | 'createTask'
+  | 'listTasks'
+  | 'evaluateTask'
+  | 'createHandoff'
+  | 'listHandoffs'
+  | 'replaySession'
+  | 'listReplays'
+  | 'getReplay'
+  | 'buildDataset'
+  | 'listDatasets'
+  | 'getDataset'
+  | 'getFailureClusters'
+  | 'registerPolicy'
+  | 'listPolicies'
+  | 'evaluatePolicy'
+  | 'getPolicy'
+  | 'setPolicy'
+  | 'resetPolicy';
 
 // Parameter interfaces for each gateway
 export interface ExploreParams {
@@ -46,7 +78,8 @@ export interface ContextParams {
   exclude?: string[];
   autoFill?: boolean;
   skipContentGeneration?: boolean;
-  target?: 'docs' | 'agents' | 'plans' | 'all';
+  generateQA?: boolean;
+  target?: 'docs' | 'agents' | 'skills' | 'plans' | 'sensors' | 'all';
   offset?: number;
   limit?: number;
   filePath?: string;
@@ -128,5 +161,75 @@ export interface SkillParams {
   skills?: string[];
   includeContent?: boolean;
   includeBuiltIn?: boolean;
-  preset?: 'claude' | 'gemini' | 'codex' | 'antigravity' | 'all';
+  preset?: string;
+}
+
+export interface HarnessParams {
+  action: HarnessAction;
+  sessionId?: string;
+  taskId?: string;
+  name?: string;
+  title?: string;
+  description?: string;
+  owner?: string;
+  status?: 'draft' | 'ready' | 'in_progress' | 'blocked' | 'completed' | 'failed';
+  metadata?: Record<string, unknown>;
+  level?: 'debug' | 'info' | 'warn' | 'error';
+  event?: string;
+  message?: string;
+  data?: Record<string, unknown>;
+  kind?: 'text' | 'json' | 'file';
+  content?: unknown;
+  path?: string;
+  note?: string;
+  artifactIds?: string[];
+  pause?: boolean;
+  sensorId?: string;
+  sensorName?: string;
+  sensorSeverity?: 'info' | 'warning' | 'critical';
+  sensorBlocking?: boolean;
+  sensorStatus?: 'passed' | 'failed' | 'skipped' | 'blocked';
+  summary?: string;
+  evidence?: string[];
+  output?: unknown;
+  details?: Record<string, unknown>;
+  blockOnWarnings?: boolean;
+  requireEvidence?: boolean;
+  inputs?: string[];
+  expectedOutputs?: string[];
+  acceptanceCriteria?: string[];
+  requiredSensors?: string[];
+  requiredArtifacts?: string[];
+  from?: string;
+  to?: string;
+  artifacts?: string[];
+  replayId?: string;
+  includePayloads?: boolean;
+  maxEvents?: number;
+  datasetId?: string;
+  sessionIds?: string[];
+  includeSuccessfulSessions?: boolean;
+  scope?: 'sensor' | 'artifact' | 'handoff' | 'workflow' | 'task' | 'risk';
+  effect?: 'allow' | 'deny' | 'require_approval';
+  target?: 'tool' | 'action' | 'path' | 'risk';
+  pattern?: string;
+  pathPattern?: string;
+  approvalRole?: string;
+  approvedBy?: string;
+  approvalNote?: string;
+  risk?: 'low' | 'medium' | 'high' | 'critical';
+  policy?: {
+    defaultEffect?: 'allow' | 'deny';
+    rules?: Array<{
+      id?: string;
+      effect: 'allow' | 'deny' | 'require_approval';
+      target?: 'tool' | 'action' | 'path' | 'risk';
+      pattern?: string;
+      pathPattern?: string;
+      approvalRole?: string;
+      reason?: string;
+      description?: string;
+      scope?: 'sensor' | 'artifact' | 'handoff' | 'workflow' | 'task' | 'risk';
+    }>;
+  };
 }

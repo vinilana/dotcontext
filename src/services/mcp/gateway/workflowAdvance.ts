@@ -10,6 +10,8 @@ import {
   PHASE_NAMES_EN,
   WorkflowGateError,
 } from '../../../workflow';
+import { HarnessWorkflowBlockedError } from '../../workflow';
+import { HarnessPolicyBlockedError } from '../../harness';
 
 import type { MCPToolResponse } from './response';
 import { createJsonResponse, createErrorResponse } from './response';
@@ -51,7 +53,7 @@ export async function handleWorkflowAdvance(
         success: false,
         error: 'No workflow found. Initialize a workflow first.',
         suggestion: 'Use workflow-init({ name: "feature-name" }) to start.',
-        statusFilePath: path.join(contextPath, 'workflow', 'status.yaml')
+        workflowStatePath: path.join(contextPath, 'harness', 'workflows', 'prevc.json')
       });
     }
 
@@ -95,16 +97,44 @@ export async function handleWorkflowAdvance(
         });
       }
     } catch (error) {
-      if (error instanceof WorkflowGateError) {
-        const blockedGate = error.message.includes('plan') ? 'plan_required' : 'approval_required';
+      const caughtError = error instanceof Error ? error : new Error(String(error));
+
+      if (caughtError instanceof HarnessPolicyBlockedError) {
+        return createJsonResponse({
+          success: false,
+          error: caughtError.message,
+          blockedBy: 'policy',
+          reasons: caughtError.decision.reasons,
+          policy: caughtError.decision.policy,
+        });
+      }
+
+      if (caughtError instanceof HarnessWorkflowBlockedError) {
+        return createJsonResponse({
+          success: false,
+          error: caughtError.message,
+          blockedBy: 'harness',
+          reasons: caughtError.reasons,
+          harness: caughtError.harnessStatus,
+          resolution: [
+            'Use workflow-manage({ action: "runSensors", sensors: [...] }) to run required sensors',
+            'Use workflow-manage({ action: "recordArtifact", ... }) to attach missing artifacts',
+            'Use workflow-manage({ action: "defineTask", ... }) to refresh the active task contract if it is stale',
+            'Use workflow-advance({ force: true }) only if you intentionally want to bypass harness checks',
+          ],
+        });
+      }
+
+      if (caughtError instanceof WorkflowGateError) {
+        const blockedGate = caughtError.message.includes('plan') ? 'plan_required' : 'approval_required';
 
         return createJsonResponse({
           success: false,
-          error: error.message,
-          gate: error.gate,
-          transition: error.transition,
+          error: caughtError.message,
+          gate: caughtError.gate,
+          transition: caughtError.transition,
           blockedGate,
-          hint: error.hint,
+          hint: caughtError.hint,
           resolution: blockedGate === 'plan_required'
             ? 'Create and link a plan: plan({ action: "link", planSlug: "plan-name" })'
             : 'Approve plan: workflow-manage({ action: "approvePlan", planSlug: "plan-name" })',
@@ -112,9 +142,10 @@ export async function handleWorkflowAdvance(
           autonomousMode: 'Or use workflow-manage({ action: "setAutonomous", enabled: true })'
         });
       }
-      throw error;
+      throw caughtError;
     }
   } catch (error) {
-    return createErrorResponse(error);
+    const caughtError = error instanceof Error ? error : new Error(String(error));
+    return createErrorResponse(caughtError);
   }
 }

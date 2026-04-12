@@ -10,6 +10,8 @@ Welcome to the `@dotcontext/cli` repository knowledge base. Start with the proje
 | Development Workflow | [`development-workflow.md`](./development-workflow.md) | Branching rules, CI config, contributing guide |
 | Testing Strategy | [`testing-strategy.md`](./testing-strategy.md) | Test configs, CI gates, known flaky suites |
 | Tooling & Productivity | [`tooling.md`](./tooling.md) | CLI scripts, IDE configs, automation workflows |
+| Harness Split Foundation | [`harness-split-foundation.md`](./harness-split-foundation.md) | Branch changes, package boundary decisions, harness engineering alignment |
+| Harness Roadmap | [`harness-roadmap.md`](./harness-roadmap.md) | Harness engineering capabilities, sequencing, and product direction |
 
 ## Q&A
 

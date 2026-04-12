@@ -35,10 +35,26 @@ export function generateFrontmatter(metadata: SkillMetadata, slug?: string): str
 }
 
 /**
+ * Generate portable skill frontmatter for exported AI-tool skills.
+ * Keep only the fields understood by external skill runtimes.
+ */
+export function generatePortableFrontmatter(name: string, description: string): string {
+  return ['---', `name: ${name}`, `description: ${description}`, '---'].join('\n');
+}
+
+/**
  * Wrap content with frontmatter
  */
 export function wrapWithFrontmatter(metadata: SkillMetadata, content: string, slug?: string): string {
   const result = `${generateFrontmatter(metadata, slug)}\n\n${content}`;
+  return result.endsWith('\n') ? result : `${result}\n`;
+}
+
+/**
+ * Wrap content with portable frontmatter for exported AI-tool skills.
+ */
+export function wrapWithPortableFrontmatter(name: string, description: string, content: string): string {
+  const result = `${generatePortableFrontmatter(name, description)}\n\n${content}`;
   return result.endsWith('\n') ? result : `${result}\n`;
 }
 

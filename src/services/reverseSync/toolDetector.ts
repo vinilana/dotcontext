@@ -171,6 +171,9 @@ export class ToolDetector {
       continue: 'continue',
       aider: 'aider',
       codex: 'codex',
+      gemini: 'gemini',
+      antigravity: 'antigravity',
+      trae: 'trae',
       zed: 'zed',
       generic: 'unknown',
     };

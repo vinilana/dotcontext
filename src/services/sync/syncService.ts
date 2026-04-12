@@ -9,10 +9,11 @@ import type {
   SyncServiceDependencies,
   SyncOptions,
   SyncResult,
+  SyncRunResult,
   SyncMode,
   AgentFileInfo
 } from './types';
-import { resolvePresets } from './presets';
+import { getPresetByPath, resolvePresets } from './presets';
 import { createSymlinks } from './symlinkHandler';
 import { createMarkdownReferences } from './markdownReferenceHandler';
 
@@ -27,7 +28,7 @@ export class SyncService {
     this.version = dependencies.version;
   }
 
-  async run(rawOptions: SyncCommandFlags): Promise<void> {
+  async run(rawOptions: SyncCommandFlags): Promise<SyncRunResult> {
     const options = await this.resolveOptions(rawOptions);
 
     await this.validateSource(options.sourcePath);
@@ -38,7 +39,12 @@ export class SyncService {
 
     if (agentFiles.length === 0) {
       this.ui.displayWarning(this.t('warnings.sync.noAgentsFound'));
-      return;
+      return {
+        filesCreated: 0,
+        filesSkipped: 0,
+        filesFailed: 0,
+        targets: [],
+      };
     }
 
     this.ui.displayInfo(
@@ -69,6 +75,13 @@ export class SyncService {
     if (!options.dryRun) {
       this.ui.displaySuccess(this.t('success.sync.completed'));
     }
+
+    return {
+      filesCreated: results.reduce((sum, result) => sum + result.filesCreated, 0),
+      filesSkipped: results.reduce((sum, result) => sum + result.filesSkipped, 0),
+      filesFailed: results.reduce((sum, result) => sum + result.filesFailed, 0),
+      targets: results,
+    };
   }
 
   /**
@@ -177,17 +190,20 @@ export class SyncService {
     this.ui.startSpinner(this.t('spinner.sync.processing', { path: targetPath }));
 
     try {
+      const preset = getPresetByPath(targetPath);
       const handlerResult =
         options.mode === 'symlink'
           ? await createSymlinks(agentFiles, targetPath, options.sourcePath, {
               force: options.force,
               dryRun: options.dryRun,
-              verbose: options.verbose
+              verbose: options.verbose,
+              filenameSuffix: preset?.filenameSuffix,
             })
           : await createMarkdownReferences(agentFiles, targetPath, options.sourcePath, {
               force: options.force,
               dryRun: options.dryRun,
-              verbose: options.verbose
+              verbose: options.verbose,
+              filenameSuffix: preset?.filenameSuffix,
             });
 
       result.filesCreated = handlerResult.filesCreated;

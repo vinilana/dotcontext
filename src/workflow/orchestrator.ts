@@ -4,7 +4,6 @@
  * Manages workflow progression, phase transitions, and role handoffs.
  */
 
-import * as fs from 'fs-extra';
 import * as path from 'path';
 import {
   PrevcStatus,
@@ -142,11 +141,7 @@ export class PrevcOrchestrator {
       await this.planLinker.archivePlans();
     } else {
       await this.planLinker.clearAllPlans();
-      // Delete status.yaml
-      const statusPath = path.join(this.contextPath, 'workflow', 'status.yaml');
-      if (await fs.pathExists(statusPath)) {
-        await fs.remove(statusPath);
-      }
+      await this.statusManager.remove();
     }
   }
 
@@ -154,10 +149,7 @@ export class PrevcOrchestrator {
    * Archive the current workflow to .context/workflow/archive/
    */
   private async archiveCurrentWorkflow(): Promise<void> {
-    const workflowPath = path.join(this.contextPath, 'workflow');
-    const statusPath = path.join(workflowPath, 'status.yaml');
-
-    if (!(await fs.pathExists(statusPath))) {
+    if (!(await this.statusManager.exists())) {
       return;
     }
 
@@ -169,14 +161,7 @@ export class PrevcOrchestrator {
     } catch {
       // Use default name if can't load status
     }
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const archiveDir = path.join(workflowPath, 'archive', `${archiveName}-${timestamp}`);
-
-    await fs.ensureDir(archiveDir);
-
-    // Move status.yaml to archive
-    await fs.move(statusPath, path.join(archiveDir, 'status.yaml'));
+    await this.statusManager.archive(archiveName);
   }
 
   /**

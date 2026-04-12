@@ -8,9 +8,8 @@ import {
   renderIndex,
 } from './templates';
 import { getGuidesByKeys, DOCUMENT_GUIDES } from './guideRegistry';
-import { CodebaseAnalyzer, SemanticContext } from '../../services/semantic';
+import { CodebaseAnalyzer, SemanticContext, SemanticSnapshotService } from '../../services/semantic';
 import { StackDetector } from '../../services/stack';
-import { CodebaseMapGenerator } from './codebaseMapGenerator';
 import {
   createDocFrontmatter,
   serializeFrontmatter,
@@ -73,13 +72,16 @@ export class DocumentationGenerator {
   ): Promise<number> {
     const docsDir = path.join(outputDir, 'docs');
     await GeneratorUtils.ensureDirectoryAndLog(docsDir, verbose, 'Generating documentation scaffold in');
+    const snapshotService = config.semantic ? new SemanticSnapshotService() : null;
 
     // Perform semantic analysis if enabled
     let semantics: SemanticContext | undefined;
+    let snapshotFingerprint: string | undefined;
     if (config.semantic) {
       GeneratorUtils.logProgress('Running semantic analysis...', verbose);
       this.analyzer = new CodebaseAnalyzer();
       try {
+        snapshotFingerprint = await snapshotService!.captureRepoFingerprint(repoStructure.rootPath);
         semantics = await this.analyzer.analyze(repoStructure.rootPath);
         GeneratorUtils.logProgress(
           `Analyzed ${semantics.stats.totalFiles} files, found ${semantics.stats.totalSymbols} symbols in ${semantics.stats.analysisTimeMs}ms`,
@@ -101,23 +103,23 @@ export class DocumentationGenerator {
       }
     }
 
-    // Generate codebase map JSON if semantic analysis succeeded
+    // Persist semantic snapshot into the semantic cache
     if (semantics) {
       try {
-        GeneratorUtils.logProgress('Generating codebase map...', verbose);
+        GeneratorUtils.logProgress('Persisting semantic snapshot...', verbose);
+        const snapshot = await snapshotService!.writeSnapshot(repoStructure, {
+          outputDir,
+          semantics,
+          stackInfo,
+          repoFingerprint: snapshotFingerprint,
+        });
 
-        const mapGenerator = new CodebaseMapGenerator();
-        const codebaseMap = mapGenerator.generate(repoStructure, semantics, stackInfo!);
-
-        const mapPath = path.join(docsDir, 'codebase-map.json');
-        await GeneratorUtils.writeFileWithLogging(
-          mapPath,
-          JSON.stringify(codebaseMap, null, 2),
-          verbose,
-          'Created codebase-map.json'
+        GeneratorUtils.logProgress(
+          `Created semantic snapshot summary at ${path.relative(outputDir, snapshot.publishedSummaryPath)}`,
+          verbose
         );
       } catch (error) {
-        GeneratorUtils.logError('Codebase map generation failed, continuing without it', error, verbose);
+        GeneratorUtils.logError('Semantic snapshot generation failed, continuing without it', error, verbose);
       }
     }
 

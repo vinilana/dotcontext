@@ -1,14 +1,4 @@
-import type { AIProvider } from '../../types';
-
 export type InteractiveMode = 'quick' | 'advanced';
-
-export interface LLMPromptResult {
-  provider: AIProvider;
-  model: string;
-  apiKey?: string;
-  baseUrl?: string;
-  autoDetected: boolean;
-}
 
 export interface PathsPromptResult {
   repoPath: string;
@@ -18,9 +8,6 @@ export interface PathsPromptResult {
 export interface SmartDefaults {
   repoPath: string;
   outputDir: string;
-  provider?: AIProvider;
-  model?: string;
-  apiKeyConfigured: boolean;
   scaffoldExists: boolean;
   detectedLanguages: string[];
 }

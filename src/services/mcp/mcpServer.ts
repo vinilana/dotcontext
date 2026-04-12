@@ -1,7 +1,7 @@
 /**
- * MCP Server - Model Context Protocol server for Claude Code integration
+ * MCP Server - Model Context Protocol server for dotcontext integration.
  *
- * Exposes 9 tools (5 consolidated gateways + 4 dedicated workflow tools) for
+ * Exposes consolidated gateway tools plus dedicated workflow entry points for
  * reduced context and simpler tool selection for AI agents.
  *
  * Simplified workflow: context init → fillSingle → workflow-init
@@ -13,7 +13,7 @@ import { z } from 'zod';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
-import { readFileTool } from '../ai/tools';
+import { readFileTool } from '../harness/contextTools';
 import { PathValidator, SecurityError } from '../../utils/pathSecurity';
 import { SemanticContextBuilder, type ContextFormat } from '../semantic/contextBuilder';
 import { ContextCache } from '../semantic/contextCache';
@@ -34,6 +34,7 @@ import {
   handlePlan,
   handleAgent,
   handleSkill,
+  handleHarness,
   handleWorkflowInit,
   handleWorkflowStatus,
   handleWorkflowAdvance,
@@ -44,6 +45,7 @@ import {
   type PlanParams,
   type AgentParams,
   type SkillParams,
+  type HarnessParams,
   type WorkflowInitParams,
   type WorkflowStatusParams,
   type WorkflowAdvanceParams,
@@ -95,12 +97,11 @@ export class AIContextMCPServer {
   }
 
   /**
-   * Register tools: 5 consolidated gateways + 4 dedicated workflow tools
-   * Total: 9 tools for clear entry points and reduced AI cognitive load
+   * Register consolidated gateway tools and dedicated workflow tools.
    *
-   * Project tools removed - use context({ action: "init" }) + workflow-init instead
+   * Project tools removed - use context({ action: "init" }) + workflow-init instead.
    *
-   * NOTE: repoPath is now determined dynamically via getRepoPath() at runtime,
+   * NOTE: repoPath is determined dynamically via getRepoPath() at runtime,
    * which uses smart initialization and client path caching.
    */
   private registerGatewayTools(): void {
@@ -152,21 +153,26 @@ export class AIContextMCPServer {
     this.server.registerTool('context', {
       description: `Context scaffolding and semantic context. Actions:
 - check: Check if .context scaffolding exists (params: repoPath?)
-- init: Initialize .context scaffolding (params: repoPath?, type?, outputDir?, semantic?, autoFill?, skipContentGeneration?)
-- fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?)
+- bootstrapStatus: Summarize scaffold, workflow, and harness bootstrap readiness (params: repoPath?)
+- init: Initialize .context scaffolding (params: repoPath?, type?, outputDir?, semantic?, autoFill?, skipContentGeneration?, generateQA?) Q&A helper docs are opt-in.
+- fill: Fill scaffolding with AI content (params: repoPath?, outputDir?, target?, offset?, limit?) Generated Q&A helper docs under .context/docs/qa are only created when generateQA is enabled and are not returned unless you add custom unfilled docs there. Bootstrap .context/harness/sensors.json is returned until customized.
 - fillSingle: Fill a single scaffold file (params: repoPath?, filePath)
 - listToFill: List files that need filling (params: repoPath?, outputDir?, target?)
-- getMap: Get codebase map section (params: repoPath?, section?)
+- getMap: Get codebase map section with on-read auto-refresh (params: repoPath?, section?)
 - buildSemantic: Build semantic context (params: repoPath?, contextType?, targetFile?, options?)
-- scaffoldPlan: Create a plan template (params: planName, repoPath?, title?, summary?, autoFill?)
+- scaffoldPlan: Create a plan template (params: planName, repoPath?, title?, summary?, autoFill?) Plan creation does NOT start execution. For non-trivial work, immediately follow with workflow-init so PREVC starts on the harness and persists state under .context/harness/workflows/prevc.json.
+- searchQA: Search generated Q&A helper docs with keyword ranking (params: repoPath?, query)
+- generateQA: Generate optional Q&A helper docs from the codebase (params: repoPath?, options?)
+- getFlow: Trace a code path from an entry file/function (params: repoPath?, entryFile, entryFunction?, options?)
+- detectPatterns: Detect functional patterns in the codebase (params: repoPath?, options?)
 
 **Important:** Agents should provide repoPath on the FIRST call, then it will be cached:
 1. First call: context({ action: "check", repoPath: "/path/to/project" })
 2. Subsequent calls can omit repoPath - it will use cached value from step 1
 3. After context init, call fillSingle for each pending file
-4. Call workflow-init to enable PREVC workflow (unless trivial change)`,
+4. If you create a plan with scaffoldPlan, call workflow-init immediately after planning to start the harness-backed PREVC workflow (unless trivial change)`,
       inputSchema: {
-        action: z.enum(['check', 'init', 'fill', 'fillSingle', 'listToFill', 'getMap', 'buildSemantic', 'scaffoldPlan'])
+        action: z.enum(['check', 'bootstrapStatus', 'init', 'fill', 'fillSingle', 'listToFill', 'getMap', 'buildSemantic', 'scaffoldPlan', 'searchQA', 'generateQA', 'getFlow', 'detectPatterns'])
           .describe('Action to perform'),
         repoPath: z.string().optional()
           .describe('Repository path (defaults to cwd)'),
@@ -184,8 +190,10 @@ export class AIContextMCPServer {
           .describe('(init, scaffoldPlan) Auto-fill with codebase content'),
         skipContentGeneration: z.boolean().optional()
           .describe('(init) Skip pre-generating content'),
-        target: z.enum(['docs', 'agents', 'plans', 'all']).optional()
-          .describe('(fill, listToFill) Which scaffolding to target'),
+        generateQA: z.boolean().optional()
+          .describe('(init) Generate optional Q&A helper docs under .context/docs/qa; these are pre-filled and do not require fillSingle'),
+        target: z.enum(['docs', 'agents', 'skills', 'plans', 'sensors', 'all']).optional()
+          .describe('(fill, listToFill) Which scaffolding to target, including nested skills and harness sensors'),
         offset: z.number().optional()
           .describe('(fill) Skip first N files'),
         limit: z.number().optional()
@@ -193,11 +201,10 @@ export class AIContextMCPServer {
         filePath: z.string().optional()
           .describe('(fillSingle) Absolute path to scaffold file'),
         section: z.enum([
-          'all', 'stack', 'structure', 'architecture', 'symbols',
-          'symbols.classes', 'symbols.interfaces', 'symbols.functions',
-          'symbols.types', 'symbols.enums', 'publicAPI', 'dependencies', 'stats'
+          'all', 'meta', 'stack', 'structure', 'architecture',
+          'functionalPatterns', 'dependencies', 'stats', 'keyFiles', 'navigation'
         ]).optional()
-          .describe('(getMap) Section to retrieve'),
+          .describe('(getMap) Section to retrieve; the snapshot auto-refreshes on read'),
         contextType: z.enum(['documentation', 'playbook', 'plan', 'compact']).optional()
           .describe('(buildSemantic) Type of context to build'),
         targetFile: z.string().optional()
@@ -208,13 +215,19 @@ export class AIContextMCPServer {
           includeDocumentation: z.boolean().optional(),
           includeSignatures: z.boolean().optional()
         }).optional()
-          .describe('(buildSemantic) Builder options'),
+          .describe('(buildSemantic, generateQA, searchQA, getFlow, detectPatterns) Builder/analyzer options'),
         planName: z.string().optional()
           .describe('(scaffoldPlan) Name of the plan'),
         title: z.string().optional()
           .describe('(scaffoldPlan) Plan title'),
         summary: z.string().optional()
           .describe('(scaffoldPlan) Plan summary/goal'),
+        query: z.string().optional()
+          .describe('(searchQA) Query string used to rank generated Q&A helper docs'),
+        entryFile: z.string().optional()
+          .describe('(getFlow) Entry file path for flow tracing'),
+        entryFunction: z.string().optional()
+          .describe('(getFlow) Optional entry function for flow tracing'),
       }
     }, wrap('context', async (params): Promise<MCPToolResponse> => {
       return handleContext(params as ContextParams, { repoPath: this.getRepoPath((params as ContextParams).repoPath), contextBuilder: this.contextBuilder });
@@ -226,9 +239,12 @@ export class AIContextMCPServer {
     this.server.registerTool('workflow-init', {
       description: `Initialize a PREVC workflow for structured development.
 
+This is the harness-backed entry point for planned work. If the user asked to create a plan for non-trivial work, do not stop at scaffoldPlan: call workflow-init so the plan runs under PREVC with canonical state in .context/harness/workflows/prevc.json.
+
 **What it does:**
 - Creates .context/workflow/ folder (automatically, if it doesn't exist)
 - Initializes workflow status file with phase tracking
+- Creates canonical harness workflow state and session binding
 - Detects project scale and configures gates
 - Sets up PREVC phases (Plan → Review → Execute → Verify → Complete)
 
@@ -320,7 +336,7 @@ Use force=true to bypass gates, or use workflow-manage({ action: 'setAutonomous'
 
     // Tool 3d: workflow-manage - Manage workflow operations
     this.server.registerTool('workflow-manage', {
-      description: `Manage workflow operations: handoffs, collaboration, documents, gates, approvals.
+      description: `Manage workflow operations: handoffs, collaboration, documents, gates, approvals, and harness runtime state.
 
 Actions:
 - handoff: Transfer work between agents (params: from, to, artifacts)
@@ -328,9 +344,13 @@ Actions:
 - createDoc: Create workflow document (params: type, docName)
 - getGates: Check gate status
 - approvePlan: Approve linked plan (params: planSlug?, approver?, notes?)
-- setAutonomous: Toggle autonomous mode (params: enabled, reason?)`,
+- setAutonomous: Toggle autonomous mode (params: enabled, reason?)
+- checkpoint: Record a harness checkpoint (params: notes?, data?, artifactIds?, pause?)
+- recordArtifact: Attach an artifact to the active harness session (params: name, kind?, filePath?, content?)
+- defineTask: Define the active harness task contract (params: taskTitle, taskDescription?, expectedOutputs?, acceptanceCriteria?, requiredSensors?, requiredArtifacts?)
+- runSensors: Execute harness sensors for the active session (params: sensors)`,
       inputSchema: {
-        action: z.enum(['handoff', 'collaborate', 'createDoc', 'getGates', 'approvePlan', 'setAutonomous'])
+        action: z.enum(['handoff', 'collaborate', 'createDoc', 'getGates', 'approvePlan', 'setAutonomous', 'checkpoint', 'recordArtifact', 'defineTask', 'runSensors'])
           .describe('Action to perform'),
         from: z.string().optional()
           .describe('(handoff) Agent handing off (e.g., feature-developer)'),
@@ -356,6 +376,38 @@ Actions:
           .describe('(setAutonomous) Enable/disable'),
         reason: z.string().optional()
           .describe('(setAutonomous) Reason for change'),
+        name: z.string().optional()
+          .describe('(recordArtifact) Artifact name'),
+        kind: z.enum(['text', 'json', 'file']).optional()
+          .describe('(recordArtifact) Artifact kind'),
+        content: z.any().optional()
+          .describe('(recordArtifact, checkpoint) Structured content or payload'),
+        filePath: z.string().optional()
+          .describe('(recordArtifact) Artifact file path'),
+        taskTitle: z.string().optional()
+          .describe('(defineTask) Task title'),
+        taskDescription: z.string().optional()
+          .describe('(defineTask) Task description'),
+        owner: z.string().optional()
+          .describe('(defineTask) Task owner'),
+        inputs: z.array(z.string()).optional()
+          .describe('(defineTask) Required inputs'),
+        expectedOutputs: z.array(z.string()).optional()
+          .describe('(defineTask) Expected outputs'),
+        acceptanceCriteria: z.array(z.string()).optional()
+          .describe('(defineTask) Acceptance criteria'),
+        requiredSensors: z.array(z.string()).optional()
+          .describe('(defineTask) Required sensors'),
+        requiredArtifacts: z.array(z.string()).optional()
+          .describe('(defineTask) Required artifacts'),
+        sensors: z.array(z.string()).optional()
+          .describe('(runSensors) Sensors to execute'),
+        data: z.any().optional()
+          .describe('(checkpoint) Optional checkpoint payload'),
+        artifactIds: z.array(z.string()).optional()
+          .describe('(checkpoint) Artifact IDs associated with the checkpoint'),
+        pause: z.boolean().optional()
+          .describe('(checkpoint) Pause the active harness session after checkpoint'),
       }
     }, wrap('workflow-manage', async (params): Promise<MCPToolResponse> => {
       return handleWorkflowManage(params as WorkflowManageParams, { repoPath: this.getRepoPath((params as WorkflowManageParams).repoPath) });
@@ -417,7 +469,11 @@ Actions:
 
     // Gateway 6: plan - Plan management and execution tracking
     this.server.registerTool('plan', {
-      description: `Plan management and execution tracking. Actions:
+      description: `Plan management and execution tracking for PREVC workflows.
+
+This tool does not start workflows. When a user asks for a plan for non-trivial work, start the harness-backed workflow with workflow-init first, or immediately after scaffoldPlan. If you link a plan before workflow-init, re-link it after workflow-init so PREVC gates and harness state use that plan.
+
+Actions:
 - link: Link plan to workflow (params: planSlug)
 - getLinked: Get all linked plans
 - getDetails: Get detailed plan info (params: planSlug)
@@ -516,8 +572,8 @@ Actions:
           .describe('(list) Include full content'),
         includeBuiltIn: z.boolean().optional()
           .describe('(export, fill) Include built-in skills'),
-        preset: z.enum(['claude', 'gemini', 'codex', 'antigravity', 'all']).optional()
-          .describe('(export) Target AI tool'),
+        preset: z.string().optional()
+          .describe('(export) Target AI tool preset'),
         force: z.boolean().optional()
           .describe('(scaffold, export) Overwrite existing'),
       }
@@ -525,7 +581,146 @@ Actions:
       return handleSkill(params as SkillParams, { repoPath: this.getRepoPath() });
     }));
 
-    this.log('Registered 9 tools (5 consolidated gateways + 4 dedicated workflow tools)');
+    // Gateway 9: harness - Explicit harness runtime operations
+    this.server.registerTool('harness', {
+      description: `Harness runtime operations. Actions:
+- createSession: Create durable harness session (params: name, metadata?)
+- listSessions: List harness sessions
+- getSession: Get a harness session (params: sessionId)
+- appendTrace: Append trace event (params: sessionId, level, event, message, data?)
+- listTraces: List trace events for a session (params: sessionId)
+- addArtifact: Add artifact to a session (params: sessionId, name, kind?, content?, path?, metadata?)
+- listArtifacts: List session artifacts (params: sessionId)
+- checkpoint: Record session checkpoint (params: sessionId, note?, data?, artifactIds?, pause?)
+- resumeSession: Resume paused session (params: sessionId)
+- completeSession: Complete session (params: sessionId, note?)
+- failSession: Fail session (params: sessionId, message)
+- recordSensor: Record sensor result for session (params: sessionId, sensorId, sensorStatus, summary, sensorSeverity?, sensorBlocking?, evidence?)
+- getSessionQuality: Evaluate backpressure and task completion (params: sessionId, taskId?, blockOnWarnings?, requireEvidence?)
+- createTask: Create task contract (params: title, sessionId?, expectedOutputs?, acceptanceCriteria?, requiredSensors?, requiredArtifacts?)
+- listTasks: List task contracts
+- evaluateTask: Evaluate task completion (params: taskId, sessionId?)
+- createHandoff: Create handoff contract (params: from, to, sessionId?, taskId?, artifacts?, evidence?)
+- listHandoffs: List handoff contracts
+- replaySession: Replay a durable session timeline (params: sessionId, includePayloads?, maxEvents?)
+- listReplays: List generated replays (params: sessionId?)
+- getReplay: Get replay by id (params: replayId)
+- buildDataset: Build a failure dataset from sessions (params: sessionIds?, includeSuccessfulSessions?)
+- listDatasets: List failure datasets
+- getDataset: Get failure dataset by id (params: datasetId)
+- getFailureClusters: Get clusters for a dataset (params: datasetId)
+- registerPolicy: Register policy rule (params: scope, effect, target?, pattern?, pathPattern?, risk?, description?)
+- listPolicies: List policy rules
+- getPolicy: Retrieve current policy document
+- setPolicy: Replace policy document (params: policy)
+- resetPolicy: Reset policy to bootstrap defaults
+- evaluatePolicy: Evaluate policy against runtime input (params: scope, pattern?, target?, path?, pathPattern?, risk?, approvedBy?, approvalRole?, approvalNote?)`,
+      inputSchema: {
+        action: z.enum([
+          'createSession',
+          'listSessions',
+          'getSession',
+          'appendTrace',
+          'listTraces',
+          'addArtifact',
+          'listArtifacts',
+          'checkpoint',
+          'resumeSession',
+          'completeSession',
+          'failSession',
+          'recordSensor',
+          'getSessionQuality',
+          'createTask',
+          'listTasks',
+          'evaluateTask',
+          'createHandoff',
+          'listHandoffs',
+          'replaySession',
+          'listReplays',
+          'getReplay',
+          'buildDataset',
+          'listDatasets',
+          'getDataset',
+          'getFailureClusters',
+          'registerPolicy',
+          'listPolicies',
+          'getPolicy',
+          'setPolicy',
+          'resetPolicy',
+          'evaluatePolicy',
+        ]).describe('Action to perform'),
+        sessionId: z.string().optional(),
+        taskId: z.string().optional(),
+        name: z.string().optional(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        owner: z.string().optional(),
+        status: z.enum(['draft', 'ready', 'in_progress', 'blocked', 'completed', 'failed']).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+        level: z.enum(['debug', 'info', 'warn', 'error']).optional(),
+        event: z.string().optional(),
+        message: z.string().optional(),
+        data: z.record(z.string(), z.unknown()).optional(),
+        kind: z.enum(['text', 'json', 'file']).optional(),
+        content: z.unknown().optional(),
+        path: z.string().optional(),
+        note: z.string().optional(),
+        artifactIds: z.array(z.string()).optional(),
+        pause: z.boolean().optional(),
+        sensorId: z.string().optional(),
+        sensorName: z.string().optional(),
+        sensorSeverity: z.enum(['info', 'warning', 'critical']).optional(),
+        sensorBlocking: z.boolean().optional(),
+        sensorStatus: z.enum(['passed', 'failed', 'skipped', 'blocked']).optional(),
+        summary: z.string().optional(),
+        evidence: z.array(z.string()).optional(),
+        output: z.unknown().optional(),
+        details: z.record(z.string(), z.unknown()).optional(),
+        blockOnWarnings: z.boolean().optional(),
+        requireEvidence: z.boolean().optional(),
+        inputs: z.array(z.string()).optional(),
+        expectedOutputs: z.array(z.string()).optional(),
+        acceptanceCriteria: z.array(z.string()).optional(),
+        requiredSensors: z.array(z.string()).optional(),
+        requiredArtifacts: z.array(z.string()).optional(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+        artifacts: z.array(z.string()).optional(),
+        replayId: z.string().optional(),
+        includePayloads: z.boolean().optional(),
+        maxEvents: z.number().optional(),
+        datasetId: z.string().optional(),
+        sessionIds: z.array(z.string()).optional(),
+        includeSuccessfulSessions: z.boolean().optional(),
+        scope: z.enum(['sensor', 'artifact', 'handoff', 'workflow', 'task', 'risk']).optional(),
+        effect: z.enum(['allow', 'deny', 'require_approval']).optional(),
+        target: z.enum(['tool', 'action', 'path', 'risk']).optional(),
+        pattern: z.string().optional(),
+        pathPattern: z.string().optional(),
+        approvalRole: z.string().optional(),
+        approvedBy: z.string().optional(),
+        approvalNote: z.string().optional(),
+        risk: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+        policy: z.object({
+          defaultEffect: z.enum(['allow', 'deny']).optional(),
+          rules: z.array(z.object({
+            id: z.string().optional(),
+            effect: z.enum(['allow', 'deny', 'require_approval']),
+            target: z.enum(['tool', 'action', 'path', 'risk']).optional(),
+            pattern: z.string().optional(),
+            pathPattern: z.string().optional(),
+            approvalRole: z.string().optional(),
+            reason: z.string().optional(),
+            description: z.string().optional(),
+            scope: z.enum(['sensor', 'artifact', 'handoff', 'workflow', 'task', 'risk']).optional(),
+          })).optional(),
+        }).optional(),
+      }
+    }, wrap('harness', async (params): Promise<MCPToolResponse> => {
+      return handleHarness(params as HarnessParams, { repoPath: this.getRepoPath() });
+    }));
+
+    this.log('Registered consolidated MCP gateway and workflow tools');
   }
 
   /**

@@ -336,7 +336,11 @@ export class ImportSkillsService {
     options: ImportSkillsOptions
   ): Promise<void> {
     const existingContent = await fs.readFile(existingPath, 'utf-8');
-    const newContent = await fs.readFile(skill.sourcePath, 'utf-8');
+    const newContent = await this.prepareContent(skill, options);
+
+    if (existingContent.includes(newContent)) {
+      return;
+    }
 
     const separator = [
       '',

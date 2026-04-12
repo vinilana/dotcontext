@@ -30,7 +30,7 @@ Use this as a reference when encountering unfamiliar terms in the codebase or do
 
 - **[TypeName]** — [Description] (\`src/types/path.ts\`)
 
-*See [\`codebase-map.json\`](./codebase-map.json) for complete type listings.*`,
+Document the main shared types here and link to their source files.`,
     },
     {
       heading: 'Enumerations',
@@ -43,7 +43,7 @@ Use this as a reference when encountering unfamiliar terms in the codebase or do
 
 - **[EnumName]** — [Description] (\`src/types/path.ts\`)
 
-*See [\`codebase-map.json\`](./codebase-map.json) for complete enum listings.*`,
+Document the main enums here and link to their source files.`,
     },
     {
       heading: 'Core Terms',

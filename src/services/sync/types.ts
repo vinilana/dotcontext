@@ -3,11 +3,12 @@ import type { TranslateFn } from '../../utils/i18n';
 
 export type SyncMode = 'symlink' | 'markdown';
 
-export type PresetName = 'claude' | 'github' | 'cursor' | 'windsurf' | 'cline' | 'continue' | 'antigravity' | 'trae' | 'all';
+export type PresetName = string;
 
 export interface TargetPreset {
   name: PresetName;
   path: string;
+  filenameSuffix?: string;
   description: string;
 }
 
@@ -55,6 +56,7 @@ export interface HandlerOptions {
   force: boolean;
   dryRun: boolean;
   verbose: boolean;
+  filenameSuffix?: string;
 }
 
 export interface HandlerResult {
@@ -62,4 +64,11 @@ export interface HandlerResult {
   filesSkipped: number;
   filesFailed: number;
   errors: Array<{ file: string; error: string }>;
+}
+
+export interface SyncRunResult {
+  filesCreated: number;
+  filesSkipped: number;
+  filesFailed: number;
+  targets: SyncResult[];
 }

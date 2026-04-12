@@ -33,6 +33,19 @@ coverage/
 # Output directories
 output/
 .context-test/
+.release/
+
+# .context runtime state
+.context/plans/
+.context/workflow/**
+.context/harness/sessions/
+.context/harness/traces/
+.context/harness/artifacts/
+.context/harness/contracts/
+.context/harness/workflows/
+.context/harness/replays/
+.context/harness/datasets/
+.context/**/archive/
 
 # AI Context state files
 context-log.json

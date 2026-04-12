@@ -1,5 +1,11 @@
 # MCP Tools Reference
 
+This directory documents the MCP adapter surface over the harness runtime.
+
+CLI-only concerns such as editor installation and local operator setup belong to the CLI boundary and should not be added here.
+
+Harness-domain concerns should live behind reusable services. The MCP layer should increasingly act as a transport adapter, not as the center of the product model.
+
 ## Simplified Tool Structure
 
 The MCP tools follow a simple, explicit pattern:
@@ -15,7 +21,7 @@ The MCP tools follow a simple, explicit pattern:
 | Tool | Description |
 |------|-------------|
 | `explore` | File and code exploration (read, list, analyze, search, getStructure) |
-| `context` | Context scaffolding and semantic context (check, init, fill, fillSingle, listToFill, getMap, buildSemantic, scaffoldPlan) |
+| `context` | Context scaffolding, semantic context, and optional Q&A/flow helpers (check, bootstrapStatus, init, fill, fillSingle, listToFill, getMap, buildSemantic, scaffoldPlan, searchQA, generateQA, getFlow, detectPatterns) |
 | `sync` | Import/export synchronization with AI tools |
 | `plan` | Plan management and execution tracking |
 | `agent` | Agent orchestration and discovery |
@@ -54,6 +60,10 @@ Do the template files have content?
 │       ├─ Returns scaffold structure with guidance
 │       └─ AI generates content based on context
 └─ Yes → Skip to Step 3
+
+Note: generated Q&A files in `.context/docs/qa/` are optional helper artifacts created only by `context({ action: "init", generateQA: true })`. They do not appear in `listToFill`/`fill` unless you create custom nested docs there with `status: unfilled`.
+Note: `.context/harness/sensors.json` is bootstrap-generated during `init` and can appear in `listToFill`/`fill` until it is customized for the project.
+Note: `searchQA` performs keyword ranking over those generated helper docs. It is not embedding-based semantic search.
 ```
 
 ### Step 3: Initialize Workflow
@@ -114,7 +124,7 @@ project-setup({ featureName: "my-feature", template: "feature" })
 **After (explicit steps):**
 ```
 1. context({ action: "init" })              // Create scaffolding
-2. context({ action: "fillSingle", ... })   // Fill each file
+2. context({ action: "fillSingle", ... })   // Fill each scaffold file that still needs content
 3. workflow-init({ name: "my-feature" })    // Start workflow
 ```
 

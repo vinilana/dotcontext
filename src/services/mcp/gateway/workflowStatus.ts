@@ -45,14 +45,15 @@ export async function handleWorkflowStatus(
         error: 'No workflow found. Initialize a workflow first.',
         suggestion: 'Use workflow-init({ name: "feature-name" }) to start.',
         note: 'Workflows enable structured PREVC phases. Skip for trivial changes.',
-        statusFilePath: path.join(contextPath, 'workflow', 'status.yaml')
+        workflowStatePath: path.join(contextPath, 'harness', 'workflows', 'prevc.json')
       });
     }
 
     const summary = await service.getSummary();
     const status = await service.getStatus();
-    const statusFilePath = path.join(contextPath, 'workflow', 'status.yaml');
+    const workflowStatePath = path.join(contextPath, 'harness', 'workflows', 'prevc.json');
     const orchestration = await service.getPhaseOrchestration(summary.currentPhase);
+    const harness = await service.getHarnessStatus();
 
     return createJsonResponse({
       success: true,
@@ -68,7 +69,8 @@ export async function handleWorkflowStatus(
       agents: status.agents,
       roles: status.roles,
       orchestration,
-      statusFilePath,
+      harness,
+      workflowStatePath,
     });
   } catch (error) {
     return createErrorResponse(error);

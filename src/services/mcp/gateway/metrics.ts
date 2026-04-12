@@ -105,8 +105,14 @@ class MetricsStore {
     // Generate recommendations
     const recommendations: string[] = [];
 
-    if (this.metrics.qaSearches === 0) {
-      recommendations.push('Try using searchQA to find pre-computed answers before reading files');
+    if (fileReads > 20 && contextQueries < 5) {
+      recommendations.push('Use buildSemantic or getMap to reduce broad file reads');
+    } else if (this.metrics.qaSearches === 0 && fileReads > 8) {
+      recommendations.push('Use getMap or buildSemantic to inspect the codebase before reading many files');
+    }
+
+    if (efficiency === 'low') {
+      recommendations.push('Treat generateQA/searchQA as optional helpers; start with semantic context and snapshots');
     }
 
     if (this.metrics.flowQueries === 0 && fileReads > 5) {
@@ -115,14 +121,6 @@ class MetricsStore {
 
     if (this.metrics.patternDetections === 0 && fileReads > 10) {
       recommendations.push('Use detectPatterns to understand codebase capabilities');
-    }
-
-    if (fileReads > 20 && contextQueries < 5) {
-      recommendations.push('Consider generating Q&A content with generateQA to reduce file reads');
-    }
-
-    if (efficiency === 'low') {
-      recommendations.push('Run context.generateQA to pre-compute answers for common questions');
     }
 
     return {

@@ -39,7 +39,7 @@ export class SkillsDetector {
 
             if (stat.isDirectory()) {
               // Find all SKILL.md files and other markdown files
-              const files = await glob('**/*.md', {
+              const files = await glob('**/SKILL.md', {
                 cwd: fullPath,
                 absolute: true,
                 ignore: ['node_modules/**', '.git/**'],
@@ -133,7 +133,7 @@ export class SkillsDetector {
           }
         } else if (stat.isDirectory()) {
           // Find all markdown files in directory
-          const files = await glob('**/*.md', {
+          const files = await glob('**/SKILL.md', {
             cwd: fullPath,
             absolute: true,
             ignore: ['node_modules/**', '.git/**'],

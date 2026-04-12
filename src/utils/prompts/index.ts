@@ -7,7 +7,7 @@ import { colors } from '../theme';
 export * from './types';
 
 // Re-export modules
-export { detectSmartDefaults, getConfiguredProviders, hasAnyProviderConfigured } from './smartDefaults';
+export { detectSmartDefaults } from './smartDefaults';
 export { displayConfigSummary } from './configSummary';
 
 /**
