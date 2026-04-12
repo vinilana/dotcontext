@@ -210,8 +210,10 @@ If you already have the MCP package installed globally, `dotcontext-mcp install`
 
 The installer:
 - Detects installed AI tools on your system
+- Opens the interactive tool picker when you run `install` in a terminal without a tool id
 - Configures the `dotcontext` MCP server in each tool
 - Supports global (home directory) and local (project directory) installation
+- Falls back to `all` detected tools in non-interactive runs without a tool id
 - Merges with existing MCP configurations without overwriting unrelated servers
 - Includes `--dry-run` and `--verbose` modes
 - Writes the config shape required by each supported client

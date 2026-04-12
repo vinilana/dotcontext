@@ -80,7 +80,51 @@ The installer is the source of truth for supported clients and config formats. D
 npm run release:packages:patch
 ```
 
-This prepares a local release bundle under `.release/releases/<version>`.
+This prepares local release bundles under `.release/packages/` and `.release/releases/<version>`.
+
+### Publishing split packages
+
+`release:packages:*` does not publish anything to npm. Publishing the split packages is a separate step.
+
+1. Build and validate the package bundles:
+
+```bash
+npm run build:packages
+npm run smoke:packages
+```
+
+2. Publish from the generated bundle directory for each package you intend to release:
+
+```bash
+cd .release/packages/cli
+npm publish --access public
+
+cd ../harness
+npm publish --access public
+
+cd ../mcp
+npm publish --access public
+```
+
+3. If npm 2FA is enabled for publishes, pass the current OTP:
+
+```bash
+npm publish --access public --otp=<code>
+```
+
+Useful verification commands:
+
+```bash
+npm view @dotcontext/cli version
+npm view @dotcontext/harness version
+npm view @dotcontext/mcp version
+```
+
+Notes:
+
+- Publish from `.release/packages/<slug>`, not from the repo root.
+- `@dotcontext/mcp` is a separately published package. If it is missing from npm, `npx @dotcontext/mcp install` will fail with a registry `404`.
+- Run `npm publish --dry-run --access public` first if you want to inspect the tarball before the real publish.
 
 ## Pull Requests
 

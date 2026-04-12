@@ -6,10 +6,15 @@
 
 export {
   MCPInstallService,
+  buildMcpInstallToolChoices,
+  resolveMcpInstallToolSelection,
   type MCPInstallServiceDependencies,
   type MCPInstallOptions,
   type MCPInstallResult,
   type MCPInstallation,
+  type MCPInstallToolChoice,
+  type MCPInstallToolPrompt,
+  type ResolveMcpInstallToolSelectionOptions,
 } from './mcpInstallService';
 
 export {
