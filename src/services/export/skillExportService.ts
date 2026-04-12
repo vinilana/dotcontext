@@ -16,7 +16,7 @@ import {
   displayOperationSummary,
   getSkillsExportPresets,
 } from '../shared';
-import { createSkillRegistry, Skill, BUILT_IN_SKILLS, getBuiltInSkillTemplates, SKILL_TO_PHASES, BuiltInSkillType, wrapWithFrontmatter } from '../../workflow/skills';
+import { createSkillRegistry, Skill, BUILT_IN_SKILLS, getBuiltInSkillTemplates, SKILL_TO_PHASES, wrapWithPortableFrontmatter } from '../../workflow/skills';
 
 export type SkillExportServiceDependencies = BaseDependencies;
 
@@ -256,7 +256,10 @@ export class SkillExportService {
    * Generate SKILL.md content with frontmatter
    */
   private generateSkillContent(skill: Skill): string {
-    return wrapWithFrontmatter(skill.metadata, skill.content, skill.slug);
+    const templates = getBuiltInSkillTemplates();
+    const fallbackContent = skill.isBuiltIn ? templates[skill.slug as keyof typeof templates]?.content : undefined;
+    const content = skill.content.trim() ? skill.content : fallbackContent || '';
+    return wrapWithPortableFrontmatter(skill.slug, skill.metadata.description, content);
   }
 
   /**

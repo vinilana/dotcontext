@@ -162,4 +162,9 @@ export {
   SkillRegistry,
   createSkillRegistry,
   getBuiltInSkillTemplates,
+  generateFrontmatter,
+  generatePortableFrontmatter,
+  wrapWithFrontmatter,
+  wrapWithPortableFrontmatter,
+  parseFrontmatter,
 } from './skills';

@@ -18,11 +18,15 @@ export interface SkillDefaultContent {
  * Map of section headings to content keys
  */
 const SECTION_KEY_MAP: Record<string, keyof SkillDefaultContent> = {
-  'When to Use': 'whenToUse',
-  'Instructions': 'instructions',
+  Workflow: 'instructions',
   'Examples': 'examples',
-  'Guidelines': 'guidelines',
+  'Quality Bar': 'guidelines',
 };
+
+const RESOURCE_STRATEGY_DEFAULT = `- Add \`scripts/\` only when the task is fragile, repetitive, or benefits from deterministic execution.
+- Add \`references/\` only when details are too large or too variant-specific to keep in \`SKILL.md\`.
+- Add \`assets/\` only for files that will be consumed in the final output.
+- Keep extra docs out of the skill folder; prefer \`SKILL.md\` plus only the resources that materially help.`;
 
 /**
  * Create a skill structure with standard sections
@@ -36,37 +40,38 @@ export function createSkillStructure(
 ): ScaffoldStructure {
   const sections: ScaffoldSection[] = [
     {
-      heading: 'When to Use',
+      heading: 'Workflow',
       order: 1,
-      contentType: 'prose',
-      guidance: `Briefly describe when this skill should be activated: ${description}`,
-      required: true,
-      headingLevel: 2,
-    },
-    {
-      heading: 'Instructions',
-      order: 2,
       contentType: 'list',
-      guidance: 'Step-by-step instructions for executing this skill. Be specific and actionable.',
-      exampleContent: '1. First step\n2. Second step\n3. Third step',
+      guidance: `Write the minimum reliable procedure for ${skillSlug}. Use imperative steps, stay concise, and optimize for repeated execution.`,
+      exampleContent: '1. Inspect the task inputs, constraints, and desired output.\n2. Execute the smallest reliable sequence.\n3. Validate the result against real files, commands, or behavior.\n4. Capture reusable helpers only if they reduce future repetition.',
       required: true,
       headingLevel: 2,
     },
     {
       heading: 'Examples',
-      order: 3,
+      order: 2,
       contentType: 'code-block',
-      guidance: 'Provide concrete examples of how to use this skill. Include input and expected output.',
+      guidance: 'Provide short, concrete examples. Prefer one or two examples that show the expected input shape and outcome.',
       required: true,
       headingLevel: 2,
     },
     {
-      heading: 'Guidelines',
-      order: 4,
+      heading: 'Quality Bar',
+      order: 3,
       contentType: 'list',
-      guidance: 'Best practices and guidelines for using this skill effectively.',
+      guidance: 'List the checks, constraints, and non-obvious heuristics that keep this skill reliable.',
       required: true,
       headingLevel: 2,
+    },
+    {
+      heading: 'Resource Strategy',
+      order: 4,
+      contentType: 'list',
+      guidance: `Explain when ${skillSlug} should add helper resources. Prefer progressive disclosure and avoid unnecessary files.`,
+      required: true,
+      headingLevel: 2,
+      defaultContent: RESOURCE_STRATEGY_DEFAULT,
     },
   ];
 

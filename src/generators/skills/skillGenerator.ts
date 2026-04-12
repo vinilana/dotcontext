@@ -2,7 +2,7 @@
  * Skill Generator
  *
  * Scaffolds skill directories and SKILL.md files.
- * Generates frontmatter-only files (scaffold v2) for AI to fill.
+ * Generates scaffold v2 files with fillable frontmatter plus useful starter content.
  */
 
 import * as fs from 'fs';
@@ -22,6 +22,10 @@ import {
   createSkillFrontmatter,
   serializeFrontmatter,
 } from '../../types/scaffoldFrontmatter';
+import {
+  getScaffoldStructure,
+  serializeStructureAsMarkdown,
+} from '../shared/scaffoldStructures';
 
 export interface SkillGeneratorOptions {
   /** Repository path */
@@ -82,7 +86,7 @@ export class SkillGenerator {
       // Create skill directory
       fs.mkdirSync(skillDir, { recursive: true });
 
-      // Generate frontmatter-only content (scaffold v2)
+      // Generate scaffold content with internal frontmatter plus starter body
       let description: string;
       let phases: PrevcPhase[];
 
@@ -97,14 +101,14 @@ export class SkillGenerator {
         phases = getDefaultPhases(skillName);
       }
 
-      // Create frontmatter-only content
+      // Create scaffold content
       const frontmatter = createSkillFrontmatter(
         this.formatSkillTitle(skillName),
         description,
         skillName,
         { phases }
       );
-      const content = serializeFrontmatter(frontmatter) + '\n';
+      const content = serializeFrontmatter(frontmatter) + '\n' + this.buildSkillBody(skillName);
 
       // Write SKILL.md
       fs.writeFileSync(skillPath, content, 'utf-8');
@@ -132,6 +136,48 @@ export class SkillGenerator {
       .join(' ');
   }
 
+  private buildSkillBody(skillName: string): string {
+    const structure = getScaffoldStructure(skillName);
+    if (structure) {
+      return serializeStructureAsMarkdown(structure);
+    }
+
+    return [
+      '## Workflow',
+      '',
+      `<!-- Write the minimum reliable procedure for ${skillName}. Use imperative steps, stay concise, and focus on what another Codex instance would not infer on its own. -->`,
+      '',
+      '1. Inspect the task inputs, constraints, and desired outcome.',
+      '2. Execute the smallest reliable sequence for the task.',
+      '3. Validate the result against real files, commands, or behavior.',
+      '4. Add reusable helpers only if they reduce future repetition.',
+      '',
+      '## Examples',
+      '',
+      `<!-- Add one or two short examples that show when ${skillName} should be used and what good output looks like. -->`,
+      '',
+      '```text',
+      `User: Use the ${skillName} skill to handle this task.`,
+      'Assistant: Follow the workflow, apply repository-specific rules, and produce the requested output.',
+      '```',
+      '',
+      '## Quality Bar',
+      '',
+      '- Keep the skill concise; include only non-obvious guidance.',
+      '- Put activation triggers in the description frontmatter, not in the body.',
+      '- Use imperative instructions and short examples.',
+      '- Prefer progressive disclosure over large inline explanations.',
+      '',
+      '## Resource Strategy',
+      '',
+      '- Add `scripts/` only for deterministic or repetitive work.',
+      '- Add `references/` only for large details that should be loaded on demand.',
+      '- Add `assets/` only for files consumed by the final output.',
+      '- Avoid extra docs such as `README.md` or `CHANGELOG.md` inside the skill folder.',
+      '',
+    ].join('\n');
+  }
+
   /**
    * Generate a single custom skill
    */
@@ -153,14 +199,14 @@ export class SkillGenerator {
     // Create skill directory
     fs.mkdirSync(skillDir, { recursive: true });
 
-    // Generate frontmatter-only content (scaffold v2)
+    // Generate scaffold content with internal frontmatter plus starter body
     const frontmatter = createSkillFrontmatter(
       this.formatSkillTitle(name),
       description,
       name,
       { phases }
     );
-    const content = serializeFrontmatter(frontmatter) + '\n';
+    const content = serializeFrontmatter(frontmatter) + '\n' + this.buildSkillBody(name);
 
     // Write SKILL.md
     fs.writeFileSync(skillPath, content, 'utf-8');

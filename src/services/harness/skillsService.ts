@@ -10,6 +10,7 @@ import { VERSION } from '../../version';
 import { PHASE_NAMES_EN, type PrevcPhase } from '../../workflow';
 import { getOrBuildContext } from './contextTools';
 import { minimalUI, mockTranslate } from '../shared';
+import { needsFill } from '../../utils/frontMatter';
 
 export interface HarnessSkillsServiceOptions {
   repoPath: string;
@@ -69,11 +70,18 @@ function getSkillFillInstructions(skillSlug: string): string {
 - Data validation requirements`,
   };
 
-  return instructions[skillSlug] || `Fill this skill with project-specific content for ${skillSlug}:
+  return `${instructions[skillSlug] || `Fill this skill with project-specific content for ${skillSlug}:
 - Identify relevant patterns from the codebase
 - Include specific examples from the project
 - Add conventions and best practices
-- Reference important files and components`;
+- Reference important files and components`}
+
+Then apply these writing constraints:
+- Keep activation language in the frontmatter description instead of adding a "When to Use" section in the body
+- Write the body in imperative form
+- Keep the body concise and split large details into \`references/\` only when needed
+- Add \`scripts/\` or \`assets/\` only if they materially reduce repeated work
+- Do not create extra docs such as README, quick-reference, or changelog files inside the skill folder`;
 }
 
 function buildSkillFillPrompt(
@@ -116,6 +124,13 @@ function buildSkillFillPrompt(
     '- Specific examples from this codebase',
     '- Project-specific conventions and patterns',
     '- References to relevant files and components',
+    '- Concise instructions written in imperative form',
+    '- Progressive disclosure: keep SKILL.md lean and move large details to references only when necessary',
+    '',
+    'Hard requirements:',
+    '- Preserve the existing internal scaffold frontmatter',
+    '- Do not add a "When to Use" section in the body; improve the description if trigger wording is missing',
+    '- Avoid creating extra documentation files inside the skill folder',
     '',
     'DO NOT leave placeholder text. Each skill must have meaningful, project-specific content.'
   );
@@ -274,11 +289,13 @@ export class HarnessSkillsService {
     }
 
     if (!params.includeBuiltIn) {
-      skillsToFill = skillsToFill.filter((s: { path: string }) => {
-        if (!fs.existsSync(s.path)) return true;
-        const content = fs.readFileSync(s.path, 'utf-8');
-        return content.includes('<!-- TODO') || content.includes('[PLACEHOLDER]') || content.length < 500;
-      });
+      const filtered = await Promise.all(
+        skillsToFill.map(async (skill: { path: string }) => ({
+          skill,
+          shouldFill: !await fs.pathExists(skill.path) || await needsFill(skill.path),
+        }))
+      );
+      skillsToFill = filtered.filter(entry => entry.shouldFill).map(entry => entry.skill);
     }
 
     if (skillsToFill.length === 0) {

@@ -17,7 +17,7 @@ import {
   SKILL_TO_PHASES,
 } from './types';
 import { getBuiltInSkillTemplates } from './skillTemplates';
-import { parseFrontmatter } from './frontmatter';
+import { parseFrontmatter, wrapWithFrontmatter } from './frontmatter';
 import { PrevcPhase } from '../types';
 
 /** Default skills directory path */
@@ -72,7 +72,11 @@ export class SkillRegistry {
     if (!skill) return null;
 
     try {
-      return fs.readFileSync(skill.path, 'utf-8');
+      if (fs.existsSync(skill.path)) {
+        return fs.readFileSync(skill.path, 'utf-8');
+      }
+
+      return wrapWithFrontmatter(skill.metadata, skill.content, skill.slug);
     } catch (error) {
       console.error(`Failed to read skill file: ${skill.path}`, error);
       return null;
