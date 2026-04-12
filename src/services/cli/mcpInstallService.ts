@@ -16,6 +16,7 @@ import {
   addError,
 } from '../shared/types';
 import { TOOL_REGISTRY, getToolById, ToolDefinition } from '../shared/toolRegistry';
+import type { TranslateFn } from '../../utils/i18n';
 
 // ============================================================================
 // Types
@@ -46,6 +47,24 @@ export interface MCPInstallation {
   configPath: string;
   action: 'created' | 'updated' | 'skipped';
   dryRun: boolean;
+}
+
+export interface MCPInstallToolChoice {
+  name: string;
+  value: string;
+}
+
+export interface MCPInstallToolPrompt {
+  message: string;
+  choices: MCPInstallToolChoice[];
+}
+
+export interface ResolveMcpInstallToolSelectionOptions {
+  selectedTool?: string;
+  isInteractive: boolean;
+  service: Pick<MCPInstallService, 'getSupportedTools' | 'detectInstalledTools'>;
+  t: TranslateFn;
+  promptTool?: (prompt: MCPInstallToolPrompt) => Promise<string>;
 }
 
 // ============================================================================
@@ -695,4 +714,55 @@ export class MCPInstallService {
       };
     }
   }
+}
+
+export function buildMcpInstallToolChoices(
+  supportedTools: Array<Pick<ToolDefinition, 'id' | 'displayName'>>,
+  detectedTools: string[],
+  t: TranslateFn
+): MCPInstallToolChoice[] {
+  const detectedSet = new Set(detectedTools);
+  const orderedTools = [
+    ...supportedTools.filter((tool) => detectedSet.has(tool.id)),
+    ...supportedTools.filter((tool) => !detectedSet.has(tool.id)),
+  ];
+
+  return [
+    {
+      name: t('commands.mcpInstall.allDetected'),
+      value: 'all',
+    },
+    ...orderedTools.map((tool) => ({
+      name: detectedSet.has(tool.id)
+        ? `${tool.displayName} (${t('labels.detected')})`
+        : tool.displayName,
+      value: tool.id,
+    })),
+  ];
+}
+
+export async function resolveMcpInstallToolSelection(
+  options: ResolveMcpInstallToolSelectionOptions
+): Promise<string> {
+  const { selectedTool, isInteractive, service, t, promptTool } = options;
+
+  if (selectedTool) {
+    return selectedTool;
+  }
+
+  if (!isInteractive) {
+    return 'all';
+  }
+
+  if (!promptTool) {
+    throw new Error('Interactive MCP install selection requires a prompt handler.');
+  }
+
+  const supportedTools = service.getSupportedTools();
+  const detectedTools = await service.detectInstalledTools();
+
+  return promptTool({
+    message: t('commands.mcpInstall.selectTool'),
+    choices: buildMcpInstallToolChoices(supportedTools, detectedTools, t),
+  });
 }

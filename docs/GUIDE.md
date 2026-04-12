@@ -60,6 +60,8 @@ npx @dotcontext/mcp install
 
 This configures the `dotcontext` MCP server for supported AI tools. Use `--dry-run` to preview changes, `--local` to install in the current project instead of your home directory, or pass a specific tool id such as `codex`, `cursor`, or `claude`.
 
+When you run `npx @dotcontext/mcp install` in an interactive terminal without a tool id, the installer opens a guided tool picker. In non-interactive contexts, it defaults to installing for `all` detected tools.
+
 Examples:
 
 ```bash

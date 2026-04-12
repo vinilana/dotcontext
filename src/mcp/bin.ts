@@ -9,7 +9,9 @@
 
 import { startMCPServer } from './index';
 import { registerProcessShutdown } from '../utils/processShutdown';
-import { MCPInstallService } from '../services/cli/mcpInstallService';
+import { createTranslator, detectLocale } from '../utils/i18n';
+import { themedSelect } from '../utils/themedPrompt';
+import { MCPInstallService, resolveMcpInstallToolSelection } from '../cli';
 import { VERSION } from '../version';
 
 type ParsedArgs = {
@@ -20,8 +22,6 @@ type ParsedArgs = {
   dryRun?: boolean;
   global?: boolean;
 };
-
-const mockTranslate = (key: string) => key;
 
 const consoleUI = {
   displayWelcome: () => {},
@@ -164,20 +164,38 @@ Examples:
 `);
 }
 
-async function runInstallCommand(args: ParsedArgs): Promise<void> {
+async function runInstallCommand(args: ParsedArgs, argv: string[]): Promise<void> {
+  const locale = detectLocale(argv, process.env.DOTCONTEXT_LANG, [
+    process.env.LC_ALL,
+    process.env.LC_MESSAGES,
+    process.env.LANG,
+  ]);
+  const t = createTranslator(locale);
   const service = new MCPInstallService({
     ui: consoleUI,
-    t: mockTranslate as any,
+    t,
     version: VERSION,
   });
 
+  const selectedTool = await resolveMcpInstallToolSelection({
+    selectedTool: args.tool,
+    isInteractive: Boolean(process.stdin.isTTY),
+    service,
+    t,
+    promptTool: ({ message, choices }) => themedSelect({ message, choices }),
+  });
+
   const result = await service.run({
-    tool: args.tool,
+    tool: selectedTool,
     global: args.global,
     dryRun: args.dryRun,
     verbose: args.verbose,
     repoPath: args.repoPath || process.cwd(),
   });
+
+  if (result.installations.length > 0) {
+    consoleUI.displayInfo('MCP', t('info.mcp.restartTools'));
+  }
 
   if (args.tool && result.installations.length === 0) {
     process.exit(1);
@@ -213,7 +231,7 @@ export async function runMcpPackage(argv: string[]): Promise<void> {
   }
 
   if (parsed.command === 'install') {
-    await runInstallCommand(parsed);
+    await runInstallCommand(parsed, argv);
     return;
   }
 

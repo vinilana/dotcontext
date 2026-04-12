@@ -1,7 +1,11 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { MCPInstallService } from './mcpInstallService';
+import {
+  MCPInstallService,
+  buildMcpInstallToolChoices,
+  resolveMcpInstallToolSelection,
+} from './mcpInstallService';
 import type { CLIInterface } from '../../utils/cliUI';
 
 // Mock CLIInterface
@@ -68,6 +72,77 @@ describe('MCPInstallService', () => {
       expect(tools.length).toBeGreaterThan(0);
       expect(tools.some(t => t.id === 'claude')).toBe(true);
       expect(tools.some(t => t.id === 'cursor')).toBe(true);
+    });
+  });
+
+  describe('buildMcpInstallToolChoices', () => {
+    it('orders detected tools first and labels them', () => {
+      const choices = buildMcpInstallToolChoices(
+        [
+          { id: 'claude', displayName: 'Claude Code' },
+          { id: 'codex', displayName: 'Codex CLI' },
+          { id: 'cursor', displayName: 'Cursor AI' },
+        ],
+        ['codex'],
+        mockT as any
+      );
+
+      expect(choices).toEqual([
+        { name: 'commands.mcpInstall.allDetected', value: 'all' },
+        { name: 'Codex CLI (labels.detected)', value: 'codex' },
+        { name: 'Claude Code', value: 'claude' },
+        { name: 'Cursor AI', value: 'cursor' },
+      ]);
+    });
+  });
+
+  describe('resolveMcpInstallToolSelection', () => {
+    it('returns the provided tool without prompting', async () => {
+      const promptTool = jest.fn();
+
+      const selectedTool = await resolveMcpInstallToolSelection({
+        selectedTool: 'cursor',
+        isInteractive: true,
+        service,
+        t: mockT as any,
+        promptTool,
+      });
+
+      expect(selectedTool).toBe('cursor');
+      expect(promptTool).not.toHaveBeenCalled();
+    });
+
+    it('defaults to all in non-interactive mode when no tool is provided', async () => {
+      const selectedTool = await resolveMcpInstallToolSelection({
+        isInteractive: false,
+        service,
+        t: mockT as any,
+      });
+
+      expect(selectedTool).toBe('all');
+    });
+
+    it('prompts with detected tools first in interactive mode', async () => {
+      const promptTool = jest.fn().mockResolvedValue('codex');
+      const detectSpy = jest.spyOn(service, 'detectInstalledTools').mockResolvedValue(['codex']);
+
+      const selectedTool = await resolveMcpInstallToolSelection({
+        isInteractive: true,
+        service,
+        t: mockT as any,
+        promptTool,
+      });
+
+      expect(selectedTool).toBe('codex');
+      expect(promptTool).toHaveBeenCalledWith({
+        message: 'commands.mcpInstall.selectTool',
+        choices: expect.arrayContaining([
+          { name: 'commands.mcpInstall.allDetected', value: 'all' },
+          { name: 'Codex CLI (labels.detected)', value: 'codex' },
+        ]),
+      });
+
+      detectSpy.mockRestore();
     });
   });
 

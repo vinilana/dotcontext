@@ -18,6 +18,7 @@ import { createTranslator, detectLocale, SUPPORTED_LOCALES, normalizeLocale } fr
 import type { TranslateFn, Locale, TranslationKey } from './utils/i18n';
 import {
   MCPInstallService,
+  resolveMcpInstallToolSelection,
   SyncService,
   ImportRulesService,
   ImportAgentsService,
@@ -114,30 +115,6 @@ function scheduleVersionCheck(force: boolean = false): Promise<void> {
   }
 
   return versionCheckPromise;
-}
-
-function buildMcpToolChoices(
-  supportedTools: Array<{ id: string; displayName: string }>,
-  detectedTools: string[],
-): Array<{ name: string; value: string }> {
-  const detectedSet = new Set(detectedTools);
-  const orderedTools = [
-    ...supportedTools.filter(tool => detectedSet.has(tool.id)),
-    ...supportedTools.filter(tool => !detectedSet.has(tool.id)),
-  ];
-
-  return [
-    {
-      name: t('commands.mcpInstall.allDetected'),
-      value: 'all',
-    },
-    ...orderedTools.map(tool => ({
-      name: detectedSet.has(tool.id)
-        ? `${tool.displayName} (${t('labels.detected')})`
-        : tool.displayName,
-      value: tool.id,
-    })),
-  ];
 }
 
 program.hook('preAction', () => {
@@ -295,27 +272,13 @@ program
   .action(async (tool: string | undefined, options: any) => {
     try {
       const mcpInstallService = new MCPInstallService({ ui, t, version: VERSION });
-      let selectedTool = tool;
-
-      // Interactive terminals can choose a specific tool; headless runs default to all supported tools.
-      if (!selectedTool && process.stdin.isTTY) {
-        const supportedTools = mcpInstallService.getSupportedTools();
-        const detectedTools = await mcpInstallService.detectInstalledTools();
-        const choices = buildMcpToolChoices(supportedTools, detectedTools);
-
-        const { selectedTool: promptSelectedTool } = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'selectedTool',
-            message: t('commands.mcpInstall.selectTool'),
-            choices,
-          },
-        ]);
-
-        selectedTool = promptSelectedTool;
-      } else if (!selectedTool) {
-        selectedTool = 'all';
-      }
+      const selectedTool = await resolveMcpInstallToolSelection({
+        selectedTool: tool,
+        isInteractive: Boolean(process.stdin.isTTY),
+        service: mcpInstallService,
+        t,
+        promptTool: ({ message, choices }) => themedSelect({ message, choices }),
+      });
 
       const result = await mcpInstallService.run({
         tool: selectedTool,
@@ -868,16 +831,12 @@ async function displayPendingFiles(contextDir: string): Promise<void> {
 
 async function runMcpInstall(): Promise<void> {
   const mcpInstallService = new MCPInstallService({ ui, t, version: VERSION });
-  const supportedTools = mcpInstallService.getSupportedTools();
-  const detectedTools = await mcpInstallService.detectInstalledTools();
-  const mcpChoices = buildMcpToolChoices(supportedTools, detectedTools);
-
-  const { selectedTool } = await inquirer.prompt([{
-    type: 'list',
-    name: 'selectedTool',
-    message: t('commands.mcpInstall.selectTool'),
-    choices: mcpChoices,
-  }]);
+  const selectedTool = await resolveMcpInstallToolSelection({
+    isInteractive: true,
+    service: mcpInstallService,
+    t,
+    promptTool: ({ message, choices }) => themedSelect({ message, choices }),
+  });
 
   const mcpResult = await mcpInstallService.run({
     tool: selectedTool,
