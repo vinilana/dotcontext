@@ -9,11 +9,13 @@ import { WorkflowService } from '../workflow';
 import { HarnessWorkflowStateService } from './workflowStateService';
 import {
   PHASE_NAMES_EN,
+} from '../../workflow/phases';
+import {
   createPlanLinker,
-  PrevcStatusManager,
-  type PrevcPhase,
-} from '../../workflow';
+} from '../../workflow/plans';
+import { PrevcStatusManager } from '../../workflow/status/statusManager';
 import { GitService } from '../../utils/gitService';
+import type { PrevcPhase } from '../../workflow/types';
 
 export interface HarnessPlansServiceOptions {
   repoPath: string;

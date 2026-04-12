@@ -1,18 +1,20 @@
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import {
+import type {
   LinkedPlan,
   PlanDecision,
   PlanExecutionTracking,
   PlanPhase,
   PlanReference,
-  PlanStep,
   WorkflowPlans,
 } from './types';
-import { PrevcPhase, StatusType } from '../types';
-import { AgentMetadata, AgentRegistry, createAgentRegistry } from '../agents';
+import type { PrevcPhase, StatusType } from '../types';
+import type { AgentMetadata } from '../agents';
+import { AgentRegistry, createAgentRegistry } from '../agents';
 import { PrevcStatusManager } from '../status/statusManager';
 import { PlanCommitService } from './planCommitService';
+import { PlanExecutionResolver } from './planExecutionResolver';
+import { PlanIndexProjector } from './planIndexProjector';
 import { PlanLinkerParser } from './planLinkerParser';
 import { PlanMarkdownProjector } from './planMarkdownProjector';
 import { PlanTrackingStore } from './planTrackingStore';
@@ -24,8 +26,10 @@ export class PlanLinker {
   private readonly agentRegistry: AgentRegistry;
   private readonly parser: PlanLinkerParser;
   private readonly trackingStore: PlanTrackingStore;
+  private readonly indexProjector: PlanIndexProjector;
   private readonly projector: PlanMarkdownProjector;
   private readonly commitService: PlanCommitService;
+  private readonly executionResolver: PlanExecutionResolver;
 
   constructor(
     private readonly repoPath: string,
@@ -38,7 +42,15 @@ export class PlanLinker {
     this.agentRegistry = createAgentRegistry(repoPath);
     this.parser = new PlanLinkerParser();
     this.trackingStore = new PlanTrackingStore(this.workflowPath);
+    this.indexProjector = new PlanIndexProjector(
+      this.contextPath,
+      this.workflowPath,
+      this.plansPath,
+      this.parser,
+      () => this.trackingStore.loadAll()
+    );
     this.projector = new PlanMarkdownProjector();
+    this.executionResolver = new PlanExecutionResolver();
     this.commitService = new PlanCommitService(
       repoPath,
       (planSlug) => this.getLinkedPlan(planSlug),
@@ -55,13 +67,7 @@ export class PlanLinker {
   }
 
   async ensureWorkflowPlanIndex(): Promise<void> {
-    const plansFile = path.join(this.workflowPath, 'plans.json');
-    if (await fs.pathExists(plansFile)) {
-      return;
-    }
-
-    await fs.ensureDir(this.workflowPath);
-    await fs.writeJson(plansFile, { active: [], completed: [] } satisfies WorkflowPlans, { spaces: 2 });
+    await this.refreshWorkflowPlanIndex();
   }
 
   async discoverAgents(): Promise<Array<{ type: string; path: string; isCustom: boolean }>> {
@@ -83,60 +89,30 @@ export class PlanLinker {
       return null;
     }
 
+    const now = new Date().toISOString();
+    const existingTracking = await this.trackingStore.load(planSlug);
+    const tracking = existingTracking ?? this.trackingStore.createEmpty(planSlug, now);
+    if (!existingTracking) {
+      await this.trackingStore.save(planSlug, tracking);
+    }
+
     const content = await fs.readFile(planPath, 'utf-8');
     const planInfo = this.parser.parsePlanFile(content, planSlug);
-    const ref: PlanReference = {
+    const plans = await this.refreshWorkflowPlanIndex();
+    const linkedRef = [...plans.active, ...plans.completed].find((plan) => plan.slug === planSlug);
+
+    return linkedRef ?? {
       slug: planSlug,
       path: `plans/${planSlug}.md`,
       title: planInfo.title,
       summary: planInfo.summary,
-      linkedAt: new Date().toISOString(),
+      linkedAt: tracking.linkedAt,
       status: 'active',
     };
-
-    await this.addPlanToWorkflow(ref);
-    return ref;
   }
 
   async getLinkedPlans(): Promise<WorkflowPlans> {
-    const plansFile = path.join(this.workflowPath, 'plans.json');
-    if (!await fs.pathExists(plansFile)) {
-      return { active: [], completed: [] };
-    }
-
-    try {
-      return await fs.readJson(plansFile);
-    } catch {
-      return { active: [], completed: [] };
-    }
-  }
-
-  async updatePlanReference(
-    planSlug: string,
-    updater: (ref: PlanReference) => PlanReference
-  ): Promise<PlanReference | null> {
-    const plans = await this.getLinkedPlans();
-
-    const updateBucket = (bucket: PlanReference[]) => {
-      const index = bucket.findIndex((ref) => ref.slug === planSlug);
-      if (index === -1) {
-        return null;
-      }
-
-      const updated = updater({ ...bucket[index] });
-      bucket[index] = updated;
-      return updated;
-    };
-
-    const updatedRef = updateBucket(plans.active) ?? updateBucket(plans.completed);
-    if (!updatedRef) {
-      return null;
-    }
-
-    const plansFile = path.join(this.workflowPath, 'plans.json');
-    await fs.ensureDir(path.dirname(plansFile));
-    await fs.writeJson(plansFile, plans, { spaces: 2 });
-    return updatedRef;
+    return this.refreshWorkflowPlanIndex();
   }
 
   async getLinkedPlan(planSlug: string): Promise<LinkedPlan | null> {
@@ -146,15 +122,13 @@ export class PlanLinker {
       return null;
     }
 
-    const planPath = path.join(this.contextPath, ref.path);
-    if (!await fs.pathExists(planPath)) {
+    const parsed = await this.loadPlanDocument(ref);
+    if (!parsed) {
       return null;
     }
 
-    const content = await fs.readFile(planPath, 'utf-8');
-    const parsed = this.parser.parsePlanToLinked(content, ref);
     const tracking = await this.trackingStore.load(planSlug);
-    return tracking ? this.applyTracking(parsed, tracking) : parsed;
+    return this.executionResolver.resolve(parsed, tracking);
   }
 
   async getPlansForPhase(phase: PrevcPhase): Promise<LinkedPlan[]> {
@@ -218,6 +192,7 @@ export class PlanLinker {
 
   async updatePlanPhase(planSlug: string, phaseId: string, status: StatusType): Promise<boolean> {
     const now = new Date().toISOString();
+    const planDocument = await this.loadPlanDocumentBySlug(planSlug);
     const tracking = (await this.trackingStore.load(planSlug)) ?? this.trackingStore.createEmpty(planSlug, now);
     const phase = this.trackingStore.ensurePhase(tracking, phaseId, now);
 
@@ -232,10 +207,10 @@ export class PlanLinker {
       phase.completedAt = undefined;
     }
 
-    const plan = await this.getLinkedPlan(planSlug);
-    tracking.progress = this.calculateTrackingProgress(plan, tracking);
+    tracking.progress = this.executionResolver.calculateProgress(planDocument, tracking);
     tracking.lastUpdated = now;
     await this.trackingStore.save(planSlug, tracking);
+    await this.refreshWorkflowPlanIndex();
 
     if (this.statusManager) {
       const currentPhase = await this.statusManager.getCurrentPhase();
@@ -257,6 +232,7 @@ export class PlanLinker {
     const tracking = (await this.trackingStore.load(planSlug)) ?? this.trackingStore.createEmpty(planSlug);
     const fullDecision = this.trackingStore.recordDecision(tracking, decision);
     await this.trackingStore.save(planSlug, tracking);
+    await this.refreshWorkflowPlanIndex();
 
     if (this.statusManager) {
       const currentPhase = await this.statusManager.getCurrentPhase();
@@ -282,15 +258,16 @@ export class PlanLinker {
     }
   ): Promise<boolean> {
     const now = new Date().toISOString();
-    const plan = await this.getLinkedPlan(planSlug);
-    const planPhase = plan?.phases.find((phase) => phase.id === phaseId);
+    const planDocument = await this.loadPlanDocumentBySlug(planSlug);
+    const planPhase = planDocument?.phases.find((phase) => phase.id === phaseId);
     const planStep = planPhase?.steps.find((step) => step.order === stepIndex);
     const tracking = (await this.trackingStore.load(planSlug)) ?? this.trackingStore.createEmpty(planSlug, now);
+    const trackedStepDescription = tracking.phases[phaseId]?.steps.find((step) => step.stepIndex === stepIndex)?.description;
     const step = this.trackingStore.ensureStep(
       tracking,
       phaseId,
       stepIndex,
-      planStep?.description || `Step ${stepIndex}`,
+      planStep?.description || trackedStepDescription || `Step ${stepIndex}`,
       now
     );
 
@@ -320,9 +297,10 @@ export class PlanLinker {
       phase.status = 'in_progress';
     }
 
-    tracking.progress = this.calculateTrackingProgress(plan, tracking);
+    tracking.progress = this.executionResolver.calculateProgress(planDocument, tracking);
     tracking.lastUpdated = now;
     await this.trackingStore.save(planSlug, tracking);
+    await this.refreshWorkflowPlanIndex();
 
     if (this.statusManager) {
       const action = status === 'completed'
@@ -363,21 +341,11 @@ export class PlanLinker {
       approvedBy?: string;
     }
   ): Promise<PlanReference | null> {
-    const updatedRef = await this.updatePlanReference(planSlug, (ref) => ({
-      ...ref,
-      approval_status: approval.approvalStatus,
-      approved_at: approval.approvedAt,
-      approved_by: approval.approvedBy,
-    }));
-
-    if (!updatedRef) {
-      return null;
-    }
-
     const tracking = (await this.trackingStore.load(planSlug)) ?? this.trackingStore.createEmpty(planSlug);
     this.trackingStore.applyApproval(tracking, approval);
     await this.trackingStore.save(planSlug, tracking);
-    return updatedRef;
+    const plans = await this.refreshWorkflowPlanIndex();
+    return [...plans.active, ...plans.completed].find((ref) => ref.slug === planSlug) || null;
   }
 
   async getPlanExecutionStatus(planSlug: string): Promise<PlanExecutionTracking | null> {
@@ -386,8 +354,13 @@ export class PlanLinker {
 
   async syncPlanMarkdown(planSlug: string): Promise<boolean> {
     const tracking = await this.trackingStore.load(planSlug);
-    const planPath = path.join(this.plansPath, `${planSlug}.md`);
-    if (!tracking || !await fs.pathExists(planPath)) {
+    const plan = await this.getLinkedPlan(planSlug);
+    if (!tracking || !plan) {
+      return false;
+    }
+
+    const planPath = path.join(this.contextPath, plan.ref.path);
+    if (!await fs.pathExists(planPath)) {
       return false;
     }
 
@@ -395,6 +368,10 @@ export class PlanLinker {
     const projected = this.projector.project(content, tracking);
     await fs.writeFile(planPath, projected, 'utf-8');
     return true;
+  }
+
+  async refreshWorkflowPlanIndex(): Promise<WorkflowPlans> {
+    return this.indexProjector.refreshIndex();
   }
 
   async recordPhaseCommit(
@@ -417,6 +394,7 @@ export class PlanLinker {
     }
 
     await this.trackingStore.save(planSlug, tracking);
+    await this.refreshWorkflowPlanIndex();
     await this.syncPlanMarkdown(planSlug);
     return true;
   }
@@ -455,121 +433,28 @@ export class PlanLinker {
     }
   }
 
-  private calculateTrackingProgress(plan: LinkedPlan | null, tracking: PlanExecutionTracking): number {
-    const stepProgress = this.trackingStore.calculateStepProgress(tracking);
-    if (stepProgress > 0) {
-      return stepProgress;
-    }
-
-    if (!plan || plan.phases.length === 0) {
-      return tracking.progress;
-    }
-
-    const completedPhases = plan.phases.filter((phase) => {
-      const trackedPhase = tracking.phases[phase.id];
-      return trackedPhase?.status === 'completed';
-    }).length;
-
-    return Math.round((completedPhases / plan.phases.length) * 100);
-  }
-
-  private applyTracking(plan: LinkedPlan, tracking: PlanExecutionTracking): LinkedPlan {
-    const phases = plan.phases.map((phase) => {
-      const trackedPhase = tracking.phases[phase.id];
-      const trackedSteps = new Map((trackedPhase?.steps ?? []).map((step) => [step.stepIndex, step]));
-
-      const steps = phase.steps.map((step) => {
-        const trackedStep = trackedSteps.get(step.order);
-        return trackedStep
-          ? {
-              ...step,
-              status: trackedStep.status,
-              completedAt: trackedStep.completedAt,
-              outputs: trackedStep.output
-                ? Array.from(new Set([...(step.outputs ?? []), trackedStep.output]))
-                : step.outputs,
-            }
-          : step;
-      });
-
-      for (const trackedStep of trackedPhase?.steps ?? []) {
-        if (!steps.some((step) => step.order === trackedStep.stepIndex)) {
-          steps.push(this.toTrackedPlanStep(trackedStep.stepIndex, trackedStep));
-        }
-      }
-
-      const inferredStatus = trackedPhase?.status || this.inferPhaseStatusFromSteps(steps, phase.status);
-
-      return {
-        ...phase,
-        status: inferredStatus,
-        startedAt: trackedPhase?.startedAt || phase.startedAt,
-        completedAt: trackedPhase?.completedAt || phase.completedAt,
-        steps: steps.sort((a, b) => a.order - b.order),
-      };
-    });
-
-    const currentPhase = phases.find((phase) => phase.status === 'in_progress')?.id;
-
-    return {
-      ...plan,
-      phases,
-      progress: tracking.progress,
-      currentPhase,
-    };
-  }
-
-  private inferPhaseStatusFromSteps(steps: PlanStep[], fallback: StatusType): StatusType {
-    if (steps.length === 0) {
-      return fallback;
-    }
-    if (steps.every((step) => step.status === 'completed')) {
-      return 'completed';
-    }
-    if (steps.some((step) => step.status === 'in_progress' || step.status === 'completed')) {
-      return 'in_progress';
-    }
-    return fallback;
-  }
-
-  private toTrackedPlanStep(stepIndex: number, trackedStep: NonNullable<PlanExecutionTracking['phases'][string]>['steps'][number]): PlanStep {
-    const outputs = trackedStep.output ? [trackedStep.output] : trackedStep.deliverables;
-    return {
-      order: stepIndex,
-      description: trackedStep.description,
-      deliverables: trackedStep.deliverables,
-      outputs,
-      status: trackedStep.status,
-      completedAt: trackedStep.completedAt,
-    };
-  }
-
-  private async addPlanToWorkflow(ref: PlanReference): Promise<void> {
-    const plans = await this.getLinkedPlans();
-    const existingRef = [...plans.active, ...plans.completed].find((plan) => plan.slug === ref.slug);
-    const nextRef: PlanReference = existingRef
-      ? {
-          ...ref,
-          approval_status: existingRef.approval_status,
-          approved_at: existingRef.approved_at,
-          approved_by: existingRef.approved_by,
-        }
-      : ref;
-
-    plans.active = plans.active.filter((plan) => plan.slug !== ref.slug);
-    plans.completed = plans.completed.filter((plan) => plan.slug !== ref.slug);
-    plans.active.push(nextRef);
-    if (!plans.primary) {
-      plans.primary = nextRef.slug;
-    }
-
-    const plansFile = path.join(this.workflowPath, 'plans.json');
-    await fs.ensureDir(this.workflowPath);
-    await fs.writeJson(plansFile, plans, { spaces: 2 });
-  }
-
   private async autoCommitPhase(planSlug: string, phaseId: string): Promise<boolean> {
     return this.commitService.autoCommitPhase(planSlug, phaseId);
+  }
+
+  private async loadPlanDocumentBySlug(planSlug: string): Promise<LinkedPlan | null> {
+    const plans = await this.getLinkedPlans();
+    const ref = [...plans.active, ...plans.completed].find((plan) => plan.slug === planSlug);
+    if (!ref) {
+      return null;
+    }
+
+    return this.loadPlanDocument(ref);
+  }
+
+  private async loadPlanDocument(ref: PlanReference): Promise<LinkedPlan | null> {
+    const planPath = path.join(this.contextPath, ref.path);
+    if (!await fs.pathExists(planPath)) {
+      return null;
+    }
+
+    const content = await fs.readFile(planPath, 'utf-8');
+    return this.parser.parsePlanToLinked(content, ref);
   }
 }
 

@@ -7,6 +7,7 @@ import type { PrevcStatus } from '../types';
  */
 export interface WorkflowStatePort {
   exists(): Promise<boolean>;
+  existsSync(): boolean;
   load(): Promise<PrevcStatus>;
   loadSync(): PrevcStatus;
   save(status: PrevcStatus): Promise<void>;

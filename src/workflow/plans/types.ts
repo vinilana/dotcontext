@@ -252,6 +252,8 @@ export interface PlanPhaseTracking {
 export interface PlanExecutionTracking {
   /** Plan slug */
   planSlug: string;
+  /** When the plan was linked into workflow tracking */
+  linkedAt: string;
   /** Overall progress (0-100) */
   progress: number;
   /** Approval status mirrored from workflow state */

@@ -8,31 +8,27 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import { exec as execCallback } from 'child_process';
 import { promisify } from 'util';
+import { CollaborationSession, CollaborationManager } from '../../workflow/collaboration';
+import { GateCheckResult } from '../../workflow/gates';
+import { getPhaseDefinition, PHASE_NAMES_PT } from '../../workflow/phases';
+import { createPlanLinker, type LinkedPlan, type PlanPhase, type PlanStep } from '../../workflow/plans';
+import { ROLE_DISPLAY_NAMES } from '../../workflow/roles';
+import { getScaleName, getScaleFromName } from '../../workflow/scaling';
+import { PrevcOrchestrator, type WorkflowSummary } from '../../workflow/orchestrator';
 import {
-  PrevcOrchestrator,
-  WorkflowSummary,
   PrevcStatus,
   PrevcPhase,
   PrevcRole,
   ProjectScale,
   ProjectContext,
-  CollaborationSession,
-  CollaborationManager,
-  CollaborationSynthesis,
   WorkflowSettings,
   PlanApproval,
-  GateCheckResult,
   PhaseOrchestration,
-  createPlanLinker,
-  getPhaseDefinition,
-  getScaleName,
-  getScaleFromName,
-  PHASE_NAMES_PT,
-  ROLE_DISPLAY_NAMES,
-  type LinkedPlan,
-  type PlanPhase,
-  type PlanStep,
-} from '../../workflow';
+} from '../../workflow/types';
+import type { CollaborationSynthesis } from '../../workflow/types';
+import {
+  FileCollaborationStore,
+} from './fileCollaborationStore';
 import {
   HarnessRuntimeStateService,
   HarnessSensorCatalogService,
@@ -179,7 +175,9 @@ export class WorkflowService {
     this.policyService = new HarnessPolicyService({ repoPath: this.repoPath });
     this.workflowStateService = new HarnessWorkflowStateService({ contextPath: this.contextPath });
     this.orchestrator = new PrevcOrchestrator(this.contextPath, this.workflowStateService);
-    this.collaborationManager = new CollaborationManager();
+    this.collaborationManager = new CollaborationManager(
+      new FileCollaborationStore(this.contextPath)
+    );
     this.deps = deps;
     this.registerDefaultSensors();
   }
@@ -291,7 +289,7 @@ export class WorkflowService {
 
     lines.push(`📋 Workflow: ${summary.name}`);
     lines.push(`📊 Scale: ${getScaleName(summary.scale as ProjectScale)}`);
-    lines.push(`📍 Current Phase: ${PHASE_NAMES_PT[summary.currentPhase]} (${summary.currentPhase})`);
+    lines.push(`📍 Current Phase: ${PHASE_NAMES_PT[summary.currentPhase as PrevcPhase]} (${summary.currentPhase})`);
     lines.push(`📈 Progress: ${summary.progress.percentage}% (${summary.progress.completed}/${summary.progress.total} phases)`);
     lines.push('');
     lines.push('Phases:');
@@ -697,8 +695,7 @@ export class WorkflowService {
     topic: string,
     participants?: PrevcRole[]
   ): Promise<CollaborationSession> {
-    const session = this.collaborationManager.createSession(topic, participants);
-    await session.start(topic, participants);
+    const session = await this.collaborationManager.startSession(topic, participants);
 
     this.deps.ui?.displaySuccess(
       `Collaboration started: ${topic}`
@@ -718,12 +715,7 @@ export class WorkflowService {
     role: PrevcRole,
     message: string
   ): void {
-    const session = this.collaborationManager.getSession(sessionId);
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
-
-    session.contribute(role, message);
+    this.collaborationManager.contribute(sessionId, role, message);
   }
 
   /**

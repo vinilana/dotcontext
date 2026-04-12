@@ -18,6 +18,7 @@ export class PlanTrackingStore {
   createEmpty(planSlug: string, now: string = new Date().toISOString()): PlanExecutionTracking {
     return {
       planSlug,
+      linkedAt: now,
       progress: 0,
       phases: {},
       decisions: [],
@@ -35,7 +36,16 @@ export class PlanTrackingStore {
     try {
       const content = await fs.readFile(trackingFile, 'utf-8');
       const data = JSON.parse(content);
-      return this.migrate(planSlug, data);
+      const migrated = this.migrate(planSlug, data);
+      if (!migrated) {
+        return null;
+      }
+
+      if (migrated.needsMigration) {
+        await this.save(planSlug, migrated.tracking);
+      }
+
+      return migrated.tracking;
     } catch {
       return null;
     }
@@ -51,7 +61,16 @@ export class PlanTrackingStore {
     try {
       const content = fs.readFileSync(trackingFile, 'utf-8');
       const data = JSON.parse(content);
-      return this.migrate(planSlug, data);
+      const migrated = this.migrate(planSlug, data);
+      if (!migrated) {
+        return null;
+      }
+
+      if (migrated.needsMigration) {
+        fs.writeFileSync(trackingFile, JSON.stringify(migrated.tracking, null, 2), 'utf-8');
+      }
+
+      return migrated.tracking;
     } catch {
       return null;
     }
@@ -61,6 +80,25 @@ export class PlanTrackingStore {
     const trackingFile = this.getTrackingFile(planSlug);
     await fs.ensureDir(path.dirname(trackingFile));
     await fs.writeFile(trackingFile, JSON.stringify(tracking, null, 2), 'utf-8');
+  }
+
+  async loadAll(): Promise<PlanExecutionTracking[]> {
+    const slugs = await this.listTrackedPlanSlugs();
+    const records = await Promise.all(slugs.map((slug) => this.load(slug)));
+    return records.filter((record): record is PlanExecutionTracking => record !== null);
+  }
+
+  async listTrackedPlanSlugs(): Promise<string[]> {
+    const trackingDir = path.join(this.workflowPath, 'plan-tracking');
+
+    if (!await fs.pathExists(trackingDir)) {
+      return [];
+    }
+
+    const entries = await fs.readdir(trackingDir, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map((entry) => entry.name.slice(0, -5));
   }
 
   ensurePhase(tracking: PlanExecutionTracking, phaseId: string, now: string): PlanPhaseTracking {
@@ -167,7 +205,7 @@ export class PlanTrackingStore {
     return true;
   }
 
-  private migrate(planSlug: string, data: unknown): PlanExecutionTracking | null {
+  private migrate(planSlug: string, data: unknown): { tracking: PlanExecutionTracking; needsMigration: boolean } | null {
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       return null;
     }
@@ -175,20 +213,24 @@ export class PlanTrackingStore {
     const tracking = data as Partial<PlanExecutionTracking> & {
       phases?: Record<string, { status: string; updatedAt?: string } | PlanPhaseTracking>;
     };
+    let needsMigration = false;
 
     if (!tracking.phases || typeof tracking.phases !== 'object') {
       const now = new Date().toISOString();
       return {
-        planSlug,
-        progress: tracking.progress || 0,
-        phases: {},
-        decisions: tracking.decisions || [],
-        lastUpdated: tracking.lastUpdated || now,
+        needsMigration: true,
+        tracking: {
+          planSlug,
+          linkedAt: tracking.linkedAt || now,
+          progress: tracking.progress || 0,
+          phases: {},
+          decisions: tracking.decisions || [],
+          lastUpdated: tracking.lastUpdated || now,
+        },
       };
     }
 
     const migratedPhases: Record<string, PlanPhaseTracking> = {};
-    let needsMigration = false;
 
     for (const [phaseId, phaseData] of Object.entries(tracking.phases)) {
       if (phaseData && typeof phaseData === 'object' && 'steps' in phaseData) {
@@ -207,15 +249,23 @@ export class PlanTrackingStore {
       needsMigration = true;
     }
 
+    if (!tracking.linkedAt) {
+      needsMigration = true;
+    }
+
     return {
-      planSlug: tracking.planSlug || planSlug,
-      progress: tracking.progress || 0,
-      approvalStatus: tracking.approvalStatus,
-      approvedAt: tracking.approvedAt,
-      approvedBy: tracking.approvedBy,
-      phases: migratedPhases,
-      decisions: tracking.decisions || [],
-      lastUpdated: tracking.lastUpdated || new Date().toISOString(),
+      needsMigration,
+      tracking: {
+        planSlug: tracking.planSlug || planSlug,
+        linkedAt: tracking.linkedAt || new Date().toISOString(),
+        progress: tracking.progress || 0,
+        phases: migratedPhases,
+        approvalStatus: tracking.approvalStatus,
+        approvedAt: tracking.approvedAt,
+        approvedBy: tracking.approvedBy,
+        decisions: tracking.decisions || [],
+        lastUpdated: tracking.lastUpdated || new Date().toISOString(),
+      },
     };
   }
 }

@@ -14,17 +14,14 @@ import {
   WorkflowSettings,
   PlanApproval,
   PhaseOrchestration,
-  AgentSequenceStep,
-  ToolGuidance,
 } from './types';
 import { PrevcStatusManager } from './status/statusManager';
 import { detectProjectScale, getScaleRoute } from './scaling';
-import { PREVC_PHASE_ORDER, getPhaseDefinition, PHASE_NAMES_EN } from './phases';
-import { getRoleConfig } from './prevcConfig';
+import { PREVC_PHASE_ORDER, getPhaseDefinition } from './phases';
 import { WorkflowGateChecker, GateCheckResult, getDefaultSettings } from './gates';
 import { PlanLinker } from './plans/planLinker';
-import { AgentOrchestrator, PHASE_TO_AGENTS } from './orchestration/agentOrchestrator';
-import { createSkillRegistry } from './skills';
+import { WorkflowGuidanceService } from './orchestration/workflowGuidanceService';
+import { buildNextAgentSuggestion } from './guidance';
 import type { WorkflowStatePort } from './status/workflowStatePort';
 
 /**
@@ -56,6 +53,7 @@ export class PrevcOrchestrator {
   private statusManager: PrevcStatusManager;
   private gateChecker: WorkflowGateChecker;
   private planLinker: PlanLinker;
+  private guidanceService: WorkflowGuidanceService;
 
   constructor(contextPath: string, workflowState: WorkflowStatePort) {
     this.repoPath = path.dirname(contextPath);
@@ -64,6 +62,7 @@ export class PrevcOrchestrator {
     this.gateChecker = new WorkflowGateChecker();
     // Pass statusManager to PlanLinker for breadcrumb trail logging
     this.planLinker = new PlanLinker(path.dirname(contextPath), this.statusManager);
+    this.guidanceService = new WorkflowGuidanceService(this.repoPath);
   }
 
   /**
@@ -228,139 +227,14 @@ export class PrevcOrchestrator {
    * Get the next agent suggestion after a handoff
    */
   getNextAgentSuggestion(currentAgent: string): { agent: string; reason: string } | null {
-    const orchestrator = new AgentOrchestrator();
-
-    // Common handoff sequences
-    const handoffSequences: Record<string, { agent: string; reason: string }> = {
-      'feature-developer': { agent: 'test-writer', reason: 'Write tests for the new code' },
-      'bug-fixer': { agent: 'test-writer', reason: 'Write regression tests' },
-      'test-writer': { agent: 'code-reviewer', reason: 'Review implementation and tests' },
-      'code-reviewer': { agent: 'documentation-writer', reason: 'Document the changes' },
-      'backend-specialist': { agent: 'test-writer', reason: 'Write API tests' },
-      'frontend-specialist': { agent: 'test-writer', reason: 'Write UI tests' },
-      'refactoring-specialist': { agent: 'test-writer', reason: 'Verify refactored code' },
-    };
-
-    return handoffSequences[currentAgent] || null;
+    return buildNextAgentSuggestion(currentAgent);
   }
 
   /**
    * Get orchestration guidance for a phase
    */
   async getPhaseOrchestration(phase: PrevcPhase): Promise<PhaseOrchestration> {
-    const orchestrator = new AgentOrchestrator();
-    const agents = PHASE_TO_AGENTS[phase] || [];
-    const sequence = orchestrator.getAgentHandoffSequence([phase]);
-
-    const suggestedSequence: AgentSequenceStep[] = sequence.map((agent) => ({
-      agent,
-      task: this.getAgentDefaultTask(agent),
-    }));
-
-    const startWith = agents.length > 0 ? agents[0] : 'feature-developer';
-    const instruction = this.buildOrchestrationInstruction(phase, startWith);
-    const skillRegistry = createSkillRegistry(this.repoPath);
-    const skills = await skillRegistry.getSkillsForPhase(phase);
-    const recommendedSkills = skills.map((skill) => ({
-      slug: skill.slug,
-      name: skill.metadata.name,
-      description: skill.metadata.description,
-      path: skill.path,
-      isBuiltIn: skill.isBuiltIn,
-    }));
-
-    // Build tool guidance for explicit orchestration
-    const toolGuidance = this.buildToolGuidance(phase, startWith);
-
-    // Build step-by-step orchestration instructions
-    const orchestrationSteps = this.buildOrchestrationSteps(phase, sequence);
-
-    return {
-      recommendedAgents: agents,
-      suggestedSequence,
-      startWith,
-      instruction,
-      recommendedSkills,
-      toolGuidance,
-      orchestrationSteps,
-    };
-  }
-
-  /**
-   * Get default task description for an agent
-   */
-  private getAgentDefaultTask(agent: string): string {
-    const taskMap: Record<string, string> = {
-      'feature-developer': 'Implement core functionality',
-      'bug-fixer': 'Fix identified issues',
-      'test-writer': 'Write tests for new code',
-      'code-reviewer': 'Review implementation',
-      'documentation-writer': 'Document the changes',
-      'backend-specialist': 'Implement server-side logic',
-      'frontend-specialist': 'Build user interface',
-      'database-specialist': 'Design and optimize database',
-      'architect-specialist': 'Design system architecture',
-      'security-auditor': 'Audit for security vulnerabilities',
-      'performance-optimizer': 'Optimize performance',
-      'refactoring-specialist': 'Improve code structure',
-      'devops-specialist': 'Configure deployment pipeline',
-      'mobile-specialist': 'Develop mobile features',
-    };
-
-    return taskMap[agent] || 'Execute assigned tasks';
-  }
-
-  /**
-   * Build tool guidance with concrete MCP tool call examples
-   */
-  private buildToolGuidance(phase: PrevcPhase, startAgent: string): ToolGuidance {
-    return {
-      discoverExample: `agent({ action: "orchestrate", phase: "${phase}" })`,
-      sequenceExample: `agent({ action: "getSequence", phases: ["${phase}"] })`,
-      handoffExample: `workflow-manage({ action: "handoff", from: "${startAgent}", to: "<next-agent>", artifacts: ["output.md"] })`,
-    };
-  }
-
-  /**
-   * Build step-by-step orchestration instructions with tool calls
-   */
-  private buildOrchestrationSteps(phase: PrevcPhase, agents: string[]): string[] {
-    const phaseName = PHASE_NAMES_EN[phase];
-    const startAgent = agents[0] || 'feature-developer';
-    const nextAgent = agents[1] || '<next-agent>';
-
-    return [
-      `1. Discover agents for ${phaseName} phase: agent({ action: "orchestrate", phase: "${phase}" })`,
-      `2. Review recommended sequence: agent({ action: "getSequence", phases: ["${phase}"] })`,
-      `3. Begin with ${startAgent} agent - follow playbook at .context/agents/${startAgent}.md`,
-      `4. Execute handoffs: workflow-manage({ action: "handoff", from: "${startAgent}", to: "${nextAgent}", artifacts: ["output.md"] })`,
-      `5. Leverage skills: skill({ action: "getForPhase", phase: "${phase}" })`,
-    ];
-  }
-
-  /**
-   * Build orchestration instruction for a phase
-   */
-  private buildOrchestrationInstruction(phase: PrevcPhase, startAgent: string): string {
-    const phaseName = PHASE_NAMES_EN[phase];
-
-    return `ORCHESTRATION GUIDE for ${phaseName} phase:\n\n` +
-      `1. START: Activate ${startAgent} agent\n` +
-      `   - Review agent playbook: .context/agents/${startAgent}.md\n` +
-      `   - Understand responsibilities and outputs\n\n` +
-      `2. DISCOVER: Find all agents for this phase\n` +
-      `   - Call: agent({ action: "orchestrate", phase: "${phase}" })\n` +
-      `   - Review: Recommended agents and their roles\n\n` +
-      `3. SEQUENCE: Plan agent handoff order\n` +
-      `   - Call: agent({ action: "getSequence", phases: ["${phase}"] })\n` +
-      `   - Follow: Suggested sequence for optimal workflow\n\n` +
-      `4. EXECUTE: Perform work and handoffs\n` +
-      `   - Work: Complete tasks as ${startAgent}\n` +
-      `   - Handoff: workflow-manage({ action: "handoff", from: "${startAgent}", to: "<next-agent>", artifacts: [...] })\n` +
-      `   - Repeat: Continue through sequence until phase complete\n\n` +
-      `5. ADVANCE: Move to next phase\n` +
-      `   - Call: workflow-advance({ outputs: [...] })\n` +
-      `   - Review: Next phase orchestration guidance`;
+    return this.guidanceService.getPhaseOrchestration(phase);
   }
 
   /**
@@ -469,31 +343,7 @@ export class PrevcOrchestrator {
    */
   async getRecommendedActions(): Promise<string[]> {
     const status = await this.getStatus();
-    const currentPhase = status.project.current_phase;
-    const phaseDefinition = getPhaseDefinition(currentPhase);
-    const actions: string[] = [];
-
-    // Suggest phase-specific actions
-    actions.push(
-      `Complete ${phaseDefinition.name} phase tasks`
-    );
-
-    // Suggest role-specific actions
-    for (const role of phaseDefinition.roles) {
-      const roleConfig = getRoleConfig(role);
-      if (roleConfig) {
-        actions.push(...roleConfig.responsibilities.slice(0, 2));
-      }
-    }
-
-    // Suggest output creation
-    if (phaseDefinition.outputs.length > 0) {
-      actions.push(
-        `Create outputs: ${phaseDefinition.outputs.join(', ')}`
-      );
-    }
-
-    return actions;
+    return this.guidanceService.getRecommendedActions(status);
   }
 
   /**

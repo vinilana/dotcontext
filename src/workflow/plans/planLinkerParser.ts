@@ -53,11 +53,6 @@ export class PlanLinkerParser {
 
     const decisions = this.extractDecisions();
 
-    const completedPhases = phases.filter(p => p.status === 'completed').length;
-    const progress = phases.length > 0 ? Math.round((completedPhases / phases.length) * 100) : 0;
-
-    const currentPhase = phases.find(p => p.status === 'in_progress')?.id;
-
     return {
       ref,
       phases,
@@ -65,8 +60,8 @@ export class PlanLinkerParser {
       risks: [],
       agents,
       docs,
-      progress,
-      currentPhase,
+      progress: 0,
+      currentPhase: undefined,
       agentLineup: hasCanonicalPlanFrontMatter && scaffoldFrontMatter?.agents?.length
         ? scaffoldFrontMatter.agents.map(agent => ({
             type: agent.type,

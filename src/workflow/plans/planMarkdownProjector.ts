@@ -3,6 +3,7 @@ import { PlanExecutionTracking } from './types';
 export class PlanMarkdownProjector {
   project(content: string, tracking: PlanExecutionTracking): string {
     let nextContent = this.updateFrontmatterProgress(content, tracking);
+    nextContent = this.updateTaskTables(nextContent, tracking);
     nextContent = this.updateStepCheckboxes(nextContent, tracking);
     nextContent = this.updateExecutionHistorySection(nextContent, tracking);
     return nextContent;
@@ -78,6 +79,131 @@ export class PlanMarkdownProjector {
     }
 
     return updatedLines.join('\n');
+  }
+
+  private updateTaskTables(content: string, tracking: PlanExecutionTracking): string {
+    const lines = content.split('\n');
+    const updatedLines: string[] = [];
+    let currentPhaseId: string | null = null;
+    let currentTableColumnMap: Record<string, number> | null = null;
+
+    for (const line of lines) {
+      const phaseMatch = line.match(/^###\s+Phase\s+(\d+)/);
+      if (phaseMatch) {
+        currentPhaseId = `phase-${phaseMatch[1]}`;
+        currentTableColumnMap = null;
+        updatedLines.push(line);
+        continue;
+      }
+
+      const tableCells = this.parseMarkdownTableRow(line);
+      if (!tableCells || !currentPhaseId) {
+        updatedLines.push(line);
+        continue;
+      }
+
+      if (this.isTableSeparatorRow(tableCells)) {
+        updatedLines.push(line);
+        continue;
+      }
+
+      if (this.looksLikeTaskTableHeader(tableCells)) {
+        currentTableColumnMap = this.buildColumnMap(tableCells);
+        updatedLines.push(line);
+        continue;
+      }
+
+      if (!currentTableColumnMap) {
+        updatedLines.push(line);
+        continue;
+      }
+
+      const stepIndex = this.parseTableStepIndex(tableCells[0]);
+      if (stepIndex === null) {
+        updatedLines.push(line);
+        continue;
+      }
+
+      const phaseTracking = tracking.phases[currentPhaseId];
+      const stepTracking = phaseTracking?.steps.find((step) => step.stepIndex === stepIndex);
+      if (!stepTracking) {
+        updatedLines.push(line);
+        continue;
+      }
+
+      const nextCells = [...tableCells];
+      const statusColumnIndex = currentTableColumnMap.status;
+      if (typeof statusColumnIndex === 'number') {
+        nextCells[statusColumnIndex] = stepTracking.status;
+      }
+
+      const deliverableIndex = currentTableColumnMap.deliverable ?? currentTableColumnMap.deliverables ?? currentTableColumnMap.output ?? currentTableColumnMap.outputs;
+      if (typeof deliverableIndex === 'number') {
+        const deliverables = this.uniqueStrings([
+          ...(stepTracking.deliverables ?? []),
+          ...(stepTracking.output ? [stepTracking.output] : []),
+        ]);
+        if (deliverables.length > 0) {
+          nextCells[deliverableIndex] = deliverables.join(', ');
+        }
+      }
+
+      updatedLines.push(this.renderMarkdownTableRow(nextCells));
+    }
+
+    return updatedLines.join('\n');
+  }
+
+  private parseMarkdownTableRow(line: string): string[] | null {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('|')) {
+      return null;
+    }
+
+    return trimmed
+      .slice(1, trimmed.endsWith('|') ? -1 : undefined)
+      .split('|')
+      .map((cell) => cell.trim());
+  }
+
+  private renderMarkdownTableRow(cells: string[]): string {
+    return `| ${cells.join(' | ')} |`;
+  }
+
+  private isTableSeparatorRow(row: string[]): boolean {
+    return row.every((cell) => /^:?-{3,}:?$/.test(cell));
+  }
+
+  private looksLikeTaskTableHeader(row: string[]): boolean {
+    const lowered = row.map((cell) => cell.toLowerCase());
+    return lowered.some((cell) => cell === '#' || cell.includes('task')) &&
+      lowered.some((cell) => cell.includes('status')) &&
+      lowered.some((cell) => cell.includes('deliverable') || cell.includes('output'));
+  }
+
+  private buildColumnMap(header: string[]): Record<string, number> {
+    const map: Record<string, number> = {};
+    header.forEach((cell, index) => {
+      const normalized = cell.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      if (normalized) {
+        map[normalized] = index;
+      }
+    });
+    return map;
+  }
+
+  private parseTableStepIndex(value: string): number | null {
+    const normalized = value.trim();
+    const match = normalized.match(/^(\d+)(?:\.(\d+))?$/);
+    if (!match) {
+      return null;
+    }
+
+    return typeof match[2] === 'string' ? Number(match[2]) : Number(match[1]);
+  }
+
+  private uniqueStrings(values: string[]): string[] {
+    return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
   }
 
   private updateExecutionHistorySection(content: string, tracking: PlanExecutionTracking): string {
@@ -168,4 +294,5 @@ export class PlanMarkdownProjector {
 
     return lines.join('\n');
   }
+
 }

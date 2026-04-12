@@ -6,11 +6,9 @@
 
 import * as path from 'path';
 import { WorkflowService } from '../../workflow';
-import {
-  PHASE_NAMES_EN,
-  getScaleName,
-  ProjectScale,
-} from '../../../workflow';
+import { PHASE_NAMES_EN } from '../../../workflow/phases';
+import { getScaleName } from '../../../workflow/scaling';
+import { ProjectScale, type PrevcPhase } from '../../../workflow/types';
 
 import type { MCPToolResponse } from './response';
 import { createJsonResponse, createErrorResponse } from './response';
@@ -61,7 +59,7 @@ export async function handleWorkflowStatus(
       scale: getScaleName(summary.scale as ProjectScale),
       currentPhase: {
         code: summary.currentPhase,
-        name: PHASE_NAMES_EN[summary.currentPhase],
+        name: PHASE_NAMES_EN[summary.currentPhase as PrevcPhase],
       },
       progress: summary.progress,
       isComplete: summary.isComplete,

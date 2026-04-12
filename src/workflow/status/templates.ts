@@ -10,9 +10,11 @@ import {
   PrevcRole,
   ProjectScale,
   PhaseStatus,
+  RoleStatus,
   ExecutionAction,
 } from '../types';
 import { PREVC_PHASE_ORDER } from '../phases';
+import { PREVC_ROLES } from '../roles';
 import { getScaleRoute } from '../scaling';
 
 /**
@@ -99,6 +101,10 @@ export function createInitialStatus(options: CreateStatusOptions): PrevcStatus {
 
   const route = getScaleRoute(scale);
   const activePhasesSet = new Set(phases || route.phases);
+  const requestedRoles = options.roles || route.roles;
+  const activeRoles: PrevcRole[] = requestedRoles === 'all'
+    ? [...PREVC_ROLES]
+    : [...requestedRoles];
 
   // Determine first active phase
   let firstPhase: PrevcPhase = 'P';
@@ -136,6 +142,10 @@ export function createInitialStatus(options: CreateStatusOptions): PrevcStatus {
 
   // Create initial status
   const now = new Date().toISOString();
+  const roles: Partial<Record<PrevcRole, RoleStatus>> = {};
+  for (const role of activeRoles) {
+    roles[role] = { status: 'pending' };
+  }
 
   return {
     project: {
@@ -146,7 +156,7 @@ export function createInitialStatus(options: CreateStatusOptions): PrevcStatus {
     },
     phases: phaseStatuses,
     agents: {},
-    roles: {},
+    roles,
   };
 }
 
@@ -197,4 +207,3 @@ export function createLargeProjectStatus(name: string): PrevcStatus {
     roles: 'all',
   });
 }
-

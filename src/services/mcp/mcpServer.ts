@@ -24,8 +24,8 @@ import {
   PREVC_ROLES,
   getScaleName,
   ProjectScale,
-  AGENT_TYPES,
 } from '../../workflow';
+import { AGENT_TYPES } from '../../workflow/orchestration/agentOrchestrator';
 
 import {
   handleExplore,

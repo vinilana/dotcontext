@@ -6,14 +6,12 @@
 
 import * as path from 'path';
 import { WorkflowService } from '../../workflow';
-import {
-  PHASE_NAMES_EN,
-  ROLE_DISPLAY_NAMES,
-  createPlanLinker,
-} from '../../../workflow';
+import { PHASE_NAMES_EN } from '../../../workflow/phases';
+import { createPlanLinker } from '../../../workflow/plans';
+import { ROLE_DISPLAY_NAMES } from '../../../workflow/roles';
 import { HarnessPolicyBlockedError } from '../../harness';
 
-import type { PrevcRole } from '../../../workflow';
+import type { PrevcPhase, PrevcRole } from '../../../workflow/types';
 import type { MCPToolResponse } from './response';
 import { createJsonResponse, createErrorResponse } from './response';
 
@@ -161,7 +159,7 @@ export async function handleWorkflowManage(
           success: true,
           currentPhase: {
             code: summary.currentPhase,
-            name: PHASE_NAMES_EN[summary.currentPhase],
+            name: PHASE_NAMES_EN[summary.currentPhase as PrevcPhase],
           },
           canAdvance: gateResult.canAdvance,
           gates: gateResult.gates,

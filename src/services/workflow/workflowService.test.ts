@@ -86,6 +86,42 @@ describe('WorkflowService harness integration', () => {
     expect(firstTask.id).not.toBe(binding?.activeTaskId);
   });
 
+  it('persists collaboration sessions across fresh workflow service instances', async () => {
+    const session = await service.startCollaboration('Architecture review', ['architect', 'developer']);
+    const sessionId = session.getId();
+
+    service.contributeToCollaboration(
+      sessionId,
+      'architect',
+      'I recommend extracting collaboration persistence into a file-backed store.'
+    );
+
+    const reloadedService = new WorkflowService(tempDir);
+    reloadedService.contributeToCollaboration(
+      sessionId,
+      'developer',
+      'We should keep the session durable across MCP calls.'
+    );
+
+    const synthesis = await reloadedService.endCollaboration(sessionId);
+    const persisted = await fs.readJson(
+      path.join(tempDir, '.context', 'workflow', 'collaboration-sessions.json')
+    );
+
+    expect(synthesis).not.toBeNull();
+    expect(synthesis?.participants).toEqual(['architect', 'developer']);
+    expect(synthesis?.contributions).toHaveLength(2);
+    expect(synthesis?.contributions.map((contribution) => contribution.role)).toEqual([
+      'architect',
+      'developer',
+    ]);
+    expect(persisted.version).toBe(1);
+    expect(persisted.sessions).toHaveLength(1);
+    expect(persisted.sessions[0].id).toBe(sessionId);
+    expect(persisted.sessions[0].status).toBe('concluded');
+    expect(persisted.sessions[0].contributions).toHaveLength(2);
+  });
+
   it('bootstraps a task contract for the linked plan phase and rotates it on workflow advance', async () => {
     await service.init({
       name: 'plan-bootstrap',
