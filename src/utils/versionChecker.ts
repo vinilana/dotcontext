@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { gt } from 'semver';
 
 import type { CLIInterface } from './cliUI';
@@ -21,11 +20,26 @@ const DISABLE_ENV_FLAGS = ['DOTCONTEXT_DISABLE_UPDATE_CHECK', 'NO_UPDATE_NOTIFIE
 
 async function fetchLatestVersion(packageName: string, timeoutMs: number): Promise<string> {
   const url = `https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`;
-  const response = await axios.get<{ version?: string }>(url, { timeout: timeoutMs });
-  if (!response.data?.version) {
-    throw new Error('missing-version');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = (await response.json()) as { version?: string };
+    if (!data?.version) {
+      throw new Error('missing-version');
+    }
+
+    return data.version;
+  } finally {
+    clearTimeout(timeout);
   }
-  return response.data.version;
 }
 
 export async function checkForUpdates(options: VersionCheckOptions): Promise<void> {
