@@ -13,12 +13,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Plan frontmatter can now persist `phases[].summary`, `phases[].deliverables`, and `phases[].steps[].deliverables`
   - Plan parsing now prefers canonical frontmatter metadata and falls back to markdown task tables or numbered lists only for legacy plans
 
+- **Workflow collaboration sessions are now durable across service and MCP calls**
+  - Collaboration state is now persisted under `.context/workflow/collaboration-sessions.json`
+  - Fresh `WorkflowService` instances rehydrate active and concluded collaboration sessions from disk
+  - Added dedicated store and tests covering persistence across manager and service recreation
+
+- **Workflow architecture now has explicit runtime, migration, and guidance components**
+  - Added dedicated status runtime, transition, execution-history, and legacy-migration services under `src/workflow/status/` and `src/workflow/legacy/`
+  - Added workflow guidance helpers and services outside the PREVC runtime orchestrator
+  - Added plan execution/index projection helpers so plan document parsing and execution tracking are composed explicitly
+
 ### Changed
 
 - **Workflow-linked plans now bootstrap and rotate harness task contracts automatically**
   - `plan link` creates a bootstrap task contract for the current PREVC phase when a workflow is active
   - `workflow-advance` completes the previous active contract and derives the next phase contract from the linked plan
   - The harness remains the persistence and evaluation layer for task contracts while workflow owns the phase-driven rotation logic
+
+- **PREVC workflow definitions now come from a shared canonical registry**
+  - Phase, role, agent, skill, and documentation mappings now derive from a central PREVC model instead of being duplicated across workflow modules
+  - Document guidance now points at real files under `.context/docs` instead of dead placeholder paths
+
+- **Workflow state management is now port-driven and facade-based**
+  - `PrevcStatusManager` now depends on a workflow state port instead of importing harness persistence directly
+  - Canonical status persistence, runtime mutation, legacy YAML migration, and execution history logic are now separated into smaller units
+
+- **Plan execution tracking is now the canonical workflow-plan runtime state**
+  - `plan-tracking/*.json` now drives linked plan progress, current phase, approval metadata, and step status
+  - Markdown plans are now treated as documentation plus projection targets, not as the source of runtime execution truth
+  - Workflow plan index refresh is now projected from plan documents plus tracking state
+
+- **Workflow orchestration guidance is now outside the runtime core**
+  - Textual orchestration instructions, recommended actions, and handoff guidance moved out of the PREVC runtime orchestrator into dedicated guidance services
+  - Internal consumers now import workflow submodules directly more often, reducing pressure on the public workflow barrel
+
+- **The workflow public barrel is narrower and more intentional**
+  - `src/workflow/index.ts` now favors a stable surface over re-exporting broad internal implementation details
+  - Internal services were rewired toward direct module imports where that avoided keeping internals public by accident
+
+- **Gate evaluation now follows the same executable phase progression as workflow state**
+  - Gate checks now use the next non-skipped PREVC phase instead of an independent hardcoded phase order
+  - Blocking hints were updated to current MCP/workflow commands
+
+### Fixed
+
+- **Linked plan execution state no longer drifts from tracking data**
+  - `getLinkedPlan()` now reflects tracked phase and step execution state instead of synthetic markdown defaults
+  - Progress calculation now uses planned document steps as the denominator when available, avoiding false `100%` progress from partially tracked phases
+
+- **Workflow collaboration no longer resets between calls**
+  - Collaboration sessions now survive new service instances and MCP request boundaries instead of living only in an in-memory `Map`
+
+- **Workflow document and gate guidance no longer point at stale behavior**
+  - Agent and phase documentation links now resolve to actual repository docs
+  - Gate remediation messages now reference current `plan(...)` and `workflow-manage(...)` calls instead of removed legacy command names
 
 ## [v0.9.2]
 
