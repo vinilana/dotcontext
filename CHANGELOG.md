@@ -82,6 +82,11 @@ That is why many of the changes below are structural. The value of `0.9.0` is no
   - Google Antigravity now exports to `.agents/rules` and `.agents/workflows` while continuing to import legacy `.agent/*` layouts
   - Quick sync defaults and prompts now reflect the newer rules/skills target set for GitHub Copilot, Gemini, Windsurf, Codex, and Antigravity
 
+- **Skill scaffolding now produces stronger source content and cleaner exported skills**
+  - Scaffolded `.context/skills/*/SKILL.md` files now start with actionable starter sections (`Workflow`, `Examples`, `Quality Bar`, `Resource Strategy`) instead of near-empty placeholders
+  - Built-in skill templates now bias toward concise procedural guidance, progressive disclosure, and trigger language in frontmatter descriptions instead of `When to Use` sections in the body
+  - Exported AI-tool skills now use portable frontmatter with only `name` and `description`, improving compatibility with external skill runtimes
+
 - **PREVC workflow state is now harness-native**
   - Canonical workflow state and workflow-to-session binding now live together under `.context/harness/workflows/prevc.json`
   - Legacy workflow-side binding files are treated only as migration inputs and are no longer part of the active runtime model
@@ -126,6 +131,10 @@ That is why many of the changes below are structural. The value of `0.9.0` is no
   - Agent import normalizes `.agent.md` filenames back into canonical `.context/agents/*.md`
   - Rules imported from non-markdown sources now normalize to `.md` targets in `.context/docs`
   - Skill merge mode now avoids re-appending identical imported content
+
+- **Skill fill/export consistency**
+  - Skill refill detection now respects scaffold `status: unfilled` metadata instead of weak placeholder/size heuristics
+  - Exporting built-in skills now falls back to the stronger canonical template body when a scaffolded source file still has no meaningful body content
 
 - **Packaging validation coverage**
   - Added smoke checks for generated `cli`, `harness`, and `mcp` package bundles before local release preparation
