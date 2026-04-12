@@ -25,6 +25,7 @@ import { WorkflowGateChecker, GateCheckResult, getDefaultSettings } from './gate
 import { PlanLinker } from './plans/planLinker';
 import { AgentOrchestrator, PHASE_TO_AGENTS } from './orchestration/agentOrchestrator';
 import { createSkillRegistry } from './skills';
+import type { WorkflowStatePort } from './status/workflowStatePort';
 
 /**
  * Options for completing a phase
@@ -56,10 +57,10 @@ export class PrevcOrchestrator {
   private gateChecker: WorkflowGateChecker;
   private planLinker: PlanLinker;
 
-  constructor(contextPath: string) {
+  constructor(contextPath: string, workflowState: WorkflowStatePort) {
     this.repoPath = path.dirname(contextPath);
     this.contextPath = contextPath;
-    this.statusManager = new PrevcStatusManager(contextPath);
+    this.statusManager = new PrevcStatusManager(contextPath, workflowState);
     this.gateChecker = new WorkflowGateChecker();
     // Pass statusManager to PlanLinker for breadcrumb trail logging
     this.planLinker = new PlanLinker(path.dirname(contextPath), this.statusManager);

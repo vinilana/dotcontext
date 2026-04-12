@@ -7,7 +7,6 @@
 
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { HarnessWorkflowStateService } from '../../services/harness/workflowStateService';
 import {
   PrevcStatus,
   PrevcPhase,
@@ -25,10 +24,11 @@ import {
   ExecutionHistoryEntry,
   ExecutionAction,
 } from '../types';
-import { PREVC_PHASE_ORDER } from '../phases';
+import { PREVC_PHASE_ORDER, getNextActivePhase } from '../phases';
 import { getScaleRoute } from '../scaling';
 import { createInitialStatus, generateResumeContext } from './templates';
 import { getDefaultSettings } from '../gates';
+import type { WorkflowStatePort } from './workflowStatePort';
 
 /**
  * PREVC Status Manager
@@ -37,12 +37,12 @@ import { getDefaultSettings } from '../gates';
  */
 export class PrevcStatusManager {
   private contextPath: string;
-  private workflowState: HarnessWorkflowStateService;
+  private workflowState: WorkflowStatePort;
   private cachedStatus: PrevcStatus | null = null;
 
-  constructor(contextPath: string) {
+  constructor(contextPath: string, workflowState: WorkflowStatePort) {
     this.contextPath = contextPath;
-    this.workflowState = new HarnessWorkflowStateService({ contextPath });
+    this.workflowState = workflowState;
   }
 
   private get legacyStatusPath(): string {
@@ -160,16 +160,7 @@ export class PrevcStatusManager {
   }
 
   private getNextPhaseForStatus(status: PrevcStatus): PrevcPhase | null {
-    const currentIndex = PREVC_PHASE_ORDER.indexOf(status.project.current_phase);
-
-    for (let i = currentIndex + 1; i < PREVC_PHASE_ORDER.length; i++) {
-      const phase = PREVC_PHASE_ORDER[i];
-      if (status.phases[phase].status !== 'skipped') {
-        return phase;
-      }
-    }
-
-    return null;
+    return getNextActivePhase(status.project.current_phase, status.phases);
   }
 
   /**

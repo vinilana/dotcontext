@@ -166,8 +166,6 @@ export class WorkflowService {
     this.contextPath = path.basename(resolvedPath) === '.context'
       ? resolvedPath
       : path.join(resolvedPath, '.context');
-    this.orchestrator = new PrevcOrchestrator(this.contextPath);
-    this.collaborationManager = new CollaborationManager();
     this.runtimeStateService = new HarnessRuntimeStateService({ repoPath: this.repoPath });
     this.sensorCatalogService = new HarnessSensorCatalogService({
       repoPath: this.repoPath,
@@ -180,6 +178,8 @@ export class WorkflowService {
     });
     this.policyService = new HarnessPolicyService({ repoPath: this.repoPath });
     this.workflowStateService = new HarnessWorkflowStateService({ contextPath: this.contextPath });
+    this.orchestrator = new PrevcOrchestrator(this.contextPath, this.workflowStateService);
+    this.collaborationManager = new CollaborationManager();
     this.deps = deps;
     this.registerDefaultSensors();
   }

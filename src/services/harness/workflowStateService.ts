@@ -9,6 +9,7 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import type { PrevcStatus } from '../../workflow/types';
+import type { WorkflowStatePort } from '../../workflow/status/workflowStatePort';
 
 export interface HarnessWorkflowStateServiceOptions {
   contextPath: string;
@@ -30,7 +31,7 @@ export interface HarnessWorkflowRecord {
   binding: WorkflowHarnessBinding | null;
 }
 
-export class HarnessWorkflowStateService {
+export class HarnessWorkflowStateService implements WorkflowStatePort {
   constructor(private readonly options: HarnessWorkflowStateServiceOptions) {}
 
   private get contextPath(): string {

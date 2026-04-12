@@ -7,6 +7,7 @@
  */
 
 import { PrevcPhase } from '../types';
+import { PREVC_SKILL_PHASES } from '../registries/prevcModel';
 
 /**
  * SKILL.md frontmatter metadata
@@ -90,15 +91,6 @@ export function isBuiltInSkill(skillType: string): skillType is BuiltInSkillType
 /**
  * Skill to PREVC phase mapping
  */
-export const SKILL_TO_PHASES: Record<BuiltInSkillType, PrevcPhase[]> = {
-  'commit-message': ['E', 'C'],
-  'pr-review': ['R', 'V'],
-  'code-review': ['R', 'V'],
-  'test-generation': ['E', 'V'],
-  'documentation': ['P', 'C'],
-  'refactoring': ['E'],
-  'bug-investigation': ['E', 'V'],
-  'feature-breakdown': ['P'],
-  'api-design': ['P', 'R'],
-  'security-audit': ['R', 'V'],
-};
+export const SKILL_TO_PHASES: Record<BuiltInSkillType, PrevcPhase[]> = Object.fromEntries(
+  Object.entries(PREVC_SKILL_PHASES).map(([skill, phases]) => [skill, [...phases]])
+) as Record<BuiltInSkillType, PrevcPhase[]>;

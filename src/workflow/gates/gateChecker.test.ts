@@ -126,7 +126,7 @@ describe('WorkflowGateChecker', () => {
         expect(result.gates.plan_required.required).toBe(true);
         expect(result.gates.plan_required.passed).toBe(false);
         expect(result.blockingGate).toBe('plan_required');
-        expect(result.hint).toContain('linkPlan');
+        expect(result.hint).toContain('plan({ action: "link"');
       });
 
       it('should allow P → R when plan is linked via project.plan', () => {
@@ -200,7 +200,7 @@ describe('WorkflowGateChecker', () => {
         expect(result.gates.approval_required.required).toBe(true);
         expect(result.gates.approval_required.passed).toBe(false);
         expect(result.blockingGate).toBe('approval_required');
-        expect(result.hint).toContain('workflowApprovePlan');
+        expect(result.hint).toContain('workflow-manage({ action: "approvePlan"');
       });
 
       it('should allow R → E when plan is approved', () => {
@@ -239,6 +239,28 @@ describe('WorkflowGateChecker', () => {
     });
 
     describe('other transitions', () => {
+      it('should skip the plan gate when the next executable phase skips review', () => {
+        const status = createMockStatus({
+          project: {
+            name: 'test',
+            scale: ProjectScale.SMALL,
+            started: new Date().toISOString(),
+            current_phase: 'P',
+          },
+          phases: {
+            P: { status: 'in_progress' },
+            R: { status: 'skipped' },
+            E: { status: 'pending' },
+            V: { status: 'pending' },
+            C: { status: 'pending' },
+          },
+        });
+
+        const result = checker.checkGates(status);
+        expect(result.canAdvance).toBe(true);
+        expect(result.gates.plan_required.required).toBe(false);
+      });
+
       it('should allow E → V without any gates', () => {
         const status = createMockStatus({
           project: {

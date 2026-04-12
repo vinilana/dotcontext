@@ -12,6 +12,7 @@ import {
   GateType,
 } from '../types';
 import { WorkflowGateError } from '../errors';
+import { getNextActivePhase } from '../phases';
 
 /**
  * Status of an individual gate
@@ -83,7 +84,7 @@ export class WorkflowGateChecker {
     nextPhase?: PrevcPhase
   ): GateCheckResult {
     const currentPhase = status.project.current_phase;
-    const targetPhase = nextPhase || this.getNextPhase(currentPhase);
+    const targetPhase = nextPhase || this.getNextPhaseForStatus(status);
 
     // Get effective settings (use defaults if not set)
     const settings = this.getEffectiveSettings(status);
@@ -118,7 +119,7 @@ export class WorkflowGateChecker {
           result.canAdvance = false;
           result.blockingGate = 'plan_required';
           result.blockingReason = 'A plan must be linked before advancing from Planning to Review phase.';
-          result.hint = 'Use scaffoldPlan and linkPlan to create and link a plan, or enable autonomous mode.';
+          result.hint = 'Use plan({ action: "link", planSlug: "plan-name" }) after scaffoldPlan/workflow-init, or enable autonomous mode.';
         }
       }
     }
@@ -134,7 +135,7 @@ export class WorkflowGateChecker {
           result.canAdvance = false;
           result.blockingGate = 'approval_required';
           result.blockingReason = 'The plan must be approved before advancing from Review to Execution phase.';
-          result.hint = 'Use workflowApprovePlan to approve the plan, or enable autonomous mode.';
+          result.hint = 'Use workflow-manage({ action: "approvePlan", planSlug: "plan-name" }) or enable autonomous mode.';
         }
       }
     }
@@ -180,7 +181,7 @@ export class WorkflowGateChecker {
 
     if (!result.canAdvance && result.blockingGate) {
       const currentPhase = status.project.current_phase;
-      const targetPhase = options.nextPhase || this.getNextPhase(currentPhase);
+      const targetPhase = options.nextPhase || this.getNextPhaseForStatus(status);
 
       throw new WorkflowGateError({
         message: result.blockingReason!,
@@ -238,13 +239,8 @@ export class WorkflowGateChecker {
     return status.approval?.plan_approved === true;
   }
 
-  /**
-   * Get the next phase in the workflow sequence
-   */
-  private getNextPhase(current: PrevcPhase): PrevcPhase | null {
-    const order: PrevcPhase[] = ['P', 'R', 'E', 'V', 'C'];
-    const idx = order.indexOf(current);
-    return idx >= 0 && idx < order.length - 1 ? order[idx + 1] : null;
+  private getNextPhaseForStatus(status: PrevcStatus): PrevcPhase | null {
+    return getNextActivePhase(status.project.current_phase, status.phases);
   }
 }
 

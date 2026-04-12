@@ -1,77 +1,37 @@
-/**
- * PREVC Workflow Phases
- *
- * Defines the five phases of the PREVC workflow:
- * P - Planning
- * R - Review
- * E - Execution
- * V - Validation
- * C - Confirmation
- */
-
-import { PrevcPhase, PhaseDefinition } from './types';
+import { PrevcPhase, PhaseDefinition, PhaseStatus } from './types';
+import {
+  PREVC_PHASE_MODEL,
+  PREVC_PHASE_SEQUENCE,
+} from './registries/prevcModel';
 
 /**
  * All PREVC phases in order
  */
-export const PREVC_PHASE_ORDER: PrevcPhase[] = ['P', 'R', 'E', 'V', 'C'];
+export const PREVC_PHASE_ORDER: PrevcPhase[] = [...PREVC_PHASE_SEQUENCE];
 
 /**
  * Complete definition of all PREVC phases
  */
-export const PREVC_PHASES: Record<PrevcPhase, PhaseDefinition> = {
-  P: {
-    name: 'Planning',
-    description: 'Discovery, requirements and specifications',
-    roles: ['planner', 'designer'],
-    outputs: ['prd', 'tech-spec', 'requirements', 'wireframes'],
-    optional: false,
-    order: 1,
-  },
-  R: {
-    name: 'Review',
-    description: 'Architecture, technical decisions and design review',
-    roles: ['architect', 'designer'],
-    outputs: ['architecture', 'adr', 'design-spec'],
-    optional: true, // Depends on scale
-    order: 2,
-  },
-  E: {
-    name: 'Execution',
-    description: 'Implementation and development',
-    roles: ['developer'],
-    outputs: ['code', 'unit-tests'],
-    optional: false,
-    order: 3,
-  },
-  V: {
-    name: 'Validation',
-    description: 'Tests, QA and code review',
-    roles: ['qa', 'reviewer'],
-    outputs: ['test-report', 'review-comments', 'approval'],
-    optional: false,
-    order: 4,
-  },
-  C: {
-    name: 'Confirmation',
-    description: 'Documentation, deploy and handoff',
-    roles: ['documenter'],
-    outputs: ['documentation', 'changelog', 'deploy'],
-    optional: true, // Depends on scale
-    order: 5,
-  },
-};
+export const PREVC_PHASES: Record<PrevcPhase, PhaseDefinition> = Object.fromEntries(
+  PREVC_PHASE_ORDER.map((phase) => {
+    const definition = PREVC_PHASE_MODEL[phase];
+    return [phase, {
+      name: definition.name,
+      description: definition.description,
+      roles: [...definition.roles],
+      outputs: [...definition.outputs],
+      optional: definition.optional,
+      order: definition.order,
+    }];
+  })
+) as Record<PrevcPhase, PhaseDefinition>;
 
 /**
  * Phase display names (English - default)
  */
-export const PHASE_NAMES: Record<PrevcPhase, string> = {
-  P: 'Planning',
-  R: 'Review',
-  E: 'Execution',
-  V: 'Validation',
-  C: 'Confirmation',
-};
+export const PHASE_NAMES: Record<PrevcPhase, string> = Object.fromEntries(
+  PREVC_PHASE_ORDER.map((phase) => [phase, PREVC_PHASE_MODEL[phase].name])
+) as Record<PrevcPhase, string>;
 
 /**
  * Phase display names in English (alias for consistency)
@@ -81,13 +41,9 @@ export const PHASE_NAMES_EN = PHASE_NAMES;
 /**
  * Phase display names in Portuguese (for i18n)
  */
-export const PHASE_NAMES_PT: Record<PrevcPhase, string> = {
-  P: 'Planejamento',
-  R: 'Revisão',
-  E: 'Execução',
-  V: 'Validação',
-  C: 'Confirmação',
-};
+export const PHASE_NAMES_PT: Record<PrevcPhase, string> = Object.fromEntries(
+  PREVC_PHASE_ORDER.map((phase) => [phase, PREVC_PHASE_MODEL[phase].namePt])
+) as Record<PrevcPhase, string>;
 
 /**
  * Get the definition for a specific phase
@@ -105,6 +61,25 @@ export function getNextPhase(currentPhase: PrevcPhase): PrevcPhase | null {
     return null;
   }
   return PREVC_PHASE_ORDER[currentIndex + 1];
+}
+
+/**
+ * Get the next non-skipped phase for a workflow status snapshot.
+ */
+export function getNextActivePhase(
+  currentPhase: PrevcPhase,
+  phases: Partial<Record<PrevcPhase, Pick<PhaseStatus, 'status'>>>
+): PrevcPhase | null {
+  const currentIndex = PREVC_PHASE_ORDER.indexOf(currentPhase);
+
+  for (let i = currentIndex + 1; i < PREVC_PHASE_ORDER.length; i++) {
+    const phase = PREVC_PHASE_ORDER[i];
+    if (phases[phase]?.status !== 'skipped') {
+      return phase;
+    }
+  }
+
+  return null;
 }
 
 /**

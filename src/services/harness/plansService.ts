@@ -6,6 +6,7 @@
 
 import * as path from 'path';
 import { WorkflowService } from '../workflow';
+import { HarnessWorkflowStateService } from './workflowStateService';
 import {
   PHASE_NAMES_EN,
   createPlanLinker,
@@ -23,7 +24,8 @@ export class HarnessPlansService {
 
   constructor(private readonly options: HarnessPlansServiceOptions) {
     const contextPath = path.join(this.repoPath, '.context');
-    const statusManager = new PrevcStatusManager(contextPath);
+    const workflowStateService = new HarnessWorkflowStateService({ contextPath });
+    const statusManager = new PrevcStatusManager(contextPath, workflowStateService);
     this.linker = createPlanLinker(this.repoPath, statusManager, true);
   }
 

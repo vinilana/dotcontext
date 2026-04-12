@@ -1,83 +1,40 @@
-/**
- * PREVC Workflow Roles
- *
- * Defines the available roles in the PREVC workflow system
- * and their mapping to existing agent types.
- */
-
 import { PrevcRole } from './types';
+import {
+  PREVC_ROLE_MODEL,
+  PREVC_ROLE_SEQUENCE,
+} from './registries/prevcModel';
 
 /**
  * All available PREVC roles
  */
-export const PREVC_ROLES = [
-  'planner', // P: Discovery, requirements, specifications
-  'designer', // P/R: UX, design systems, wireframes
-  'architect', // R: ADRs, technical decisions, blueprints
-  'developer', // E: Implementation, coding
-  'qa', // V: Tests, quality gates
-  'reviewer', // V: Code review, standards
-  'documenter', // C: Documentation, handoff
-  'solo-dev', // P→C: Full quick flow
-] as const;
+export const PREVC_ROLES = PREVC_ROLE_SEQUENCE;
 
 /**
  * Mapping from PREVC roles to existing agent types (specialists)
  * @deprecated Use ROLE_TO_AGENTS from orchestration/agentOrchestrator instead.
  * This mapping is kept for backward compatibility.
  */
-export const ROLE_TO_SPECIALISTS: Record<PrevcRole, string[]> = {
-  planner: [], // New role, no existing mapping
-  designer: ['frontend-specialist'],
-  architect: ['architect-specialist'],
-  developer: [
-    'feature-developer',
-    'bug-fixer',
-    'backend-specialist',
-    'frontend-specialist',
-    'mobile-specialist',
-  ],
-  qa: ['test-writer', 'security-auditor', 'performance-optimizer'],
-  reviewer: ['code-reviewer'],
-  documenter: ['documentation-writer'],
-  'solo-dev': ['refactoring-specialist', 'bug-fixer'],
-};
+export const ROLE_TO_SPECIALISTS: Record<PrevcRole, string[]> = Object.fromEntries(
+  PREVC_ROLES.map((role) => [role, [...PREVC_ROLE_MODEL[role].specialists]])
+) as Record<PrevcRole, string[]>;
 
 /**
  * Mapping from existing agent types to PREVC roles
  * @deprecated Use agent-based tracking instead of role-based.
  * This mapping is kept for backward compatibility.
  */
-export const SPECIALIST_TO_ROLE: Record<string, PrevcRole> = {
-  'frontend-specialist': 'designer',
-  'architect-specialist': 'architect',
-  'feature-developer': 'developer',
-  'bug-fixer': 'developer',
-  'backend-specialist': 'developer',
-  'mobile-specialist': 'developer',
-  'test-writer': 'qa',
-  'security-auditor': 'qa',
-  'performance-optimizer': 'qa',
-  'code-reviewer': 'reviewer',
-  'documentation-writer': 'documenter',
-  'refactoring-specialist': 'solo-dev',
-  'database-specialist': 'developer',
-  'devops-specialist': 'developer',
-};
+export const SPECIALIST_TO_ROLE: Record<string, PrevcRole> = Object.fromEntries(
+  PREVC_ROLES.flatMap((role) =>
+    PREVC_ROLE_MODEL[role].specialists.map((specialist) => [specialist, role] as const)
+  )
+) as Record<string, PrevcRole>;
 
 /**
  * Role display names (English)
  */
-export const ROLE_DISPLAY_NAMES: Record<PrevcRole, string> = {
-  planner: 'Planner',
-  designer: 'Designer',
-  architect: 'Architect',
-  developer: 'Developer',
-  qa: 'QA Engineer',
-  reviewer: 'Reviewer',
-  documenter: 'Documenter',
-  'solo-dev': 'Solo Dev',
-};
+export const ROLE_DISPLAY_NAMES: Record<PrevcRole, string> = Object.fromEntries(
+  PREVC_ROLES.map((role) => [role, PREVC_ROLE_MODEL[role].displayName])
+) as Record<PrevcRole, string>;
 
 /**
  * Role display names in English (alias for consistency)
@@ -87,16 +44,9 @@ export const ROLE_DISPLAY_NAMES_EN = ROLE_DISPLAY_NAMES;
 /**
  * Role display names in Portuguese (for i18n)
  */
-export const ROLE_DISPLAY_NAMES_PT: Record<PrevcRole, string> = {
-  planner: 'Planejador',
-  designer: 'Designer',
-  architect: 'Arquiteto',
-  developer: 'Desenvolvedor',
-  qa: 'QA',
-  reviewer: 'Revisor',
-  documenter: 'Documentador',
-  'solo-dev': 'Solo Dev',
-};
+export const ROLE_DISPLAY_NAMES_PT: Record<PrevcRole, string> = Object.fromEntries(
+  PREVC_ROLES.map((role) => [role, PREVC_ROLE_MODEL[role].displayNamePt])
+) as Record<PrevcRole, string>;
 
 /**
  * Check if a string is a valid PREVC role

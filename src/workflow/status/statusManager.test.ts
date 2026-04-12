@@ -4,6 +4,7 @@ import * as path from 'path';
 
 import { ProjectScale } from '../types';
 import { PrevcStatusManager } from './statusManager';
+import { HarnessWorkflowStateService } from '../../services/harness/workflowStateService';
 
 describe('PrevcStatusManager canonical persistence', () => {
   let tempDir: string;
@@ -13,7 +14,7 @@ describe('PrevcStatusManager canonical persistence', () => {
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'prevc-status-'));
     contextPath = path.join(tempDir, '.context');
-    manager = new PrevcStatusManager(contextPath);
+    manager = new PrevcStatusManager(contextPath, new HarnessWorkflowStateService({ contextPath }));
   });
 
   afterEach(async () => {
