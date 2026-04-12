@@ -147,6 +147,37 @@ export class PlanLinker {
   }
 
   /**
+   * Update a linked plan reference in workflow tracking.
+   */
+  async updatePlanReference(
+    planSlug: string,
+    updater: (ref: PlanReference) => PlanReference
+  ): Promise<PlanReference | null> {
+    const plans = await this.getLinkedPlans();
+
+    const updateBucket = (bucket: PlanReference[]) => {
+      const index = bucket.findIndex((ref) => ref.slug === planSlug);
+      if (index === -1) {
+        return null;
+      }
+
+      const updated = updater({ ...bucket[index] });
+      bucket[index] = updated;
+      return updated;
+    };
+
+    const updatedRef = updateBucket(plans.active) ?? updateBucket(plans.completed);
+    if (!updatedRef) {
+      return null;
+    }
+
+    const plansFile = path.join(this.workflowPath, 'plans.json');
+    await fs.ensureDir(path.dirname(plansFile));
+    await fs.writeJson(plansFile, plans, { spaces: 2 });
+    return updatedRef;
+  }
+
+  /**
    * Get detailed plan with workflow mapping
    */
   async getLinkedPlan(planSlug: string): Promise<LinkedPlan | null> {
@@ -461,6 +492,64 @@ export class PlanLinker {
     await this.syncPlanMarkdown(planSlug);
 
     return true;
+  }
+
+  /**
+   * Update approval metadata for a linked plan.
+   * Keeps the workflow plan index and plan tracking projection in sync.
+   */
+  async updatePlanApproval(
+    planSlug: string,
+    approval: {
+      approvalStatus: 'pending' | 'approved' | 'rejected';
+      approvedAt?: string;
+      approvedBy?: string;
+    }
+  ): Promise<PlanReference | null> {
+    const plansFile = path.join(this.workflowPath, 'plans.json');
+
+    if (!await fs.pathExists(plansFile)) {
+      return null;
+    }
+
+    const plans = await this.getLinkedPlans();
+    let updatedRef: PlanReference | null = null;
+    let found = false;
+
+    const applyApproval = (ref: PlanReference): PlanReference => {
+      found = true;
+      const nextRef: PlanReference = {
+        ...ref,
+        approval_status: approval.approvalStatus,
+        approved_at: approval.approvedAt,
+        approved_by: approval.approvedBy,
+      };
+      updatedRef = nextRef;
+      return nextRef;
+    };
+
+    plans.active = plans.active.map((ref) => (ref.slug === planSlug ? applyApproval(ref) : ref));
+    plans.completed = plans.completed.map((ref) => (ref.slug === planSlug ? applyApproval(ref) : ref));
+
+    if (!found || !updatedRef) {
+      return null;
+    }
+
+    await fs.ensureDir(this.workflowPath);
+    await fs.writeFile(plansFile, JSON.stringify(plans, null, 2), 'utf-8');
+
+    const tracking = await this.loadPlanTracking(planSlug);
+    if (tracking) {
+      tracking.approvalStatus = approval.approvalStatus;
+      tracking.approvedAt = approval.approvedAt;
+      tracking.approvedBy = approval.approvedBy;
+      tracking.lastUpdated = approval.approvedAt || new Date().toISOString();
+      const trackingFile = path.join(this.workflowPath, 'plan-tracking', `${planSlug}.json`);
+      await fs.ensureDir(path.dirname(trackingFile));
+      await fs.writeFile(trackingFile, JSON.stringify(tracking, null, 2), 'utf-8');
+    }
+
+    return updatedRef;
   }
 
   /**
@@ -1065,16 +1154,27 @@ export class PlanLinker {
       }
     }
 
+    // Preserve approval metadata if the plan was already linked in another workflow
+    const existingRef = [...plans.active, ...plans.completed].find((p) => p.slug === ref.slug);
+    const nextRef: PlanReference = existingRef
+      ? {
+          ...ref,
+          approval_status: existingRef.approval_status,
+          approved_at: existingRef.approved_at,
+          approved_by: existingRef.approved_by,
+        }
+      : ref;
+
     // Remove if already exists
     plans.active = plans.active.filter(p => p.slug !== ref.slug);
     plans.completed = plans.completed.filter(p => p.slug !== ref.slug);
 
     // Add to active
-    plans.active.push(ref);
+    plans.active.push(nextRef);
 
     // Set as primary if first plan
     if (!plans.primary) {
-      plans.primary = ref.slug;
+      plans.primary = nextRef.slug;
     }
 
     await fs.ensureDir(this.workflowPath);

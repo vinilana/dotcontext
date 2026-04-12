@@ -23,6 +23,9 @@ interface DirectoryStat {
   fileCount: number;
 }
 
+const SEMANTIC_SNAPSHOT_REFERENCE =
+  'Use `context({ action: "getMap", section: "all" })` to inspect the generated semantic snapshot for stack, architecture, key files, and dependency hotspots.';
+
 export class AutoFillService {
   /**
    * Fill a documentation scaffold with semantic data
@@ -149,7 +152,7 @@ export class AutoFillService {
         return this.generateProjectOverview(ctx);
 
       case 'Codebase Reference':
-        return '> **Detailed Analysis**: For complete symbol counts, architecture layers, and dependency graphs, see [`codebase-map.json`](./codebase-map.json).';
+        return `> **Semantic Snapshot**: ${SEMANTIC_SNAPSHOT_REFERENCE}`;
 
       case 'Quick Facts':
         return this.generateQuickFacts(ctx);
@@ -264,7 +267,7 @@ export class AutoFillService {
       lines.push(`- **Entry Point**: \`${ep}\``);
     }
 
-    lines.push('- **Full analysis**: [`codebase-map.json`](./codebase-map.json)');
+    lines.push(`- **Semantic Snapshot**: ${SEMANTIC_SNAPSHOT_REFERENCE}`);
 
     return lines.join('\n');
   }
@@ -279,7 +282,7 @@ export class AutoFillService {
 
   private formatPublicAPI(symbols: ExtractedSymbol[]): string {
     if (!symbols.length) {
-      return '_See codebase-map.json for exported symbols._';
+      return '_Document the main exported surfaces here._';
     }
 
     const lines = symbols.slice(0, 10).map(s => {
@@ -287,13 +290,13 @@ export class AutoFillService {
       return `- \`${s.name}\` (${s.kind}) - ${path.basename(relPath)}:${s.location.line}`;
     });
 
-    lines.push('\n> See [`codebase-map.json`](./codebase-map.json) for complete list.');
+    lines.push(`\n> ${SEMANTIC_SNAPSHOT_REFERENCE}`);
     return lines.join('\n');
   }
 
   private formatPublicAPITable(symbols: ExtractedSymbol[]): string {
     if (!symbols.length) {
-      return '_See codebase-map.json for exported symbols._';
+      return '_Document the main exported surfaces here._';
     }
 
     const lines = [
@@ -392,7 +395,7 @@ export class AutoFillService {
       return `- **${layer.name}**: ${layer.description} (${dirs})`;
     });
 
-    lines.push('\n> See [`codebase-map.json`](./codebase-map.json) for complete symbol counts and dependency graphs.');
+    lines.push(`\n> ${SEMANTIC_SNAPSHOT_REFERENCE}`);
 
     return lines.join('\n');
   }

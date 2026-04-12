@@ -2,6 +2,11 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import type { AgentFileInfo, HandlerOptions, HandlerResult } from './types';
 
+function getTargetFilename(agent: AgentFileInfo, options: HandlerOptions): string {
+  const suffix = options.filenameSuffix || '';
+  return `${agent.name}${suffix}.md`;
+}
+
 export async function createSymlinks(
   agentFiles: AgentFileInfo[],
   targetPath: string,
@@ -16,7 +21,8 @@ export async function createSymlinks(
   };
 
   for (const agent of agentFiles) {
-    const linkPath = path.join(targetPath, agent.filename);
+    const targetFilename = getTargetFilename(agent, options);
+    const linkPath = path.join(targetPath, targetFilename);
 
     try {
       const exists = await fs.pathExists(linkPath);
@@ -48,7 +54,7 @@ export async function createSymlinks(
     } catch (error) {
       result.filesFailed++;
       result.errors.push({
-        file: agent.filename,
+        file: targetFilename,
         error: error instanceof Error ? error.message : String(error)
       });
     }

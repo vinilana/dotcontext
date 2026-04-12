@@ -1,11 +1,13 @@
 /**
  * PREVC Status Manager
  *
- * Manages the workflow status YAML file that tracks progress through phases.
+ * Manages canonical PREVC workflow state stored in harness runtime state.
+ * Legacy status.yaml files are migrated on read but no longer written.
  */
 
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { HarnessWorkflowStateService } from '../../services/harness/workflowStateService';
 import {
   PrevcStatus,
   PrevcPhase,
@@ -29,45 +31,55 @@ import { createInitialStatus, generateResumeContext } from './templates';
 import { getDefaultSettings } from '../gates';
 
 /**
- * Default status file path relative to .context directory
- */
-const STATUS_FILE = 'workflow/status.yaml';
-
-/**
  * PREVC Status Manager
  *
- * Handles reading and writing the workflow status file.
+ * Handles reading and writing canonical workflow state, with optional legacy migration.
  */
 export class PrevcStatusManager {
   private contextPath: string;
-  private statusPath: string;
+  private workflowState: HarnessWorkflowStateService;
   private cachedStatus: PrevcStatus | null = null;
 
   constructor(contextPath: string) {
     this.contextPath = contextPath;
-    this.statusPath = path.join(contextPath, STATUS_FILE);
+    this.workflowState = new HarnessWorkflowStateService({ contextPath });
+  }
+
+  private get legacyStatusPath(): string {
+    return path.join(this.contextPath, 'workflow', 'status.yaml');
   }
 
   /**
    * Check if a workflow status file exists
    */
   async exists(): Promise<boolean> {
-    return fs.pathExists(this.statusPath);
+    return (await this.workflowState.exists()) || fs.pathExists(this.legacyStatusPath);
   }
 
   /**
    * Load the workflow status from disk
    */
   async load(): Promise<PrevcStatus> {
-    if (!(await this.exists())) {
+    const hasCanonicalState = await this.workflowState.exists();
+    const hasLegacyProjection = await fs.pathExists(this.legacyStatusPath);
+
+    if (!hasCanonicalState && !hasLegacyProjection) {
       throw new Error('Workflow status not found. Run "workflow init" first.');
     }
 
-    const content = await fs.readFile(this.statusPath, 'utf-8');
-    // Parse YAML manually (simple format)
-    let status = this.parseYaml(content);
-    // Apply migration for existing workflows
+    let status: PrevcStatus;
+    if (hasCanonicalState) {
+      status = await this.workflowState.load();
+    } else {
+      const content = await fs.readFile(this.legacyStatusPath, 'utf-8');
+      status = this.parseYaml(content);
+    }
+
     status = this.migrateStatus(status);
+    await this.persistCanonical(status);
+    if (hasLegacyProjection) {
+      await fs.remove(this.legacyStatusPath);
+    }
     this.cachedStatus = status;
     return this.cachedStatus;
   }
@@ -80,13 +92,21 @@ export class PrevcStatusManager {
       return this.cachedStatus;
     }
 
-    if (!fs.existsSync(this.statusPath)) {
+    const hasCanonicalState = fs.existsSync(path.join(this.contextPath, 'harness', 'workflows', 'prevc.json'));
+    const hasLegacyProjection = fs.existsSync(this.legacyStatusPath);
+
+    if (!hasCanonicalState && !hasLegacyProjection) {
       throw new Error('Workflow status not found. Run "workflow init" first.');
     }
 
-    const content = fs.readFileSync(this.statusPath, 'utf-8');
-    let status = this.parseYaml(content);
-    // Apply migration for existing workflows
+    let status: PrevcStatus;
+    if (hasCanonicalState) {
+      status = this.workflowState.loadSync();
+    } else {
+      const content = fs.readFileSync(this.legacyStatusPath, 'utf-8');
+      status = this.parseYaml(content);
+    }
+
     status = this.migrateStatus(status);
     this.cachedStatus = status;
     return this.cachedStatus;
@@ -96,12 +116,35 @@ export class PrevcStatusManager {
    * Save the workflow status to disk
    */
   async save(status: PrevcStatus): Promise<void> {
-    const dir = path.dirname(this.statusPath);
-    await fs.ensureDir(dir);
-
-    const content = this.serializeYaml(status);
-    await fs.writeFile(this.statusPath, content, 'utf-8');
+    await this.persistCanonical(status);
     this.cachedStatus = status;
+  }
+
+  async remove(): Promise<void> {
+    await this.workflowState.remove();
+    if (await fs.pathExists(this.legacyStatusPath)) {
+      await fs.remove(this.legacyStatusPath);
+    }
+    this.cachedStatus = null;
+  }
+
+  async archive(name: string): Promise<void> {
+    await this.workflowState.archive(name);
+    if (await fs.pathExists(this.legacyStatusPath)) {
+      const archiveDir = path.join(this.contextPath, 'workflow', 'archive');
+      const safeName = name.replace(/[^a-zA-Z0-9-_]/g, '-');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      await fs.ensureDir(archiveDir);
+      await fs.move(this.legacyStatusPath, path.join(archiveDir, `${safeName}-${timestamp}.legacy-status.yaml`));
+    }
+    this.cachedStatus = null;
+  }
+
+  private async persistCanonical(status: PrevcStatus): Promise<void> {
+    await this.workflowState.save(status);
+    if (await fs.pathExists(this.legacyStatusPath)) {
+      await fs.remove(this.legacyStatusPath);
+    }
   }
 
   /**

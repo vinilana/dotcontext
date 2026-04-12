@@ -108,7 +108,7 @@ src/
 3. Run in development mode: `npm run dev` (uses tsx for fast TypeScript execution)
 4. Build for production: `npm run build`
 5. Run tests: `npm test`
-6. Try the CLI: `npx dotcontext mcp:install` to connect the package to your AI tool
+6. Try the CLI: `npx -y @dotcontext/cli@latest mcp:install` to connect the package to your AI tool
 
 ## Next Steps
 

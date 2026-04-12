@@ -227,7 +227,7 @@ export interface ProjectMetadata {
 }
 
 /**
- * Complete workflow status structure (stored in status.yaml)
+ * Complete workflow status structure (stored canonically in harness workflow state)
  */
 export interface PrevcStatus {
   project: ProjectMetadata;

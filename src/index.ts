@@ -13,18 +13,33 @@ import {
 import { themedSelect, Separator } from './utils/themedPrompt';
 import { CLIInterface } from './utils/cliUI';
 import { checkForUpdates } from './utils/versionChecker';
+import { registerProcessShutdown } from './utils/processShutdown';
 import { createTranslator, detectLocale, SUPPORTED_LOCALES, normalizeLocale } from './utils/i18n';
 import type { TranslateFn, Locale, TranslationKey } from './utils/i18n';
-import { SyncService } from './services/sync/syncService';
-import { ImportRulesService, ImportAgentsService } from './services/import';
-import { startMCPServer, MCPInstallService } from './services/mcp';
-import { StateDetector } from './services/state';
-import { WorkflowService, WorkflowServiceDependencies } from './services/workflow';
-import { ExportRulesService } from './services/export';
-import { ReportService } from './services/report';
-import { QuickSyncService, QuickSyncOptions } from './services/quickSync';
-import { ReverseQuickSyncService, type MergeStrategy } from './services/reverseSync';
-import { getScaleName, PHASE_NAMES_PT, ROLE_DISPLAY_NAMES, type PrevcRole } from './workflow';
+import {
+  MCPInstallService,
+  SyncService,
+  ImportRulesService,
+  ImportAgentsService,
+  ExportRulesService,
+  ReportService,
+  QuickSyncService,
+  type QuickSyncOptions,
+  ReverseQuickSyncService,
+  type MergeStrategy,
+  StateDetector
+} from './cli';
+import {
+  startMCPServer,
+} from './mcp';
+import {
+  WorkflowService,
+  type WorkflowServiceDependencies,
+  getScaleName,
+  PHASE_NAMES_PT,
+  ROLE_DISPLAY_NAMES,
+  type PrevcRole
+} from './harness';
 import {
   detectSmartDefaults,
   displayConfigSummary,
@@ -129,24 +144,30 @@ program.hook('preAction', () => {
   void scheduleVersionCheck();
 });
 
-program
-  .command('sync-agents')
-  .description(t('commands.sync.description'))
-  .option('-s, --source <dir>', t('commands.sync.options.source'), './.context/agents')
-  .option('-t, --target <paths...>', t('commands.sync.options.target'))
-  .option('-m, --mode <type>', t('commands.sync.options.mode'), 'symlink')
-  .option('-p, --preset <name>', t('commands.sync.options.preset'))
-  .option('--force', t('commands.sync.options.force'))
-  .option('--dry-run', t('commands.sync.options.dryRun'))
-  .option('-v, --verbose', t('commands.sync.options.verbose'))
-  .action(async (options: any) => {
-    try {
-      await syncService.run(options);
-    } catch (error) {
-      ui.displayError(t('errors.sync.failed'), error as Error);
-      process.exit(1);
-    }
-  });
+function registerSyncCommand(parent: Command, name: string, hidden = false): Command {
+  const command = parent
+    .command(name, hidden ? { hidden: true } : {})
+    .description(t('commands.sync.description'))
+    .option('-s, --source <dir>', t('commands.sync.options.source'), './.context/agents')
+    .option('-t, --target <paths...>', t('commands.sync.options.target'))
+    .option('-m, --mode <type>', t('commands.sync.options.mode'), 'symlink')
+    .option('-p, --preset <name>', t('commands.sync.options.preset'))
+    .option('--force', t('commands.sync.options.force'))
+    .option('--dry-run', t('commands.sync.options.dryRun'))
+    .option('-v, --verbose', t('commands.sync.options.verbose'))
+    .action(async (options: any) => {
+      try {
+        await syncService.run(options);
+      } catch (error) {
+        ui.displayError(t('errors.sync.failed'), error as Error);
+        process.exit(1);
+      }
+    });
+  return command;
+}
+
+registerSyncCommand(program, 'sync');
+registerSyncCommand(program, 'sync-agents', true);
 
 program
   .command('import-rules')
@@ -247,15 +268,13 @@ program
         verbose: options.verbose
       });
 
-      // Handle graceful shutdown
-      process.on('SIGINT', async () => {
-        await server.stop();
-        process.exit(0);
-      });
-
-      process.on('SIGTERM', async () => {
-        await server.stop();
-        process.exit(0);
+      registerProcessShutdown(server, {
+        onError: (error) => {
+          if (options.verbose) {
+            process.stderr.write(`[mcp] Shutdown error: ${error}\n`);
+          }
+        },
+        exit: (code) => process.exit(code),
       });
     } catch (error) {
       if (options.verbose) {
@@ -276,14 +295,15 @@ program
   .action(async (tool: string | undefined, options: any) => {
     try {
       const mcpInstallService = new MCPInstallService({ ui, t, version: VERSION });
+      let selectedTool = tool;
 
-      // If no tool specified and not in CI, show interactive prompt
-      if (!tool && process.stdin.isTTY) {
+      // Interactive terminals can choose a specific tool; headless runs default to all supported tools.
+      if (!selectedTool && process.stdin.isTTY) {
         const supportedTools = mcpInstallService.getSupportedTools();
         const detectedTools = await mcpInstallService.detectInstalledTools();
         const choices = buildMcpToolChoices(supportedTools, detectedTools);
 
-        const { selectedTool } = await inquirer.prompt([
+        const { selectedTool: promptSelectedTool } = await inquirer.prompt([
           {
             type: 'list',
             name: 'selectedTool',
@@ -292,11 +312,13 @@ program
           },
         ]);
 
-        tool = selectedTool;
+        selectedTool = promptSelectedTool;
+      } else if (!selectedTool) {
+        selectedTool = 'all';
       }
 
       const result = await mcpInstallService.run({
-        tool,
+        tool: selectedTool,
         global: options.local ? false : options.global,
         dryRun: options.dryRun,
         verbose: options.verbose,
@@ -312,171 +334,175 @@ program
     }
   });
 
-program
-  .command('preview-splash')
-  .description(t('commands.previewSplash.description'))
-  .option('--title <title>', t('commands.previewSplash.options.title'))
-  .option('--directory <path>', t('commands.previewSplash.options.directory'), process.cwd())
-  .action(async (options: any) => {
-    try {
-      await renderStartupSplash(options.directory, options.title);
-    } catch (error) {
-      ui.displayError(t('errors.cli.executionFailed'), error as Error);
-      process.exit(1);
-    }
-  });
-
-// Export Rules Command
-program
-  .command('export-rules')
-  .description(t('commands.export.description'))
-  .argument('[repo-path]', 'Repository path', process.cwd())
-  .option('-s, --source <dir>', t('commands.export.options.source'), '.context/docs')
-  .option('-t, --targets <paths...>', t('commands.export.options.targets'))
-  .option('--preset <name>', t('commands.export.options.preset'))
-  .option('--force', t('commands.export.options.force'))
-  .option('--dry-run', t('commands.export.options.dryRun'))
-  .option('-v, --verbose', t('commands.fill.options.verbose'))
-  .action(async (repoPath: string, options: any) => {
-    try {
-      const exportService = new ExportRulesService({
-        ui,
-        t,
-        version: VERSION,
-      });
-
-      await exportService.run(repoPath, {
-        source: options.source,
-        targets: options.targets,
-        preset: options.preset,
-        force: options.force,
-        dryRun: options.dryRun,
-        verbose: options.verbose,
-      });
-    } catch (error) {
-      ui.displayError(t('errors.cli.executionFailed'), error as Error);
-      process.exit(1);
-    }
-  });
-
-// Report Command
-program
-  .command('report')
-  .description(t('commands.report.description'))
-  .argument('[repo-path]', 'Repository path', process.cwd())
-  .option('-f, --format <format>', t('commands.report.options.format'), 'console')
-  .option('-o, --output <path>', t('commands.report.options.output'))
-  .option('--include-stack', t('commands.report.options.includeStack'))
-  .option('-v, --verbose', t('commands.fill.options.verbose'))
-  .action(async (repoPath: string, options: any) => {
-    try {
-      const reportService = new ReportService({
-        ui,
-        t,
-        version: VERSION,
-      });
-
-      const report = await reportService.generate(repoPath, {
-        format: options.format,
-        output: options.output,
-        includeStack: options.includeStack,
-        verbose: options.verbose,
-      });
-
-      await reportService.output(report, options);
-    } catch (error) {
-      ui.displayError(t('errors.cli.executionFailed'), error as Error);
-      process.exit(1);
-    }
-  });
-
-// Skill Commands
-const skillCommand = program
-  .command('skill')
-  .description(t('commands.skill.description'));
-
-skillCommand
-  .command('list')
-  .description(t('commands.skill.list.description'))
-  .argument('[repo-path]', 'Repository path', process.cwd())
-  .option('--json', 'Output as JSON')
-  .action(async (repoPath: string, options: any) => {
-    try {
-      const { createSkillRegistry } = await import('./workflow/skills');
-      const registry = createSkillRegistry(repoPath);
-      const discovered = await registry.discoverAll();
-
-      if (options.json) {
-        console.log(JSON.stringify({
-          builtIn: discovered.builtIn.map(s => s.slug),
-          custom: discovered.custom.map(s => s.slug),
-          total: discovered.all.length,
-        }, null, 2));
-        return;
+function registerPreviewSplashCommand(parent: Command, hidden = false): Command {
+  const command = parent
+    .command('preview-splash', hidden ? { hidden: true } : {})
+    .description(t('commands.previewSplash.description'))
+    .option('--title <title>', t('commands.previewSplash.options.title'))
+    .option('--directory <path>', t('commands.previewSplash.options.directory'), process.cwd())
+    .action(async (options: any) => {
+      try {
+        await renderStartupSplash(options.directory, options.title);
+      } catch (error) {
+        ui.displayError(t('errors.cli.executionFailed'), error as Error);
+        process.exit(1);
       }
+    });
+  return command;
+}
 
-      console.log('\nBuilt-in Skills:');
-      for (const skill of discovered.builtIn) {
-        const projectSkill = discovered.all.find(s => s.slug === skill.slug && s.path.includes('.context'));
-        const status = projectSkill ? '[project]' : '[available]';
-        console.log(`  ${skill.slug} ${status}`);
-        console.log(`    ${skill.metadata.description}`);
+function registerExportRulesCommand(parent: Command, hidden = false): Command {
+  const command = parent
+    .command('export-rules', hidden ? { hidden: true } : {})
+    .description(t('commands.export.description'))
+    .argument('[repo-path]', 'Repository path', process.cwd())
+    .option('-s, --source <dir>', t('commands.export.options.source'), '.context/docs')
+    .option('-t, --targets <paths...>', t('commands.export.options.targets'))
+    .option('--preset <name>', t('commands.export.options.preset'))
+    .option('--force', t('commands.export.options.force'))
+    .option('--dry-run', t('commands.export.options.dryRun'))
+    .option('-v, --verbose', t('commands.fill.options.verbose'))
+    .action(async (repoPath: string, options: any) => {
+      try {
+        const exportService = new ExportRulesService({
+          ui,
+          t,
+          version: VERSION,
+        });
+
+        await exportService.run(repoPath, {
+          source: options.source,
+          targets: options.targets,
+          preset: options.preset,
+          force: options.force,
+          dryRun: options.dryRun,
+          verbose: options.verbose,
+        });
+      } catch (error) {
+        ui.displayError(t('errors.cli.executionFailed'), error as Error);
+        process.exit(1);
       }
+    });
+  return command;
+}
 
-      if (discovered.custom.length > 0) {
-        console.log('\nCustom Skills:');
-        for (const skill of discovered.custom) {
-          console.log(`  ${skill.slug}`);
+function registerReportCommand(parent: Command, hidden = false): Command {
+  const command = parent
+    .command('report', hidden ? { hidden: true } : {})
+    .description(t('commands.report.description'))
+    .argument('[repo-path]', 'Repository path', process.cwd())
+    .option('-f, --format <format>', t('commands.report.options.format'), 'console')
+    .option('-o, --output <path>', t('commands.report.options.output'))
+    .option('--include-stack', t('commands.report.options.includeStack'))
+    .option('-v, --verbose', t('commands.fill.options.verbose'))
+    .action(async (repoPath: string, options: any) => {
+      try {
+        const reportService = new ReportService({
+          ui,
+          t,
+          version: VERSION,
+        });
+
+        const report = await reportService.generate(repoPath, {
+          format: options.format,
+          output: options.output,
+          includeStack: options.includeStack,
+          verbose: options.verbose,
+        });
+
+        await reportService.output(report, options);
+      } catch (error) {
+        ui.displayError(t('errors.cli.executionFailed'), error as Error);
+        process.exit(1);
+      }
+    });
+  return command;
+}
+
+function registerSkillCommands(parent: Command, hidden = false): Command {
+  const skillCommand = parent
+    .command('skill', hidden ? { hidden: true } : {})
+    .description(t('commands.skill.description'));
+
+  skillCommand
+    .command('list')
+    .description(t('commands.skill.list.description'))
+    .argument('[repo-path]', 'Repository path', process.cwd())
+    .option('--json', 'Output as JSON')
+    .action(async (repoPath: string, options: any) => {
+      try {
+        const { createSkillRegistry } = await import('./workflow/skills');
+        const registry = createSkillRegistry(repoPath);
+        const discovered = await registry.discoverAll();
+
+        if (options.json) {
+          console.log(JSON.stringify({
+            builtIn: discovered.builtIn.map(s => s.slug),
+            custom: discovered.custom.map(s => s.slug),
+            total: discovered.all.length,
+          }, null, 2));
+          return;
+        }
+
+        console.log('\nBuilt-in Skills:');
+        for (const skill of discovered.builtIn) {
+          const projectSkill = discovered.all.find(s => s.slug === skill.slug && s.path.includes('.context'));
+          const status = projectSkill ? '[project]' : '[available]';
+          console.log(`  ${skill.slug} ${status}`);
           console.log(`    ${skill.metadata.description}`);
         }
+
+        if (discovered.custom.length > 0) {
+          console.log('\nCustom Skills:');
+          for (const skill of discovered.custom) {
+            console.log(`  ${skill.slug}`);
+            console.log(`    ${skill.metadata.description}`);
+          }
+        }
+
+        console.log(`\nTotal: ${discovered.all.length} skills (${discovered.builtIn.length} built-in, ${discovered.custom.length} custom)`);
+      } catch (error) {
+        ui.displayError('Failed to list skills', error as Error);
+        process.exit(1);
       }
+    });
 
-      console.log(`\nTotal: ${discovered.all.length} skills (${discovered.builtIn.length} built-in, ${discovered.custom.length} custom)`);
-    } catch (error) {
-      ui.displayError('Failed to list skills', error as Error);
-      process.exit(1);
-    }
-  });
+  skillCommand
+    .command('export')
+    .description(t('commands.skill.export.description'))
+    .argument('[repo-path]', 'Repository path', process.cwd())
+    .option('-p, --preset <preset>', 'Export preset, for example: claude, github, windsurf, codex, antigravity, all', 'all')
+    .option('-f, --force', 'Overwrite existing files')
+    .option('--include-builtin', 'Include built-in skills even if not scaffolded')
+    .option('--dry-run', 'Preview changes without writing')
+    .action(async (repoPath: string, options: any) => {
+      try {
+        const { SkillExportService } = await import('./services/export/skillExportService');
+        const exportService = new SkillExportService({
+          ui,
+          t,
+          version: VERSION,
+        });
 
-skillCommand
-  .command('export')
-  .description(t('commands.skill.export.description'))
-  .argument('[repo-path]', 'Repository path', process.cwd())
-  .option('-p, --preset <preset>', 'Export preset: claude, gemini, codex, all', 'all')
-  .option('-f, --force', 'Overwrite existing files')
-  .option('--include-builtin', 'Include built-in skills even if not scaffolded')
-  .option('--dry-run', 'Preview changes without writing')
-  .action(async (repoPath: string, options: any) => {
-    try {
-      const { SkillExportService } = await import('./services/export/skillExportService');
-      const exportService = new SkillExportService({
-        ui,
-        t,
-        version: VERSION,
-      });
+        const result = await exportService.run(repoPath, {
+          preset: options.preset,
+          force: options.force,
+          includeBuiltIn: options.includeBuiltin,
+          dryRun: options.dryRun,
+        });
 
-      const result = await exportService.run(repoPath, {
-        preset: options.preset,
-        force: options.force,
-        includeBuiltIn: options.includeBuiltin,
-        dryRun: options.dryRun,
-      });
-
-      if (options.dryRun) {
-        ui.displayInfo('Dry run', 'No files were written');
-      } else {
-        ui.displaySuccess(`Exported ${result.skillsExported.length} skills to ${result.targets.length} targets`);
+        if (options.dryRun) {
+          ui.displayInfo('Dry run', 'No files were written');
+        } else {
+          ui.displaySuccess(`Exported ${result.skillsExported.length} skills to ${result.targets.length} targets`);
+        }
+      } catch (error) {
+        ui.displayError('Failed to export skills', error as Error);
+        process.exit(1);
       }
-    } catch (error) {
-      ui.displayError('Failed to export skills', error as Error);
-      process.exit(1);
-    }
-  });
-
-// PREVC Workflow Commands
-const workflowCommand = program
-  .command('workflow')
-  .description('PREVC workflow management (Planning, Review, Execution, Validation, Confirmation)');
+    });
+  return skillCommand;
+}
 
 // Helper to create workflow service dependencies
 const getWorkflowDeps = (): WorkflowServiceDependencies => ({
@@ -487,159 +513,180 @@ const getWorkflowDeps = (): WorkflowServiceDependencies => ({
   }
 });
 
-workflowCommand
-  .command('init <name>')
-  .description('Initialize a new PREVC workflow')
-  .option('-d, --description <text>', 'Project description for scale detection')
-  .option('-s, --scale <scale>', 'Project scale: QUICK, SMALL, MEDIUM, LARGE')
-  .option('-r, --repo-path <path>', 'Repository path', process.cwd())
-  .action(async (name: string, options: any) => {
-    try {
-      const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
-      const status = await workflowService.init({
-        name,
-        description: options.description,
-        scale: options.scale
-      });
+function registerWorkflowCommands(parent: Command, hidden = false): Command {
+  const workflowCommand = parent
+    .command('workflow', hidden ? { hidden: true } : {})
+    .description('PREVC workflow management (Planning, Review, Execution, Validation, Confirmation)');
 
-      ui.displaySuccess(`Workflow PREVC initialized: ${name}`);
-      ui.displayInfo('Scale', getScaleName(status.project.scale as any));
-      ui.displayInfo('Current Phase', `${status.project.current_phase} - ${PHASE_NAMES_PT[status.project.current_phase]}`);
-    } catch (error) {
-      ui.displayError('Failed to initialize workflow', error as Error);
-      process.exit(1);
-    }
-  });
+  workflowCommand
+    .command('init <name>')
+    .description('Initialize a new PREVC workflow')
+    .option('-d, --description <text>', 'Project description for scale detection')
+    .option('-s, --scale <scale>', 'Project scale: QUICK, SMALL, MEDIUM, LARGE')
+    .option('-r, --repo-path <path>', 'Repository path', process.cwd())
+    .action(async (name: string, options: any) => {
+      try {
+        const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
+        const status = await workflowService.init({
+          name,
+          description: options.description,
+          scale: options.scale
+        });
 
-workflowCommand
-  .command('status')
-  .description('Show current workflow status')
-  .option('-r, --repo-path <path>', 'Repository path', process.cwd())
-  .action(async (options: any) => {
-    try {
-      const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
-
-      if (!await workflowService.hasWorkflow()) {
-        ui.displayError('No workflow found. Run "workflow init <name>" first.');
+        ui.displaySuccess(`Workflow PREVC initialized: ${name}`);
+        ui.displayInfo('Scale', getScaleName(status.project.scale as any));
+        ui.displayInfo('Current Phase', `${status.project.current_phase} - ${PHASE_NAMES_PT[status.project.current_phase]}`);
+      } catch (error) {
+        ui.displayError('Failed to initialize workflow', error as Error);
         process.exit(1);
       }
+    });
 
-      const formattedStatus = await workflowService.getFormattedStatus();
-      console.log(formattedStatus);
+  workflowCommand
+    .command('status')
+    .description('Show current workflow status')
+    .option('-r, --repo-path <path>', 'Repository path', process.cwd())
+    .action(async (options: any) => {
+      try {
+        const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
 
-      const actions = await workflowService.getRecommendedActions();
-      if (actions.length > 0) {
-        console.log('\nRecommended actions:');
-        actions.forEach((action, i) => console.log(`  ${i + 1}. ${action}`));
-      }
-    } catch (error) {
-      ui.displayError('Failed to get workflow status', error as Error);
-      process.exit(1);
-    }
-  });
+        if (!await workflowService.hasWorkflow()) {
+          ui.displayError('No workflow found. Run "workflow init <name>" first.');
+          process.exit(1);
+        }
 
-workflowCommand
-  .command('advance')
-  .description('Complete current phase and advance to next')
-  .option('-r, --repo-path <path>', 'Repository path', process.cwd())
-  .option('-o, --outputs <files...>', 'Output files generated in current phase')
-  .action(async (options: any) => {
-    try {
-      const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
+        const formattedStatus = await workflowService.getFormattedStatus();
+        console.log(formattedStatus);
 
-      if (!await workflowService.hasWorkflow()) {
-        ui.displayError('No workflow found. Run "workflow init <name>" first.');
+        const actions = await workflowService.getRecommendedActions();
+        if (actions.length > 0) {
+          console.log('\nRecommended actions:');
+          actions.forEach((action, i) => console.log(`  ${i + 1}. ${action}`));
+        }
+      } catch (error) {
+        ui.displayError('Failed to get workflow status', error as Error);
         process.exit(1);
       }
+    });
 
-      const nextPhase = await workflowService.advance(options.outputs);
+  workflowCommand
+    .command('advance')
+    .description('Complete current phase and advance to next')
+    .option('-r, --repo-path <path>', 'Repository path', process.cwd())
+    .option('-o, --outputs <files...>', 'Output files generated in current phase')
+    .action(async (options: any) => {
+      try {
+        const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
 
-      if (nextPhase) {
-        ui.displaySuccess(`Advanced to phase: ${nextPhase} - ${PHASE_NAMES_PT[nextPhase]}`);
-      } else {
-        ui.displaySuccess('Workflow completed!');
-      }
-    } catch (error) {
-      ui.displayError('Failed to advance workflow', error as Error);
-      process.exit(1);
-    }
-  });
+        if (!await workflowService.hasWorkflow()) {
+          ui.displayError('No workflow found. Run "workflow init <name>" first.');
+          process.exit(1);
+        }
 
-workflowCommand
-  .command('handoff <from> <to>')
-  .description('Perform handoff between roles')
-  .option('-r, --repo-path <path>', 'Repository path', process.cwd())
-  .option('-a, --artifacts <files...>', 'Artifacts to hand off')
-  .action(async (from: string, to: string, options: any) => {
-    try {
-      const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
+        const nextPhase = await workflowService.advance(options.outputs);
 
-      if (!await workflowService.hasWorkflow()) {
-        ui.displayError('No workflow found. Run "workflow init <name>" first.');
+        if (nextPhase) {
+          ui.displaySuccess(`Advanced to phase: ${nextPhase} - ${PHASE_NAMES_PT[nextPhase]}`);
+        } else {
+          ui.displaySuccess('Workflow completed!');
+        }
+      } catch (error) {
+        ui.displayError('Failed to advance workflow', error as Error);
         process.exit(1);
       }
+    });
 
-      await workflowService.handoff(from as PrevcRole, to as PrevcRole, options.artifacts || []);
-      ui.displaySuccess(`Handoff: ${ROLE_DISPLAY_NAMES[from as PrevcRole]} → ${ROLE_DISPLAY_NAMES[to as PrevcRole]}`);
-    } catch (error) {
-      ui.displayError('Failed to perform handoff', error as Error);
-      process.exit(1);
-    }
-  });
+  workflowCommand
+    .command('handoff <from> <to>')
+    .description('Perform handoff between roles')
+    .option('-r, --repo-path <path>', 'Repository path', process.cwd())
+    .option('-a, --artifacts <files...>', 'Artifacts to hand off')
+    .action(async (from: string, to: string, options: any) => {
+      try {
+        const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
 
-workflowCommand
-  .command('collaborate <topic>')
-  .description('Start a collaboration session between roles')
-  .option('-r, --repo-path <path>', 'Repository path', process.cwd())
-  .option('-p, --participants <roles...>', 'Participating roles')
-  .action(async (topic: string, options: any) => {
-    try {
-      const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
+        if (!await workflowService.hasWorkflow()) {
+          ui.displayError('No workflow found. Run "workflow init <name>" first.');
+          process.exit(1);
+        }
 
-      const session = await workflowService.startCollaboration(
-        topic,
-        options.participants as PrevcRole[]
-      );
-
-      ui.displaySuccess(`Collaboration started: ${topic}`);
-      ui.displayInfo('Session ID', session.getId());
-      ui.displayInfo('Participants', session.getParticipantNames().join(', '));
-      console.log('\nUse MCP tools to contribute and synthesize the collaboration.');
-    } catch (error) {
-      ui.displayError('Failed to start collaboration', error as Error);
-      process.exit(1);
-    }
-  });
-
-workflowCommand
-  .command('role <action> <role>')
-  .description('Manage role status (start/complete)')
-  .option('-r, --repo-path <path>', 'Repository path', process.cwd())
-  .option('-o, --outputs <files...>', 'Output files (for complete action)')
-  .action(async (action: string, role: string, options: any) => {
-    try {
-      const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
-
-      if (!await workflowService.hasWorkflow()) {
-        ui.displayError('No workflow found. Run "workflow init <name>" first.');
+        await workflowService.handoff(from as PrevcRole, to as PrevcRole, options.artifacts || []);
+        ui.displaySuccess(`Handoff: ${ROLE_DISPLAY_NAMES[from as PrevcRole]} → ${ROLE_DISPLAY_NAMES[to as PrevcRole]}`);
+      } catch (error) {
+        ui.displayError('Failed to perform handoff', error as Error);
         process.exit(1);
       }
+    });
 
-      if (action === 'start') {
-        await workflowService.startRole(role as PrevcRole);
-        ui.displaySuccess(`Started role: ${ROLE_DISPLAY_NAMES[role as PrevcRole]}`);
-      } else if (action === 'complete') {
-        await workflowService.completeRole(role as PrevcRole, options.outputs || []);
-        ui.displaySuccess(`Completed role: ${ROLE_DISPLAY_NAMES[role as PrevcRole]}`);
-      } else {
-        ui.displayError(`Unknown action: ${action}. Use 'start' or 'complete'.`);
+  workflowCommand
+    .command('collaborate <topic>')
+    .description('Start a collaboration session between roles')
+    .option('-r, --repo-path <path>', 'Repository path', process.cwd())
+    .option('-p, --participants <roles...>', 'Participating roles')
+    .action(async (topic: string, options: any) => {
+      try {
+        const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
+
+        const session = await workflowService.startCollaboration(
+          topic,
+          options.participants as PrevcRole[]
+        );
+
+        ui.displaySuccess(`Collaboration started: ${topic}`);
+        ui.displayInfo('Session ID', session.getId());
+        ui.displayInfo('Participants', session.getParticipantNames().join(', '));
+        console.log('\nUse MCP tools to contribute and synthesize the collaboration.');
+      } catch (error) {
+        ui.displayError('Failed to start collaboration', error as Error);
         process.exit(1);
       }
-    } catch (error) {
-      ui.displayError('Failed to manage role', error as Error);
-      process.exit(1);
-    }
-  });
+    });
+
+  workflowCommand
+    .command('role <action> <role>')
+    .description('Manage role status (start/complete)')
+    .option('-r, --repo-path <path>', 'Repository path', process.cwd())
+    .option('-o, --outputs <files...>', 'Output files (for complete action)')
+    .action(async (action: string, role: string, options: any) => {
+      try {
+        const workflowService = new WorkflowService(options.repoPath, getWorkflowDeps());
+
+        if (!await workflowService.hasWorkflow()) {
+          ui.displayError('No workflow found. Run "workflow init <name>" first.');
+          process.exit(1);
+        }
+
+        if (action === 'start') {
+          await workflowService.startRole(role as PrevcRole);
+          ui.displaySuccess(`Started role: ${ROLE_DISPLAY_NAMES[role as PrevcRole]}`);
+        } else if (action === 'complete') {
+          await workflowService.completeRole(role as PrevcRole, options.outputs || []);
+          ui.displaySuccess(`Completed role: ${ROLE_DISPLAY_NAMES[role as PrevcRole]}`);
+        } else {
+          ui.displayError(`Unknown action: ${action}. Use 'start' or 'complete'.`);
+          process.exit(1);
+        }
+      } catch (error) {
+        ui.displayError('Failed to manage role', error as Error);
+        process.exit(1);
+      }
+    });
+  return workflowCommand;
+}
+
+const adminCommand = program
+  .command('admin')
+  .description('Advanced and low-level commands that are not part of the primary sync-focused CLI surface');
+
+registerExportRulesCommand(program);
+registerReportCommand(adminCommand);
+registerReportCommand(program, true);
+registerSkillCommands(adminCommand);
+registerSkillCommands(program, true);
+registerWorkflowCommands(adminCommand);
+registerWorkflowCommands(program, true);
+registerPreviewSplashCommand(adminCommand);
+registerPreviewSplashCommand(program, true);
 
 async function selectLocale(): Promise<void> {
   const locale = await themedSelect<Locale>({
@@ -955,8 +1002,8 @@ async function runQuickSync(): Promise<void> {
       skipSkills: false,
       skipDocs: false,
       agentTargets: ['claude', 'github'],
-      skillTargets: ['claude', 'gemini', 'codex'],
-      docTargets: ['cursor', 'claude', 'agents'],
+      skillTargets: ['claude', 'github', 'windsurf', 'codex', 'antigravity'],
+      docTargets: ['cursor', 'claude', 'github', 'gemini', 'agents'],
       force: false,
       dryRun: false,
       verbose: false,
@@ -1012,8 +1059,11 @@ async function runQuickSync(): Promise<void> {
           message: t('prompts.quickSync.selectSkillTargets'),
           choices: [
             { name: '.claude/skills (Claude Code)', value: 'claude', checked: true },
-            { name: '.gemini/skills (Gemini CLI)', value: 'gemini', checked: true },
-            { name: '.codex/skills (Codex CLI)', value: 'codex', checked: true },
+            { name: '.github/skills (GitHub Copilot)', value: 'github', checked: true },
+            { name: '.windsurf/skills (Windsurf)', value: 'windsurf', checked: true },
+            { name: '.codex/skills (Codex compatibility)', value: 'codex', checked: true },
+            { name: '.agents/workflows (Google Antigravity)', value: 'antigravity', checked: true },
+            { name: '.gemini/skills (Gemini compatibility)', value: 'gemini', checked: false },
           ],
         },
       ]);
@@ -1027,10 +1077,12 @@ async function runQuickSync(): Promise<void> {
           name: 'targets',
           message: t('prompts.quickSync.selectDocTargets'),
           choices: [
-            { name: '.cursorrules (Cursor AI)', value: 'cursor', checked: true },
+            { name: '.cursor/rules (Cursor AI)', value: 'cursor', checked: true },
             { name: 'CLAUDE.md (Claude Code)', value: 'claude', checked: true },
+            { name: '.github/copilot-instructions.md (GitHub Copilot)', value: 'github', checked: true },
+            { name: 'GEMINI.md (Gemini CLI)', value: 'gemini', checked: true },
             { name: 'AGENTS.md (Universal)', value: 'agents', checked: true },
-            { name: '.windsurfrules (Windsurf)', value: 'windsurf', checked: false },
+            { name: '.windsurf/rules (Windsurf)', value: 'windsurf', checked: false },
             { name: '.clinerules (Cline)', value: 'cline', checked: false },
             { name: 'CONVENTIONS.md (Aider)', value: 'aider', checked: false },
           ],
@@ -1244,11 +1296,6 @@ function handleGracefulExit(): void {
   ui.displaySuccess(t('success.interactive.goodbye'));
   process.exit(0);
 }
-
-// Handle SIGINT (Ctrl+C) at process level
-process.on('SIGINT', () => {
-  handleGracefulExit();
-});
 
 if (require.main === module) {
   main().catch(error => {

@@ -1,5 +1,8 @@
 import { ScaffoldStructure } from '../types';
 
+const SEMANTIC_SNAPSHOT_GUIDANCE =
+  'Use `context({ action: "getMap", section: "all" })` to inspect the generated semantic snapshot for stack, architecture layers, key files, and dependency hotspots.';
+
 export const projectOverviewStructure: ScaffoldStructure = {
   fileType: 'doc',
   documentName: 'project-overview',
@@ -23,24 +26,24 @@ The codebase is organized to support [main use case] with a focus on [key qualit
       heading: 'Codebase Reference',
       order: 2,
       contentType: 'prose',
-      guidance: 'Add a callout pointing to codebase-map.json for detailed symbol counts, architecture layers, and dependencies. Do NOT list all symbols inline.',
-      exampleContent: '> **Detailed Analysis**: For complete symbol counts, architecture layers, and dependency graphs, see [`codebase-map.json`](./codebase-map.json).',
+      guidance: 'Add a callout pointing to the semantic snapshot for generated stack, architecture layers, key files, and dependency hotspots.',
+      exampleContent: '> **Semantic Snapshot**: Use `context({ action: "getMap", section: "all" })` for generated stack, architecture layers, key files, and dependency hotspots.',
       required: true,
       headingLevel: 2,
-      defaultContent: `> **Detailed Analysis**: For complete symbol counts, architecture layers, and dependency graphs, see [\`codebase-map.json\`](./codebase-map.json).`,
+      defaultContent: `> **Semantic Snapshot**: ${SEMANTIC_SNAPSHOT_GUIDANCE}`,
     },
     {
       heading: 'Quick Facts',
       order: 3,
       contentType: 'list',
-      guidance: 'List root directory path, primary languages (with file counts), and key entry points. Reference codebase-map.json for full analysis.',
-      exampleContent: '- Root: `/path/to/repo`\n- Languages: TypeScript (150 files), Python (20 files)\n- Entry: `src/index.ts`\n- Full analysis: [`codebase-map.json`](./codebase-map.json)',
+      guidance: 'List root directory path, primary languages, and key entry points. Reference the semantic snapshot for the generated summary.',
+      exampleContent: '- Root: `/path/to/repo`\n- Languages: TypeScript, Python\n- Entry: `src/index.ts`\n- Semantic snapshot: `context({ action: "getMap", section: "all" })`',
       required: true,
       headingLevel: 2,
       defaultContent: `- **Root**: \`./\`
 - **Primary Language**: [Language] ([X] files)
 - **Entry Point**: \`src/index.ts\` or \`src/main.ts\`
-- **Full Analysis**: [\`codebase-map.json\`](./codebase-map.json)`,
+- **Semantic Snapshot**: \`context({ action: "getMap", section: "all" })\``,
     },
     {
       heading: 'Entry Points',
@@ -57,12 +60,10 @@ The codebase is organized to support [main use case] with a focus on [key qualit
       heading: 'Key Exports',
       order: 5,
       contentType: 'list',
-      guidance: 'Reference codebase-map.json for the complete list.',
+      guidance: 'Summarize the main public entry points and exported surfaces. Do not rely only on the semantic snapshot for a full symbol inventory.',
       required: true,
       headingLevel: 2,
-      defaultContent: `See [\`codebase-map.json\`](./codebase-map.json) for the complete list of exported symbols.
-
-Key public APIs:
+      defaultContent: `Key public APIs:
 - [List main exported classes/functions]`,
     },
     {
@@ -157,5 +158,5 @@ Key public APIs:
 - Check [Testing Strategy](./testing-strategy.md) for quality requirements`,
     },
   ],
-  linkTo: ['architecture.md', 'development-workflow.md', 'tooling.md', 'codebase-map.json'],
+  linkTo: ['architecture.md', 'development-workflow.md', 'tooling.md'],
 };

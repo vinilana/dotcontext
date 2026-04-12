@@ -89,7 +89,7 @@ export class ReverseQuickSyncService {
       try {
         this.ui.startSpinner('Importing rules...');
 
-        await this.importRulesService.run(
+        const rulesResult = await this.importRulesService.run(
           {
             force: resolvedOptions.force,
             dryRun: resolvedOptions.dryRun,
@@ -100,9 +100,10 @@ export class ReverseQuickSyncService {
           absolutePath
         );
 
-        // Note: ImportRulesService doesn't return detailed counts,
-        // so we use detection counts as approximation
-        result.rulesImported = detection.summary.totalRules;
+        result.rulesImported = rulesResult.filesCreated;
+        result.filesSkipped += rulesResult.filesSkipped;
+        result.filesFailed += rulesResult.filesFailed;
+        result.errors.push(...rulesResult.errors);
         this.ui.updateSpinner(`Rules imported: ${result.rulesImported}`, 'success');
       } catch (error) {
         this.ui.updateSpinner('Failed to import rules', 'fail');
@@ -120,7 +121,7 @@ export class ReverseQuickSyncService {
       try {
         this.ui.startSpinner('Importing agents...');
 
-        await this.importAgentsService.run(
+        const agentsResult = await this.importAgentsService.run(
           {
             force: resolvedOptions.force,
             dryRun: resolvedOptions.dryRun,
@@ -130,7 +131,10 @@ export class ReverseQuickSyncService {
           absolutePath
         );
 
-        result.agentsImported = detection.summary.totalAgents;
+        result.agentsImported = agentsResult.filesCreated;
+        result.filesSkipped += agentsResult.filesSkipped;
+        result.filesFailed += agentsResult.filesFailed;
+        result.errors.push(...agentsResult.errors);
         this.ui.updateSpinner(`Agents imported: ${result.agentsImported}`, 'success');
       } catch (error) {
         this.ui.updateSpinner('Failed to import agents', 'fail');

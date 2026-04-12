@@ -10,6 +10,9 @@ export type RuleType =
   | 'aider'
   | 'continue'
   | 'codex'
+  | 'gemini'
+  | 'antigravity'
+  | 'trae'
   | 'zed'
   | 'generic';
 

@@ -2,7 +2,7 @@
  * Gateway Tools Module
  *
  * Exports all gateway handlers, types, and response utilities.
- * This module consolidates tools into 9 MCP tools (5 gateways + 4 dedicated workflow tools).
+ * This module consolidates MCP tools into gateway and dedicated workflow entry points.
  *
  * Note: Project tools (project-setup, project-report) have been removed.
  * Use context({ action: "init" }) for scaffolding and workflow-init for workflows instead.
@@ -27,12 +27,14 @@ export type {
   PlanAction,
   AgentAction,
   SkillAction,
+  HarnessAction,
   ExploreParams,
   ContextParams,
   SyncParams,
   PlanParams,
   AgentParams,
   SkillParams,
+  HarnessParams,
 } from './types';
 
 // Consolidated gateway handlers
@@ -49,6 +51,7 @@ export { handleSync, type SyncOptions } from './sync';
 export { handlePlan, type PlanOptions } from './plan';
 export { handleAgent, type AgentOptions } from './agent';
 export { handleSkill, type SkillOptions } from './skill';
+export { handleHarness, type HarnessOptions } from './harness';
 
 // Metrics
 export {

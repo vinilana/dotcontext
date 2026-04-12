@@ -4,7 +4,7 @@ export const SUPPORTED_LOCALES: Locale[] = ['en', 'pt-BR'];
 export const DEFAULT_LOCALE: Locale = 'en';
 
 const englishMessages = {
-  'cli.description': 'Manage MCP integration, workflow, sync, and context imports for your repository',
+  'cli.description': 'Sync .context assets, reverse-sync tool state, and install MCP integrations for your repository',
   'global.options.lang': 'Language for CLI output (en or pt-BR)',
   'ui.version': 'Version {version}',
   'ui.projectConfiguration.title': 'Project Configuration',
@@ -553,7 +553,7 @@ export type TranslationKey = keyof typeof englishMessages;
 type TranslationDictionary = Record<TranslationKey, string>;
 
 const portugueseMessages: TranslationDictionary = {
-  'cli.description': 'Gerencie integração MCP, workflow, sincronização e importação de contexto para o seu repositório',
+  'cli.description': 'Sincronize assets de .context, faça reverse-sync do estado das ferramentas e instale integrações MCP para o seu repositório',
   'global.options.lang': 'Idioma para a saída do CLI (en ou pt-BR)',
   'ui.version': 'Versão {version}',
   'ui.projectConfiguration.title': 'Configuração do Projeto',

@@ -27,7 +27,7 @@ export class ImportRulesService {
     this.detector = new RulesDetector();
   }
 
-  async run(rawOptions: ImportRulesCommandFlags, repoPath: string = process.cwd()): Promise<void> {
+  async run(rawOptions: ImportRulesCommandFlags, repoPath: string = process.cwd()): Promise<ImportResult> {
     const options = await this.resolveOptions(rawOptions, repoPath);
 
     this.displayConfig(options);
@@ -48,7 +48,13 @@ export class ImportRulesService {
 
     if (detectionResult.files.length === 0) {
       this.ui.displayWarning(this.t('warnings.import.noRulesFound'));
-      return;
+      return {
+        targetPath: options.targetPath,
+        filesCreated: 0,
+        filesSkipped: 0,
+        filesFailed: 0,
+        errors: [],
+      };
     }
 
     this.ui.displayInfo(
@@ -70,6 +76,8 @@ export class ImportRulesService {
     if (!options.dryRun) {
       this.ui.displaySuccess(this.t('success.import.completed'));
     }
+
+    return result;
   }
 
   private async resolveOptions(

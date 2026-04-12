@@ -75,33 +75,40 @@ Create a new skill by adding a directory with a \`SKILL.md\` file:
 \`\`\`
 .context/skills/
 └── my-skill/
-    ├── SKILL.md          # Required: skill definition
-    └── templates/        # Optional: helper resources
-        └── checklist.md
+    ├── SKILL.md          # Required: source skill definition
+    ├── scripts/          # Optional: deterministic helpers
+    ├── references/       # Optional: load-on-demand details
+    └── assets/           # Optional: output resources
 \`\`\`
 
-### SKILL.md Format
+### Skill Anatomy
 
-\`\`\`yaml
+\`\`\`md
+The source file under \`.context/skills/\` keeps internal scaffold metadata so dotcontext can track fill status.
+When exported to AI-tool skill directories, the portable frontmatter should keep only:
+
 ---
 name: my-skill
-description: When to use this skill
-phases: [P, E, V]  # Optional: PREVC phases
-mode: false        # Optional: mode command?
+description: Describe what the skill does and the concrete triggers for when to use it
 ---
 
-# My Skill
-
-## When to Use
-[Description of when this skill applies]
-
-## Instructions
+## Workflow
 1. Step one
 2. Step two
 
 ## Examples
-[Usage examples]
 \`\`\`
+[Short example]
+\`\`\`
+
+## Quality Bar
+- List the checks and constraints that keep the skill reliable
+
+## Resource Strategy
+- Explain when to add \`scripts/\`, \`references/\`, or \`assets/\`
+\`\`\`
+
+Keep activation language in the description frontmatter, keep the body concise, and avoid extra docs such as \`README.md\` or \`CHANGELOG.md\` inside the skill folder.
 
 ## PREVC Phase Mapping
 

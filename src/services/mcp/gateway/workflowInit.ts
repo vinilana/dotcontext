@@ -60,12 +60,13 @@ export async function handleWorkflowInit(
       archivePrevious: params.archive_previous,
     });
 
-    const statusFilePath = path.join(contextPath, 'workflow', 'status.yaml');
+    const workflowStatePath = path.join(contextPath, 'harness', 'workflows', 'prevc.json');
     const settings = await service.getSettings();
     const scale = getScaleName(status.project.scale as ProjectScale);
     const isAutonomous = settings.autonomous_mode;
     const requiresPlan = settings.require_plan;
     const orchestration = await service.getPhaseOrchestration(status.project.current_phase);
+    const harness = await service.getHarnessStatus();
 
     // Build actionable enhancement prompt based on workflow state
     const enhancementPrompt = buildWorkflowEnhancementPrompt({
@@ -96,9 +97,14 @@ export async function handleWorkflowInit(
         require_plan: settings.require_plan,
         require_approval: settings.require_approval,
       },
-      statusFilePath,
+      workflowStatePath,
       contextPath,
       orchestration,
+      harness: harness ? {
+        sessionId: harness.binding.sessionId,
+        sessionStatus: harness.session.status,
+        harnessPath: path.join(contextPath, 'harness'),
+      } : null,
 
       // Action signals for AI agents
       _actionRequired: true,

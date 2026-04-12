@@ -1,13 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { SmartDefaults } from './types';
-import type { AIProvider } from '../../types';
-import {
-  detectProviderFromEnv,
-  getApiKeyFromEnv,
-  getModelFromEnv,
-  DEFAULT_MODELS
-} from '../../services/ai/providerFactory';
 
 /**
  * Detects smart defaults from environment and project structure
@@ -15,11 +8,6 @@ import {
 export async function detectSmartDefaults(basePath?: string): Promise<SmartDefaults> {
   const repoPath = basePath || process.cwd();
   const outputDir = path.resolve(repoPath, '.context');
-
-  // Detect provider from environment
-  const provider = detectProviderFromEnv() ?? undefined;
-  const apiKeyConfigured = provider ? !!getApiKeyFromEnv(provider) : false;
-  const model = provider ? (getModelFromEnv(provider) ?? DEFAULT_MODELS[provider]) : undefined;
 
   // Check if scaffold exists
   const scaffoldExists = fs.existsSync(outputDir);
@@ -30,9 +18,6 @@ export async function detectSmartDefaults(basePath?: string): Promise<SmartDefau
   return {
     repoPath,
     outputDir,
-    provider,
-    model,
-    apiKeyConfigured,
     scaffoldExists,
     detectedLanguages
   };
@@ -72,19 +57,4 @@ async function detectProjectLanguages(repoPath: string): Promise<string[]> {
   }
 
   return languages;
-}
-
-/**
- * Gets the list of configured providers from environment
- */
-export function getConfiguredProviders(): AIProvider[] {
-  const providers: AIProvider[] = ['openrouter', 'openai', 'anthropic', 'google'];
-  return providers.filter((p) => !!getApiKeyFromEnv(p));
-}
-
-/**
- * Checks if any LLM provider is configured
- */
-export function hasAnyProviderConfigured(): boolean {
-  return getConfiguredProviders().length > 0;
 }

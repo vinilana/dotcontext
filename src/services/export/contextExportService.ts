@@ -14,7 +14,7 @@ import {
 import { ExportRulesService } from './exportRulesService';
 import { SkillExportService } from './skillExportService';
 import { SyncService } from '../sync';
-import type { PresetName } from '../sync/types';
+import type { PresetName, SyncRunResult } from '../sync/types';
 
 export type ContextExportServiceDependencies = BaseDependencies;
 
@@ -99,7 +99,7 @@ export class ContextExportService {
       try {
         this.deps.ui.startSpinner('Exporting agents...');
         const syncService = new SyncService(this.deps);
-        await syncService.run({
+        const syncResult: SyncRunResult = await syncService.run({
           source: agentsPath,
           preset: preset as PresetName,
           mode: options.agentMode || 'symlink',
@@ -107,8 +107,8 @@ export class ContextExportService {
           dryRun: options.dryRun || false,
           verbose: options.verbose || false,
         });
-        // SyncService doesn't return count, so we mark as 1 if successful
-        result.agentsExported = 1;
+        result.agentsExported = syncResult.filesCreated;
+        result.targets.push(...syncResult.targets.map((target) => target.targetPath));
         this.deps.ui.stopSpinner();
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
