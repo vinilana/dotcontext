@@ -30,10 +30,10 @@ export interface CollaborationSessionRecord {
   contributions: Array<{
     role: PrevcRole;
     message: string;
-    timestamp: string;
+    timestamp: number;
   }>;
   status: CollaborationSessionLifecycle;
-  startedAt: string;
+  startedAt: number;
 }
 
 export interface CollaborationSessionStore {
@@ -119,10 +119,10 @@ export class CollaborationSession {
       contributions: this.contributions.map((contribution) => ({
         role: contribution.role,
         message: contribution.message,
-        timestamp: contribution.timestamp.toISOString(),
+        timestamp: contribution.timestamp.getTime(),
       })),
       status: this.status,
-      startedAt: this.startedAt.toISOString(),
+      startedAt: this.startedAt.getTime(),
     };
   }
 
@@ -421,16 +421,6 @@ export class CollaborationManager {
     this.store.saveSessions(
       Array.from(this.sessions.values()).map((session) => session.toRecord())
     );
-  }
-
-  /**
-   * Create a new collaboration session
-   */
-  createSession(topic: string, participants?: PrevcRole[]): CollaborationSession {
-    const session = new CollaborationSession(topic, participants);
-    this.sessions.set(session.getId(), session);
-    this.persistSessions();
-    return session;
   }
 
   /**
