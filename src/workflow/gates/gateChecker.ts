@@ -22,6 +22,27 @@ export interface GateStatus {
   passed: boolean;
   /** Whether the gate is required for this transition */
   required: boolean;
+  /** For execution_evidence: sensors declared by the task contract that never ran/passed */
+  missingSensors?: string[];
+  /** For execution_evidence: required artifacts never recorded */
+  missingArtifacts?: string[];
+  /** For execution_evidence: human-readable blocking reasons */
+  blockingFindings?: string[];
+}
+
+/**
+ * Execution evidence summary consumed by the gate checker.
+ * Shaped to mirror `HarnessTaskCompletionResult` while keeping gateChecker
+ * transport-agnostic (no import of the harness service).
+ */
+export interface ExecutionEvidence {
+  /** True when the active task contract has no missing sensors/artifacts */
+  canComplete: boolean;
+  missingSensors: string[];
+  missingArtifacts: string[];
+  blockingFindings: string[];
+  /** Indicates no active task contract was found for the current phase */
+  hasActiveContract: boolean;
 }
 
 /**
@@ -92,7 +113,8 @@ export class WorkflowGateChecker {
    */
   checkGates(
     status: PrevcStatus,
-    nextPhase?: PrevcPhase
+    nextPhase?: PrevcPhase,
+    executionEvidence?: ExecutionEvidence
   ): GateCheckResult {
     const currentPhase = status.project.current_phase;
 
@@ -108,37 +130,30 @@ export class WorkflowGateChecker {
     }
 
     const targetPhase = nextPhase || this.getNextPhaseForStatus(status);
-
-    // Get effective settings (use defaults if not set)
     const settings = this.getEffectiveSettings(status);
-
-    // If autonomous mode is enabled, all gates pass
-    if (settings.autonomous_mode) {
-      return {
-        canAdvance: true,
-        gates: {
-          plan_required: { passed: true, required: false },
-          approval_required: { passed: true, required: false },
-        },
-      };
-    }
 
     const result: GateCheckResult = {
       canAdvance: true,
       gates: {
         plan_required: { passed: true, required: false },
         approval_required: { passed: true, required: false },
+        execution_evidence: { passed: true, required: false },
       },
     };
 
+    // autonomous_mode suppresses only plan_required / approval_required.
+    // Execution evidence is never suppressed — "autonomous" does not mean
+    // "skip verification that the work actually happened".
+    const suppressPolicyGates = settings.autonomous_mode;
+
     // Check P → R transition: requires linked plan
-    if (currentPhase === 'P' && targetPhase === 'R') {
+    if (!suppressPolicyGates && currentPhase === 'P' && targetPhase === 'R') {
       if (settings.require_plan) {
         result.gates.plan_required.required = true;
         const hasPlan = this.hasLinkedPlan(status);
         result.gates.plan_required.passed = hasPlan;
 
-        if (!hasPlan) {
+        if (!hasPlan && result.canAdvance) {
           result.canAdvance = false;
           result.blockingGate = 'plan_required';
           result.blockingReason = 'A plan must be linked before advancing from Planning to Review phase.';
@@ -148,13 +163,13 @@ export class WorkflowGateChecker {
     }
 
     // Check R → E transition: requires plan approval
-    if (currentPhase === 'R' && targetPhase === 'E') {
+    if (!suppressPolicyGates && currentPhase === 'R' && targetPhase === 'E') {
       if (settings.require_approval) {
         result.gates.approval_required.required = true;
         const isApproved = this.isPlanApproved(status);
         result.gates.approval_required.passed = isApproved;
 
-        if (!isApproved) {
+        if (!isApproved && result.canAdvance) {
           result.canAdvance = false;
           result.blockingGate = 'approval_required';
           result.blockingReason = 'The plan must be approved before advancing from Review to Execution phase.';
@@ -163,7 +178,53 @@ export class WorkflowGateChecker {
       }
     }
 
+    // Execution evidence gate: E → V must show that the active task contract
+    // can complete (required sensors passed, required artifacts recorded).
+    if (this.phaseRequiresEvidence(currentPhase, targetPhase)) {
+      result.gates.execution_evidence.required = true;
+      const evidence = executionEvidence;
+
+      if (!evidence || !evidence.hasActiveContract) {
+        result.gates.execution_evidence.passed = false;
+        result.gates.execution_evidence.blockingFindings = [
+          'No active task contract found for the current phase; cannot verify execution.',
+        ];
+        if (result.canAdvance) {
+          result.canAdvance = false;
+          result.blockingGate = 'execution_evidence';
+          result.blockingReason =
+            'Cannot advance from Execution to Validation without an active task contract.';
+          result.hint =
+            'Link a plan (plan({ action: "link", ... })) so a derived task contract is created, or define one explicitly via workflow defineTask.';
+        }
+      } else {
+        result.gates.execution_evidence.passed = evidence.canComplete;
+        result.gates.execution_evidence.missingSensors = evidence.missingSensors;
+        result.gates.execution_evidence.missingArtifacts = evidence.missingArtifacts;
+        result.gates.execution_evidence.blockingFindings = evidence.blockingFindings;
+
+        if (!evidence.canComplete && result.canAdvance) {
+          result.canAdvance = false;
+          result.blockingGate = 'execution_evidence';
+          result.blockingReason =
+            'Execution evidence is incomplete: ' +
+            (evidence.blockingFindings.length > 0
+              ? evidence.blockingFindings.join('; ')
+              : 'required sensors/artifacts missing.');
+          result.hint =
+            'Run the required sensors via harness({ action: "runSensors", sensorIds: [...] }) and record the required artifacts via harness({ action: "recordArtifact", ... }) before advancing.';
+        }
+      }
+    }
+
     return result;
+  }
+
+  private phaseRequiresEvidence(
+    currentPhase: PrevcPhase,
+    targetPhase: PrevcPhase | null
+  ): boolean {
+    return currentPhase === 'E' && targetPhase === 'V';
   }
 
   /**
@@ -194,13 +255,17 @@ export class WorkflowGateChecker {
    */
   enforceGates(
     status: PrevcStatus,
-    options: { force?: boolean; nextPhase?: PrevcPhase } = {}
+    options: {
+      force?: boolean;
+      nextPhase?: PrevcPhase;
+      executionEvidence?: ExecutionEvidence;
+    } = {}
   ): void {
     if (options.force) {
       return;
     }
 
-    const result = this.checkGates(status, options.nextPhase);
+    const result = this.checkGates(status, options.nextPhase, options.executionEvidence);
 
     if (!result.canAdvance && result.blockingGate) {
       const currentPhase = status.project.current_phase;

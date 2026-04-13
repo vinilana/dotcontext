@@ -42,6 +42,25 @@ export class WorkflowGateError extends WorkflowError {
 }
 
 /**
+ * Error thrown when plan markdown sync fails during a phase transition.
+ * Intentionally bubbles up (instead of being swallowed) so divergence between
+ * tracking JSON, status YAML, and plan markdown can't go unnoticed.
+ */
+export class WorkflowSyncError extends WorkflowError {
+  readonly planSlug: string;
+  readonly cause?: Error;
+
+  constructor(planSlug: string, cause?: Error) {
+    super(
+      `Failed to sync plan markdown for "${planSlug}": ${cause?.message ?? 'unknown error'}`
+    );
+    this.name = 'WorkflowSyncError';
+    this.planSlug = planSlug;
+    this.cause = cause;
+  }
+}
+
+/**
  * Error thrown when trying to approve a plan that doesn't exist
  */
 export class NoPlanToApproveError extends WorkflowError {
