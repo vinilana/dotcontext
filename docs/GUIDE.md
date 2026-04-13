@@ -268,6 +268,31 @@ captured `tailStdout` / `tailStderr` and the non-zero `exitCode` rather than a
 500 error. On success, the step transitions to `completed` and the passing
 `acceptanceRun` is persisted.
 
+## Phase Gates são Executáveis
+
+Phase advancement in PREVC is gated by three checks surfaced as
+`GateCheckResult.gates`:
+
+| Gate | Transition | Suppressed by `autonomous_mode`? |
+| --- | --- | --- |
+| `plan_required` | P → R when `require_plan` is on | Yes |
+| `approval_required` | R → E when `require_approval` is on | Yes |
+| `execution_evidence` | E → V whenever an active task contract exists | **No** |
+
+`execution_evidence` consults the active `HarnessTaskContract` via
+`evaluateTaskCompletion`. The gate fails closed when:
+
+- the active task has `requiredSensors` that never passed in this session, or
+- the active task has `requiredArtifacts` that were never recorded, or
+- no active task contract exists for the current phase.
+
+`autonomous_mode=true` only bypasses the policy gates
+(`plan_required`, `approval_required`). It intentionally does **not** bypass
+`execution_evidence` — "autonomous" does not mean "skip verification that
+the work actually happened". To genuinely override, use `force: true` when
+calling `workflow-advance`, which skips gate enforcement entirely at the
+caller's responsibility.
+
 ## Troubleshooting
 
 ### "CLI init/plan/fill command not found"

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`execution_evidence` phase gate wires `evaluateTaskCompletion` into `workflow-advance`**
+  - `GateCheckResult.gates` now includes `execution_evidence` with `missingSensors`, `missingArtifacts`, and `blockingFindings`
+  - E → V transitions fail closed with `WorkflowGateError(gate='execution_evidence')` when the active task contract's required sensors/artifacts are not satisfied
+  - End-to-end coverage for "LLM claims completion without evidence" under `src/services/workflow/__tests__/falseCompletion.e2e.test.ts`
+
+### Changed
+
+- **`autonomous_mode` no longer suppresses execution evidence**
+  - Autonomous mode now suppresses only the `plan_required` and `approval_required` policy gates
+  - `execution_evidence` remains active under autonomous mode; use `force: true` on `workflow-advance` for explicit overrides
+- **Silent plan-markdown sync failures now surface as `WorkflowSyncError`**
+  - `orchestrator.completePhase` no longer swallows `syncPlanMarkdown` errors after a phase transition; the error is logged with phase context and propagated so tracking/status/markdown divergence cannot hide
+
+### Added
+
 - **Structured plan metadata now supports canonical phase steps and deliverables**
   - Plan frontmatter can now persist `phases[].summary`, `phases[].deliverables`, and `phases[].steps[].deliverables`
   - Plan parsing now prefers canonical frontmatter metadata and falls back to markdown task tables or numbered lists only for legacy plans
