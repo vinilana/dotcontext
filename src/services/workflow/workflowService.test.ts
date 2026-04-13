@@ -276,7 +276,7 @@ phases:
 
     // Filter out built-in sensors (e.g. i18n-coverage) to assert only the
     // project-script-derived set.
-    const shellSensors = sensors.map((s) => s.id).filter((id) => id !== 'i18n-coverage');
+    const shellSensors = sensors.map((s) => s.id).filter((id) => !['i18n-coverage', 'tests-passing', 'typecheck-clean'].includes(id));
     expect(shellSensors).toEqual(['build']);
     expect(sensors.map((s) => s.id)).toContain('i18n-coverage');
   });
@@ -291,7 +291,7 @@ phases:
       const pythonService = new WorkflowService(pythonDir);
       const sensors = pythonService.listAvailableSensors();
 
-      const shellSensors = sensors.map((s) => s.id).filter((id) => id !== 'i18n-coverage');
+      const shellSensors = sensors.map((s) => s.id).filter((id) => !['i18n-coverage', 'tests-passing', 'typecheck-clean'].includes(id));
       expect(shellSensors).toEqual(['test', 'typecheck']);
     } finally {
       await fs.remove(pythonDir);
@@ -329,7 +329,7 @@ phases:
     const customizedService = new WorkflowService(tempDir);
     const sensors = customizedService.listAvailableSensors();
 
-    const shellSensors = sensors.map((s) => s.id).filter((id) => id !== 'i18n-coverage');
+    const shellSensors = sensors.map((s) => s.id).filter((id) => !['i18n-coverage', 'tests-passing', 'typecheck-clean'].includes(id));
     expect(shellSensors).toEqual(['quality']);
   });
 

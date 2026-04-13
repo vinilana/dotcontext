@@ -35,6 +35,8 @@ import {
   type WorkflowHarnessBinding,
 } from '../harness';
 import { createI18nCoverageSensor } from '../harness/sensors/i18nCoverage';
+import { createTestsPassingSensor } from '../harness/sensors/testsPassing';
+import { createTypecheckCleanSensor } from '../harness/sensors/typecheckClean';
 
 const exec = promisify(execCallback);
 
@@ -308,6 +310,8 @@ export class HarnessSessionFacade {
     // Built-in sensors are registered first so the shell-catalog loop below
     // can override them by id if the user's sensors.json declares one.
     this.sensorsService.registerSensor(createI18nCoverageSensor(this.repoPath));
+    this.sensorsService.registerSensor(createTestsPassingSensor(this.repoPath));
+    this.sensorsService.registerSensor(createTypecheckCleanSensor(this.repoPath));
 
     const definitions = this.sensorCatalogService.resolveEffectiveSensorsSync();
 
