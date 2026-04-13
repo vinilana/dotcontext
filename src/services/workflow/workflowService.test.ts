@@ -115,7 +115,7 @@ describe('WorkflowService harness integration', () => {
       'architect',
       'developer',
     ]);
-    expect(persisted.version).toBe(1);
+    expect(persisted.version).toBe(2);
     expect(persisted.sessions).toHaveLength(1);
     expect(persisted.sessions[0].id).toBe(sessionId);
     expect(persisted.sessions[0].status).toBe('concluded');
