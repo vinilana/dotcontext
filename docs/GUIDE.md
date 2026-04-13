@@ -308,6 +308,41 @@ phases:
 harness session. `required_artifacts` are artifact names/paths that must have
 been recorded via `harness({ action: "recordArtifact", ... })`.
 
+### Structured artifact requirements
+
+`required_artifacts` accepts either bare strings (exact name match,
+backwards-compatible) or structured `RequiredArtifactSpec` objects. Specs let
+plans gatekeep multi-file work — e.g., "every locale must be translated" — that
+exact-name matching cannot express.
+
+Four `kind`s are supported:
+
+| `kind`         | Shape                                                  | Match                                                  |
+| -------------- | ------------------------------------------------------ | ------------------------------------------------------ |
+| `name`         | `{ kind: name, name: string }`                         | exact match against `artifact.path \|\| artifact.name` |
+| `path`         | `{ kind: path, path: string }`                         | exact path match                                       |
+| `glob`         | `{ kind: glob, glob: string, minMatches?: number }`    | minimatch glob; needs `>= minMatches` (default `1`)    |
+| `file-count`   | `{ kind: file-count, glob: string, min: number }`      | shorthand for glob with `minMatches = min`             |
+
+Example plan frontmatter:
+
+```yaml
+phases:
+  - id: phase-2
+    prevc: E
+    name: Implementation
+    required_sensors: [tests]
+    required_artifacts:
+      - { kind: glob, glob: "locales/**/*.json", minMatches: 5 }
+      - { kind: file-count, glob: "docs/migration/*.md", min: 2 }
+      - i18n-coverage-report   # legacy string == { kind: name, name: "i18n-coverage-report" }
+```
+
+When the gate blocks, `missingArtifacts` reports a human-readable description,
+e.g. `glob(locales/**/*.json) min=5 (got 2)`. Matching is performed only
+against artifacts recorded on the active session — filesystem traversal for
+`glob` specs is intentionally out of scope.
+
 Rules:
 
 - `plan({ action: "link", ... })` **hard-fails** if the plan has an Execution

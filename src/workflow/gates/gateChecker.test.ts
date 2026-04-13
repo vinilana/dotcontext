@@ -373,6 +373,23 @@ describe('WorkflowGateChecker', () => {
       }).toThrow();
     });
 
+    it('should throw when nextPhase is not a valid PREVC phase', () => {
+      const status = createMockStatus();
+      expect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        checker.checkGates(status, 'X' as any);
+      }).toThrow(/not a valid PREVC phase/);
+    });
+
+    it('should throw when nextPhase has no entry in status.phases', () => {
+      const status = createMockStatus();
+      // Drop the V entry to simulate corrupted/missing status data.
+      delete (status.phases as Record<string, unknown>).V;
+      expect(() => {
+        checker.checkGates(status, 'V');
+      }).toThrow(/no entry in status\.phases/);
+    });
+
     it('should not throw when force is true', () => {
       const status = createMockStatus({
         project: {

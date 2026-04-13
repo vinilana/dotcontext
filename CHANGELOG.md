@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Structured artifact requirements (`RequiredArtifactSpec`)**
+  - `HarnessTaskContract.requiredArtifacts` accepts `(string | RequiredArtifactSpec)[]`; strings remain backwards-compatible (interpreted as `{ kind: 'name', name }`)
+  - Four spec kinds: `name`, `path`, `glob` (with `minMatches`, default `1`), and `file-count` (`min`)
+  - `evaluateTaskCompletion` matches glob specs via `minimatch` against recorded session artifacts; `missingArtifacts` reports human-readable descriptions like `glob(locales/**/*.json) min=5 (got 2)`
+  - Plan frontmatter `required_artifacts` accepts the same shapes (zod discriminated union); specs propagate through `DerivedPlanTaskContractBuilder` without stringification
+  - MCP `defineTask`/`createTask` schemas widened to accept structured specs alongside strings
+  - Filesystem-glob (`fromFilesystem: true`) is intentionally out of scope; matching is restricted to recorded session artifacts
+  - Documented under "Structured artifact requirements" in `docs/GUIDE.md`
+- **`checkGates` validates `nextPhase` against `PREVC_PHASE_ORDER` and `status.phases`**
+  - Throws when `nextPhase` is not a valid PREVC phase, or is missing from `status.phases` (in addition to the existing `skipped` guard)
+
 - **Plan frontmatter declares execution evidence per phase**
   - `phases[].required_sensors` and `phases[].required_artifacts` in plan scaffold frontmatter populate the derived `HarnessTaskContract`'s required fields
   - `DerivedPlanTaskContractBuilder` now honors declared requirements and falls back to conservative defaults when absent (`E` -> `['tests']`, `V` -> `['tests', 'lint']`; P/R/C have no default)

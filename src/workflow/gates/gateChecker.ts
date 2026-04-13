@@ -12,7 +12,7 @@ import {
   GateType,
 } from '../types';
 import { WorkflowGateError } from '../errors';
-import { getNextActivePhase } from '../phases';
+import { getNextActivePhase, PREVC_PHASE_ORDER } from '../phases';
 
 /**
  * Status of an individual gate
@@ -119,8 +119,20 @@ export class WorkflowGateChecker {
     const currentPhase = status.project.current_phase;
 
     if (nextPhase) {
+      if (!PREVC_PHASE_ORDER.includes(nextPhase)) {
+        throw new Error(
+          `checkGates: nextPhase "${nextPhase}" is not a valid PREVC phase. ` +
+            `Expected one of ${PREVC_PHASE_ORDER.join(', ')}.`
+        );
+      }
       const targetEntry = status.phases?.[nextPhase];
-      if (targetEntry?.status === 'skipped') {
+      if (!targetEntry) {
+        throw new Error(
+          `checkGates: nextPhase "${nextPhase}" has no entry in status.phases. ` +
+            `The workflow status is missing this phase; cannot evaluate transition.`
+        );
+      }
+      if (targetEntry.status === 'skipped') {
         throw new Error(
           `checkGates: refusing to evaluate transition to phase "${nextPhase}" ` +
             `because it is marked as skipped. Omit nextPhase to use the next ` +
