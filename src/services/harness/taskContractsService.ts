@@ -9,6 +9,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { minimatch } from 'minimatch';
+import { glob as globFn } from 'glob';
 import type {
   HarnessArtifactRecord,
   HarnessRuntimeStatePort,
@@ -24,15 +25,16 @@ import type { HarnessSensorRun } from './sensorsService';
  *   least `minMatches` matching artifacts (default 1).
  * - `file-count`: shorthand for `glob` with `minMatches = min`.
  *
- * Matching is performed only against artifacts recorded on the active session
- * (no filesystem traversal). A future spec field `fromFilesystem: true` could
- * extend this to globbing the working tree; intentionally out of scope here.
+ * For `glob` and `file-count`, setting `fromFilesystem: true` also scans the
+ * project working tree (relative to `repoPath`) and unions filesystem hits
+ * with recorded artifacts. This closes the case where a file exists in the
+ * repo but no one called `recordArtifact`.
  */
 export type RequiredArtifactSpec =
   | { kind: 'name'; name: string }
   | { kind: 'path'; path: string }
-  | { kind: 'glob'; glob: string; minMatches?: number }
-  | { kind: 'file-count'; glob: string; min: number };
+  | { kind: 'glob'; glob: string; minMatches?: number; fromFilesystem?: boolean }
+  | { kind: 'file-count'; glob: string; min: number; fromFilesystem?: boolean };
 
 export type RequiredArtifactInput = string | RequiredArtifactSpec;
 
@@ -65,32 +67,80 @@ function describeArtifactSpec(spec: RequiredArtifactSpec, gotCount?: number): st
 
 function matchesArtifactSpec(
   spec: RequiredArtifactSpec,
-  artifacts: HarnessArtifactRecord[]
-): { matched: HarnessArtifactRecord[]; satisfied: boolean } {
+  artifacts: HarnessArtifactRecord[],
+  filesystemPaths: string[] = []
+): { matched: HarnessArtifactRecord[]; matchedPaths: string[]; satisfied: boolean } {
   switch (spec.kind) {
     case 'name': {
       const matched = artifacts.filter(
         (a) => (a.path || a.name) === spec.name || a.name === spec.name
       );
-      return { matched, satisfied: matched.length > 0 };
+      return { matched, matchedPaths: [], satisfied: matched.length > 0 };
     }
     case 'path': {
       const matched = artifacts.filter((a) => (a.path || a.name) === spec.path);
-      return { matched, satisfied: matched.length > 0 };
+      return { matched, matchedPaths: [], satisfied: matched.length > 0 };
     }
     case 'glob': {
       const min = spec.minMatches ?? 1;
       const matched = artifacts.filter((a) =>
         minimatch(a.path || a.name, spec.glob, { dot: true })
       );
-      return { matched, satisfied: matched.length >= min };
+      const recordedPaths = new Set(matched.map((a) => a.path || a.name));
+      const fsExtras = filesystemPaths.filter((p) => !recordedPaths.has(p));
+      return { matched, matchedPaths: fsExtras, satisfied: matched.length + fsExtras.length >= min };
     }
     case 'file-count': {
       const matched = artifacts.filter((a) =>
         minimatch(a.path || a.name, spec.glob, { dot: true })
       );
-      return { matched, satisfied: matched.length >= spec.min };
+      const recordedPaths = new Set(matched.map((a) => a.path || a.name));
+      const fsExtras = filesystemPaths.filter((p) => !recordedPaths.has(p));
+      return { matched, matchedPaths: fsExtras, satisfied: matched.length + fsExtras.length >= spec.min };
     }
+  }
+}
+
+const FILESYSTEM_SCAN_TIMEOUT_MS = 5_000;
+const FILESYSTEM_SCAN_IGNORE = ['**/node_modules/**', '**/.git/**', '**/dist/**'];
+
+/**
+ * Scan the working tree under `repoPath` for files matching `pattern`.
+ * Returns repo-relative POSIX paths. Refuses to escape `repoPath`. On any
+ * I/O failure or timeout, yields a sentinel error string in `errors` instead
+ * of throwing — `evaluateTaskCompletion` surfaces it as a blockingFinding.
+ */
+async function scanFilesystem(
+  repoPath: string,
+  pattern: string
+): Promise<{ paths: string[]; errors: string[] }> {
+  const root = path.resolve(repoPath);
+  try {
+    const result = await Promise.race([
+      globFn(pattern, {
+        cwd: root,
+        nodir: true,
+        dot: true,
+        ignore: FILESYSTEM_SCAN_IGNORE,
+        absolute: false,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`filesystem scan timeout after ${FILESYSTEM_SCAN_TIMEOUT_MS}ms`)), FILESYSTEM_SCAN_TIMEOUT_MS)
+      ),
+    ]);
+
+    const safe: string[] = [];
+    for (const rel of result) {
+      const normalized = rel.split(path.sep).join('/');
+      const abs = path.resolve(root, rel);
+      if (abs === root || !abs.startsWith(root + path.sep)) {
+        continue;
+      }
+      safe.push(normalized);
+    }
+    return { paths: safe, errors: [] };
+  } catch (err: any) {
+    return { paths: [], errors: [`filesystem scan failed for ${pattern}: ${err?.message ?? String(err)}`] };
   }
 }
 
@@ -346,13 +396,24 @@ export class HarnessTaskContractsService {
     const specs = contract.requiredArtifacts.map(normalizeArtifactSpec);
     const matchedArtifactSet = new Set<HarnessArtifactRecord>();
     const missingArtifacts: string[] = [];
+    const scanErrors: string[] = [];
     for (const spec of specs) {
-      const { matched, satisfied } = matchesArtifactSpec(spec, artifacts);
+      let filesystemPaths: string[] = [];
+      const wantsFs =
+        (spec.kind === 'glob' || spec.kind === 'file-count') && spec.fromFilesystem === true;
+      if (wantsFs) {
+        const pattern = spec.kind === 'glob' ? spec.glob : spec.glob;
+        const scan = await scanFilesystem(this.options.repoPath, pattern);
+        filesystemPaths = scan.paths;
+        scanErrors.push(...scan.errors);
+      }
+
+      const { matched, matchedPaths, satisfied } = matchesArtifactSpec(spec, artifacts, filesystemPaths);
       for (const a of matched) {
         matchedArtifactSet.add(a);
       }
       if (!satisfied) {
-        missingArtifacts.push(describeArtifactSpec(spec, matched.length));
+        missingArtifacts.push(describeArtifactSpec(spec, matched.length + matchedPaths.length));
       }
     }
     const matchedArtifacts = Array.from(matchedArtifactSet);
@@ -363,6 +424,9 @@ export class HarnessTaskContractsService {
     }
     if (missingArtifacts.length > 0) {
       blockingFindings.push(`Missing required artifacts: ${missingArtifacts.join(', ')}`);
+    }
+    if (scanErrors.length > 0) {
+      blockingFindings.push(...scanErrors);
     }
 
     return {

@@ -136,6 +136,96 @@ describe('HarnessTaskContractsService', () => {
       expect(evaluation.missingArtifacts[0]).toContain('got 1');
     });
 
+    describe('fromFilesystem', () => {
+      it('counts filesystem matches in addition to recorded artifacts (glob)', async () => {
+        const session = await stateService.createSession({ name: 'fs-glob' });
+        const localesDir = path.join(tempDir, 'locales');
+        await fs.ensureDir(localesDir);
+        await fs.writeJson(path.join(localesDir, 'pt.json'), {});
+        await fs.writeJson(path.join(localesDir, 'en.json'), {});
+        await fs.writeJson(path.join(localesDir, 'es.json'), {});
+        // recorded only one (and a different path) — fs scan must still satisfy.
+        await stateService.addArtifact(session.id, {
+          name: 'fr.json', kind: 'file', path: 'locales/fr.json',
+        });
+
+        const task = await service.createTaskContract({
+          title: 'fs glob',
+          sessionId: session.id,
+          requiredArtifacts: [
+            { kind: 'glob', glob: 'locales/*.json', minMatches: 4, fromFilesystem: true },
+          ],
+        });
+
+        const evaluation = await service.evaluateTaskCompletion(task.id, session.id);
+        expect(evaluation.canComplete).toBe(true);
+      });
+
+      it('blocks when neither recorded nor filesystem matches reach minMatches', async () => {
+        const session = await stateService.createSession({ name: 'fs-empty' });
+        // empty repo, no locales dir, no recorded artifacts.
+        const task = await service.createTaskContract({
+          title: 'fs empty',
+          sessionId: session.id,
+          requiredArtifacts: [
+            { kind: 'glob', glob: 'locales/*.json', minMatches: 1, fromFilesystem: true },
+          ],
+        });
+
+        const evaluation = await service.evaluateTaskCompletion(task.id, session.id);
+        expect(evaluation.canComplete).toBe(false);
+        expect(evaluation.missingArtifacts[0]).toContain('got 0');
+      });
+
+      it('mixes recorded + filesystem (file-count, deduplicated)', async () => {
+        const session = await stateService.createSession({ name: 'fs-mix' });
+        const docsDir = path.join(tempDir, 'docs');
+        await fs.ensureDir(docsDir);
+        await fs.writeFile(path.join(docsDir, 'a.md'), '# a');
+        await fs.writeFile(path.join(docsDir, 'b.md'), '# b');
+        // Same path also recorded → must NOT double-count.
+        await stateService.addArtifact(session.id, {
+          name: 'a.md', kind: 'file', path: 'docs/a.md',
+        });
+
+        const taskOk = await service.createTaskContract({
+          title: 'fs mix ok',
+          sessionId: session.id,
+          requiredArtifacts: [
+            { kind: 'file-count', glob: 'docs/*.md', min: 2, fromFilesystem: true },
+          ],
+        });
+        expect((await service.evaluateTaskCompletion(taskOk.id, session.id)).canComplete).toBe(true);
+
+        const taskFail = await service.createTaskContract({
+          title: 'fs mix fail',
+          sessionId: session.id,
+          requiredArtifacts: [
+            { kind: 'file-count', glob: 'docs/*.md', min: 5, fromFilesystem: true },
+          ],
+        });
+        const ev = await service.evaluateTaskCompletion(taskFail.id, session.id);
+        expect(ev.canComplete).toBe(false);
+        expect(ev.missingArtifacts[0]).toContain('got 2');
+      });
+
+      it('does not scan filesystem when fromFilesystem is omitted (backwards compat)', async () => {
+        const session = await stateService.createSession({ name: 'no-fs' });
+        const localesDir = path.join(tempDir, 'locales');
+        await fs.ensureDir(localesDir);
+        await fs.writeJson(path.join(localesDir, 'pt.json'), {});
+
+        const task = await service.createTaskContract({
+          title: 'no fs',
+          sessionId: session.id,
+          requiredArtifacts: [{ kind: 'glob', glob: 'locales/*.json', minMatches: 1 }],
+        });
+        const ev = await service.evaluateTaskCompletion(task.id, session.id);
+        expect(ev.canComplete).toBe(false);
+        expect(ev.missingArtifacts[0]).toContain('got 0');
+      });
+    });
+
     it('mixes string (legacy) and structured specs', async () => {
       const session = await stateService.createSession({ name: 'mix' });
       await stateService.addArtifact(session.id, {
