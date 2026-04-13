@@ -339,9 +339,31 @@ phases:
 ```
 
 When the gate blocks, `missingArtifacts` reports a human-readable description,
-e.g. `glob(locales/**/*.json) min=5 (got 2)`. Matching is performed only
-against artifacts recorded on the active session — filesystem traversal for
-`glob` specs is intentionally out of scope.
+e.g. `glob(locales/**/*.json) min=5 (got 2)`. By default, matching runs only
+against artifacts recorded on the active session.
+
+#### `fromFilesystem: true`
+
+For `glob` and `file-count`, set `fromFilesystem: true` to also scan the
+project working tree (relative to `repoPath`) and union those hits with
+recorded artifacts. This eliminates the false-blocked case where a file
+exists in the repo but no one called `recordArtifact`.
+
+```yaml
+required_artifacts:
+  - { kind: glob, glob: "locales/*.json", minMatches: 5, fromFilesystem: true }
+  - { kind: file-count, glob: "docs/migration/*.md", min: 2, fromFilesystem: true }
+```
+
+Scan rules:
+
+- Paths resolved outside `repoPath` are refused.
+- `node_modules`, `.git`, and `dist` are always excluded.
+- A 5s timeout protects against runaway scans; failure or timeout becomes a
+  `blockingFinding` (`filesystem scan failed for <pattern>: <reason>`) rather
+  than a crash.
+- Recorded artifacts and filesystem hits are deduplicated by path so the
+  same file never counts twice.
 
 Rules:
 
@@ -379,6 +401,52 @@ Phase advancement in PREVC is gated by three checks surfaced as
 the work actually happened". To genuinely override, use `force: true` when
 calling `workflow-advance`, which skips gate enforcement entirely at the
 caller's responsibility.
+
+## Built-in Sensors
+
+### `i18n-coverage`
+
+Compares translation keys between a base locale file and every other locale
+file in a configured directory. Registered by default in every harness
+session, but only executed when a plan/task contract declares it under
+`required_sensors`.
+
+Options (passed via `runSensors` `metadata` or `context`):
+
+| Option        | Default     | Meaning                                                  |
+| ------------- | ----------- | -------------------------------------------------------- |
+| `baseLocale`  | `'en'`      | locale id used as the source of truth keyset             |
+| `localesDir`  | `'locales'` | directory (repo-relative) containing `<locale>.json`     |
+| `format`      | `'json'`    | `'json'` (top-level keys) or `'json-nested'` (flattened) |
+
+Plan declaration:
+
+```yaml
+phases:
+  - id: phase-2
+    prevc: E
+    name: Implementation
+    required_sensors:
+      - i18n-coverage
+    required_artifacts:
+      - { kind: glob, glob: "locales/*.json", minMatches: 3, fromFilesystem: true }
+```
+
+Output (persisted in the `sensor.run` trace):
+
+```json
+{
+  "coverage":   { "en": 1, "pt": 1, "es": 0.66 },
+  "missingKeys": { "en": [], "pt": [], "es": ["b", "c"] }
+}
+```
+
+Pass condition: every non-base locale has `missingKeys.length === 0`.
+Failure modes (all reported with the offending file/path, never crash):
+
+- `localesDir` missing
+- malformed JSON in any `<locale>.json`
+- base locale absent from `localesDir`
 
 ## Troubleshooting
 

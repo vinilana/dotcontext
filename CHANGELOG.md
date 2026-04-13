@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`RequiredArtifactSpec.fromFilesystem: true`** for `glob` and `file-count` kinds
+  - When set, `evaluateTaskCompletion` also scans the project working tree (relative to `repoPath`) and unions filesystem hits with recorded session artifacts, eliminating the false-blocked case where a file exists in the repo but `recordArtifact` was never called
+  - Hard-coded ignore list (`node_modules`, `.git`, `dist`), 5s scan timeout, refusal to escape `repoPath`; I/O failures and timeouts surface as `blockingFinding` entries (`filesystem scan failed for <pattern>: ...`) instead of crashing
+  - Recorded artifacts and filesystem hits deduplicated by path so a file never counts twice
+  - Documented under "Structured artifact requirements -> fromFilesystem: true" in `docs/GUIDE.md`
+- **Built-in `i18n-coverage` sensor** (`src/services/harness/sensors/i18nCoverage.ts`)
+  - Compares translation keys between a configurable base locale (`baseLocale`, default `'en'`) and every other `<locale>.json` in `localesDir` (default `'locales'`); supports flat (`format: 'json'`) and nested (`format: 'json-nested'`) key extraction
+  - Persists structured output `{ coverage: { locale: ratio }, missingKeys: { locale: string[] } }` on the `sensor.run` trace; passes only when every non-base locale has zero missing keys
+  - Registered by default in every harness session via `HarnessSessionFacade.registerDefaultSensors`; only executes when a plan declares `required_sensors: [i18n-coverage]`
+  - Clear, non-crashing failure modes for missing `localesDir`, malformed JSON (with file name), and missing base locale
+  - Documented under "Built-in Sensors -> i18n-coverage" in `docs/GUIDE.md`
+
 - **Structured artifact requirements (`RequiredArtifactSpec`)**
   - `HarnessTaskContract.requiredArtifacts` accepts `(string | RequiredArtifactSpec)[]`; strings remain backwards-compatible (interpreted as `{ kind: 'name', name }`)
   - Four spec kinds: `name`, `path`, `glob` (with `minMatches`, default `1`), and `file-count` (`min`)
