@@ -61,6 +61,41 @@ export class WorkflowSyncError extends WorkflowError {
 }
 
 /**
+ * Reported divergence between a plan tracking phase and the workflow status
+ * phase for the same phase id. Each entry describes one phase where the two
+ * sources disagree.
+ */
+export interface PhaseStatusDivergence {
+  phaseId: string;
+  trackingStatus: string;
+  statusStatus: string;
+}
+
+/**
+ * Error thrown when the post-transition cross-source invariant between
+ * plan tracking (`PlanExecutionTracking.phases[id].status`) and workflow
+ * status (`PrevcStatus.phases[id].status`) does not hold. Callers should
+ * treat this as a hard failure: the two stores are out of sync and the
+ * workflow cannot safely advance until reconciled.
+ */
+export class WorkflowStateDesyncError extends WorkflowError {
+  readonly planSlug: string;
+  readonly divergences: PhaseStatusDivergence[];
+
+  constructor(planSlug: string, divergences: PhaseStatusDivergence[]) {
+    const diffText = divergences
+      .map((d) => `${d.phaseId}: tracking=${d.trackingStatus} status=${d.statusStatus}`)
+      .join('; ');
+    super(
+      `Workflow state desync for plan "${planSlug}": ${diffText}`
+    );
+    this.name = 'WorkflowStateDesyncError';
+    this.planSlug = planSlug;
+    this.divergences = divergences;
+  }
+}
+
+/**
  * Error thrown when trying to approve a plan that doesn't exist
  */
 export class NoPlanToApproveError extends WorkflowError {

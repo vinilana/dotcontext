@@ -17,9 +17,12 @@ export { AGENT_TYPES, type AgentType } from './orchestration/agentOrchestrator';
 export {
   WorkflowError,
   WorkflowGateError,
+  WorkflowSyncError,
+  WorkflowStateDesyncError,
   NoPlanToApproveError,
   NoWorkflowError,
 } from './errors';
+export type { PhaseStatusDivergence } from './errors';
 
 // Gates
 export {

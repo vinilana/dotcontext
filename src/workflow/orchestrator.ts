@@ -20,6 +20,7 @@ import { detectProjectScale, getScaleRoute } from './scaling';
 import { PREVC_PHASE_ORDER, getPhaseDefinition } from './phases';
 import { WorkflowGateChecker, GateCheckResult, getDefaultSettings, ExecutionEvidence } from './gates';
 import { PlanLinker } from './plans/planLinker';
+import { assertPhaseStatusConverges } from './plans/invariants';
 import { WorkflowGuidanceService } from './orchestration/workflowGuidanceService';
 import { buildNextAgentSuggestion } from './guidance';
 import type { WorkflowStatePort } from './status/workflowStatePort';
@@ -277,6 +278,13 @@ export class PrevcOrchestrator {
         );
         throw new WorkflowSyncError(status.project.plan, err);
       }
+
+      // Cross-source invariant: tracking JSON and status YAML must agree on
+      // per-phase status for any phase id present in both. Reload status
+      // because completePhaseTransition mutated it after the initial read.
+      const tracking = await this.planLinker.getPlanExecutionStatus(status.project.plan);
+      const postStatus = await this.statusManager.load();
+      assertPhaseStatusConverges(tracking, postStatus);
     }
 
     return advancedPhase;
