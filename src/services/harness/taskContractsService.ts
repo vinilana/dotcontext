@@ -8,12 +8,91 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
+import { minimatch } from 'minimatch';
 import type {
   HarnessArtifactRecord,
   HarnessRuntimeStatePort,
   HarnessTraceRecord,
 } from './runtimeStateService';
 import type { HarnessSensorRun } from './sensorsService';
+
+/**
+ * Structured artifact requirement.
+ *
+ * - `name`/`path`: exact match against `artifact.path || artifact.name`.
+ * - `glob`: minimatch glob over `artifact.path || artifact.name`; needs at
+ *   least `minMatches` matching artifacts (default 1).
+ * - `file-count`: shorthand for `glob` with `minMatches = min`.
+ *
+ * Matching is performed only against artifacts recorded on the active session
+ * (no filesystem traversal). A future spec field `fromFilesystem: true` could
+ * extend this to globbing the working tree; intentionally out of scope here.
+ */
+export type RequiredArtifactSpec =
+  | { kind: 'name'; name: string }
+  | { kind: 'path'; path: string }
+  | { kind: 'glob'; glob: string; minMatches?: number }
+  | { kind: 'file-count'; glob: string; min: number };
+
+export type RequiredArtifactInput = string | RequiredArtifactSpec;
+
+function normalizeArtifactSpec(input: RequiredArtifactInput): RequiredArtifactSpec {
+  if (typeof input === 'string') {
+    return { kind: 'name', name: input };
+  }
+  return input;
+}
+
+function describeArtifactSpec(spec: RequiredArtifactSpec, gotCount?: number): string {
+  switch (spec.kind) {
+    case 'name':
+      return spec.name;
+    case 'path':
+      return `path(${spec.path})`;
+    case 'glob': {
+      const min = spec.minMatches ?? 1;
+      const got = gotCount ?? 0;
+      return min > 1 || gotCount !== undefined
+        ? `glob(${spec.glob}) min=${min} (got ${got})`
+        : `glob(${spec.glob})`;
+    }
+    case 'file-count': {
+      const got = gotCount ?? 0;
+      return `file-count(${spec.glob}) min=${spec.min} (got ${got})`;
+    }
+  }
+}
+
+function matchesArtifactSpec(
+  spec: RequiredArtifactSpec,
+  artifacts: HarnessArtifactRecord[]
+): { matched: HarnessArtifactRecord[]; satisfied: boolean } {
+  switch (spec.kind) {
+    case 'name': {
+      const matched = artifacts.filter(
+        (a) => (a.path || a.name) === spec.name || a.name === spec.name
+      );
+      return { matched, satisfied: matched.length > 0 };
+    }
+    case 'path': {
+      const matched = artifacts.filter((a) => (a.path || a.name) === spec.path);
+      return { matched, satisfied: matched.length > 0 };
+    }
+    case 'glob': {
+      const min = spec.minMatches ?? 1;
+      const matched = artifacts.filter((a) =>
+        minimatch(a.path || a.name, spec.glob, { dot: true })
+      );
+      return { matched, satisfied: matched.length >= min };
+    }
+    case 'file-count': {
+      const matched = artifacts.filter((a) =>
+        minimatch(a.path || a.name, spec.glob, { dot: true })
+      );
+      return { matched, satisfied: matched.length >= spec.min };
+    }
+  }
+}
 
 export type HarnessTaskContractStatus =
   | 'draft'
@@ -34,7 +113,12 @@ export interface HarnessTaskContract {
   expectedOutputs: string[];
   acceptanceCriteria: string[];
   requiredSensors: string[];
-  requiredArtifacts: string[];
+  /**
+   * Required artifacts for task completion. Strings are interpreted as
+   * `{ kind: 'name', name }` for backwards compatibility; structured specs
+   * support glob and file-count matching. See `RequiredArtifactSpec`.
+   */
+  requiredArtifacts: RequiredArtifactInput[];
   createdAt: string;
   updatedAt: string;
   metadata?: Record<string, unknown>;
@@ -109,7 +193,7 @@ export class HarnessTaskContractsService {
     expectedOutputs?: string[];
     acceptanceCriteria?: string[];
     requiredSensors?: string[];
-    requiredArtifacts?: string[];
+    requiredArtifacts?: RequiredArtifactInput[];
     status?: HarnessTaskContractStatus;
     metadata?: Record<string, unknown>;
   }): Promise<HarnessTaskContract> {
@@ -259,13 +343,19 @@ export class HarnessTaskContractsService {
       (sensorId) => !matchedSensorRuns.some((run) => run.sensorId === sensorId)
     );
 
-    const artifactPaths = new Set([
-      ...artifacts.map((artifact) => artifact.path || artifact.name),
-    ]);
-    const missingArtifacts = contract.requiredArtifacts.filter((artifactPath) => !artifactPaths.has(artifactPath));
-    const matchedArtifacts = artifacts.filter(
-      (artifact) => contract.requiredArtifacts.includes(artifact.path || artifact.name)
-    );
+    const specs = contract.requiredArtifacts.map(normalizeArtifactSpec);
+    const matchedArtifactSet = new Set<HarnessArtifactRecord>();
+    const missingArtifacts: string[] = [];
+    for (const spec of specs) {
+      const { matched, satisfied } = matchesArtifactSpec(spec, artifacts);
+      for (const a of matched) {
+        matchedArtifactSet.add(a);
+      }
+      if (!satisfied) {
+        missingArtifacts.push(describeArtifactSpec(spec, matched.length));
+      }
+    }
+    const matchedArtifacts = Array.from(matchedArtifactSet);
 
     const blockingFindings: string[] = [];
     if (missingSensors.length > 0) {

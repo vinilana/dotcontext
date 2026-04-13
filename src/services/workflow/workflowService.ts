@@ -746,7 +746,7 @@ export class WorkflowService {
     expectedOutputs?: string[];
     acceptanceCriteria?: string[];
     requiredSensors?: string[];
-    requiredArtifacts?: string[];
+    requiredArtifacts?: import('../harness').RequiredArtifactInput[];
     metadata?: Record<string, unknown>;
   }): Promise<HarnessTaskContract> {
     const binding = await this.requireHarnessBinding();

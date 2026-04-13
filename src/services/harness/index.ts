@@ -74,6 +74,8 @@ export {
   type HarnessTaskContract,
   type HarnessHandoffContract,
   type HarnessTaskCompletionResult,
+  type RequiredArtifactSpec,
+  type RequiredArtifactInput,
 } from './taskContractsService';
 export {
   HarnessExecutionService,

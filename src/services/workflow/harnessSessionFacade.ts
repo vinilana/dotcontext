@@ -249,7 +249,7 @@ export class HarnessSessionFacade {
       expectedOutputs?: string[];
       acceptanceCriteria?: string[];
       requiredSensors?: string[];
-      requiredArtifacts?: string[];
+      requiredArtifacts?: import('../harness').RequiredArtifactInput[];
       metadata?: Record<string, unknown>;
     }
   ): Promise<HarnessTaskContract> {

@@ -37,7 +37,7 @@ export interface WorkflowManageParams {
   expectedOutputs?: string[];
   acceptanceCriteria?: string[];
   requiredSensors?: string[];
-  requiredArtifacts?: string[];
+  requiredArtifacts?: Array<string | Record<string, unknown>>;
   sensors?: string[];
   data?: unknown;
   artifactIds?: string[];
@@ -371,7 +371,7 @@ export async function handleWorkflowManage(
           expectedOutputs: params.expectedOutputs,
           acceptanceCriteria: params.acceptanceCriteria,
           requiredSensors: params.requiredSensors,
-          requiredArtifacts: params.requiredArtifacts,
+          requiredArtifacts: params.requiredArtifacts as import('../../harness').RequiredArtifactInput[] | undefined,
         });
 
         return createJsonResponse({

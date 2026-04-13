@@ -72,5 +72,92 @@ describe('HarnessTaskContractsService', () => {
     const contractPath = path.join(tempDir, '.context', 'harness', 'contracts', 'tasks', `${task.id}.json`);
     expect(await fs.pathExists(contractPath)).toBe(true);
   });
+
+  describe('structured artifact specs', () => {
+    it('glob spec with minMatches blocks when fewer artifacts match', async () => {
+      const session = await stateService.createSession({ name: 'glob-min' });
+      await stateService.addArtifact(session.id, {
+        name: 'pt-BR.json', kind: 'file', path: 'locales/pt-BR.json',
+      });
+      await stateService.addArtifact(session.id, {
+        name: 'en-US.json', kind: 'file', path: 'locales/en-US.json',
+      });
+
+      const task = await service.createTaskContract({
+        title: 'i18n coverage',
+        sessionId: session.id,
+        requiredSensors: [],
+        requiredArtifacts: [{ kind: 'glob', glob: 'locales/**/*.json', minMatches: 5 }],
+      });
+
+      const evaluation = await service.evaluateTaskCompletion(task.id, session.id);
+      expect(evaluation.canComplete).toBe(false);
+      expect(evaluation.missingArtifacts).toHaveLength(1);
+      expect(evaluation.missingArtifacts[0]).toContain('locales/**/*.json');
+      expect(evaluation.missingArtifacts[0]).toContain('min=5');
+      expect(evaluation.missingArtifacts[0]).toContain('got 2');
+    });
+
+    it('glob spec with minMatches passes when enough artifacts match', async () => {
+      const session = await stateService.createSession({ name: 'glob-ok' });
+      for (const locale of ['pt', 'en', 'es', 'fr', 'de']) {
+        await stateService.addArtifact(session.id, {
+          name: `${locale}.json`, kind: 'file', path: `locales/${locale}.json`,
+        });
+      }
+
+      const task = await service.createTaskContract({
+        title: 'i18n coverage ok',
+        sessionId: session.id,
+        requiredArtifacts: [{ kind: 'glob', glob: 'locales/**/*.json', minMatches: 5 }],
+      });
+
+      const evaluation = await service.evaluateTaskCompletion(task.id, session.id);
+      expect(evaluation.canComplete).toBe(true);
+      expect(evaluation.matchedArtifacts).toHaveLength(5);
+    });
+
+    it('file-count spec mirrors glob with minMatches=min', async () => {
+      const session = await stateService.createSession({ name: 'fc' });
+      await stateService.addArtifact(session.id, {
+        name: 'a.md', kind: 'file', path: 'docs/a.md',
+      });
+
+      const task = await service.createTaskContract({
+        title: 'file-count fail',
+        sessionId: session.id,
+        requiredArtifacts: [{ kind: 'file-count', glob: 'docs/*.md', min: 3 }],
+      });
+
+      const evaluation = await service.evaluateTaskCompletion(task.id, session.id);
+      expect(evaluation.canComplete).toBe(false);
+      expect(evaluation.missingArtifacts[0]).toContain('file-count');
+      expect(evaluation.missingArtifacts[0]).toContain('min=3');
+      expect(evaluation.missingArtifacts[0]).toContain('got 1');
+    });
+
+    it('mixes string (legacy) and structured specs', async () => {
+      const session = await stateService.createSession({ name: 'mix' });
+      await stateService.addArtifact(session.id, {
+        name: 'handoff', kind: 'text', path: 'handoff',
+      });
+      await stateService.addArtifact(session.id, {
+        name: 'a.json', kind: 'file', path: 'locales/a.json',
+      });
+
+      const task = await service.createTaskContract({
+        title: 'mix',
+        sessionId: session.id,
+        requiredArtifacts: [
+          'handoff',
+          { kind: 'glob', glob: 'locales/*.json' },
+        ],
+      });
+
+      const evaluation = await service.evaluateTaskCompletion(task.id, session.id);
+      expect(evaluation.canComplete).toBe(true);
+      expect(evaluation.missingArtifacts).toHaveLength(0);
+    });
+  });
 });
 

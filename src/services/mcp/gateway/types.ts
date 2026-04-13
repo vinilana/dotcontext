@@ -200,7 +200,7 @@ export interface HarnessParams {
   expectedOutputs?: string[];
   acceptanceCriteria?: string[];
   requiredSensors?: string[];
-  requiredArtifacts?: string[];
+  requiredArtifacts?: Array<string | Record<string, unknown>>;
   from?: string;
   to?: string;
   artifacts?: string[];
