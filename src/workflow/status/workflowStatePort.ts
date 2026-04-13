@@ -1,16 +1,13 @@
-import type { PrevcStatus } from '../types';
-
 /**
- * Narrow persistence port for canonical PREVC workflow state.
+ * @deprecated Use `HarnessWorkflowStateService` directly.
  *
- * The workflow layer depends on this abstraction, while harness implements it.
+ * This file previously declared a `WorkflowStatePort` interface that existed
+ * only to abstract a single implementation. The port has been collapsed; this
+ * type alias remains as a compatibility shim for callers outside the status
+ * package (e.g. `workflow/orchestrator.ts`) and should be removed along with
+ * its last importer.
  */
-export interface WorkflowStatePort {
-  exists(): Promise<boolean>;
-  existsSync(): boolean;
-  load(): Promise<PrevcStatus>;
-  loadSync(): PrevcStatus;
-  save(status: PrevcStatus): Promise<void>;
-  remove(): Promise<void>;
-  archive(name: string): Promise<void>;
-}
+
+import type { HarnessWorkflowStateService } from '../../services/harness/workflowStateService';
+
+export type WorkflowStatePort = HarnessWorkflowStateService;
