@@ -6,3 +6,4 @@
 
 export * from './types';
 export { PlanLinker, createPlanLinker } from './planLinker';
+export { AcceptanceFailedError, runAcceptance } from './acceptanceRunner';

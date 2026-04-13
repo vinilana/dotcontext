@@ -94,6 +94,7 @@ export {
   WorkflowPlans,
   AgentLineupEntry,
   PLAN_PHASE_TO_PREVC,
+  AcceptanceFailedError,
 } from './plans';
 
 // Skills

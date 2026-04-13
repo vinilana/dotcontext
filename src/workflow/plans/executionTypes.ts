@@ -10,6 +10,34 @@
 import { StatusType } from '../types';
 import { PlanDecision } from './types';
 
+/**
+ * Executable acceptance predicate for a step. When present, the harness runs
+ * this command before allowing the step to transition into `completed`. A
+ * non-zero exit code rejects the transition.
+ *
+ * Shell safety: `command` is always an array and is spawned with `shell:false`.
+ * The first element is the executable; the rest are literal argv entries. No
+ * shell interpolation is performed. This shape was chosen over a single
+ * string to eliminate the ambiguity that leads to shell injection.
+ */
+export interface StepAcceptanceSpec {
+  kind: 'shell';
+  command: string[];
+  timeoutMs?: number;
+  workingDir?: string;
+}
+
+/** Result of executing a step acceptance predicate. */
+export interface StepAcceptanceRun {
+  ran_at: number;
+  passed: boolean;
+  exitCode: number | null;
+  tailStdout: string;
+  tailStderr: string;
+  durationMs: number;
+  timedOut: boolean;
+}
+
 /** Individual step execution tracking */
 export interface StepExecution {
   stepIndex: number;
@@ -20,6 +48,8 @@ export interface StepExecution {
   completedAt?: string;
   output?: string;
   notes?: string;
+  acceptance?: StepAcceptanceSpec;
+  acceptanceRun?: StepAcceptanceRun;
 }
 
 /** Enhanced phase tracking with step-level detail */
