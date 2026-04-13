@@ -49,6 +49,7 @@ export {
   PHASE_NAMES_PT,
   getPhaseDefinition,
   getNextPhase,
+  getNextActivePhase,
   getPreviousPhase,
   isPhaseOptional,
   getRolesForPhase,

@@ -152,3 +152,52 @@ export function isValidPhase(phase: string): phase is PrevcPhase {
 export function getPhaseOrder(phase: PrevcPhase): number {
   return PREVC_PHASES[phase]?.order ?? 0;
 }
+
+/**
+ * Minimal shape we need to decide whether a phase is active.
+ *
+ * We intentionally keep this structural (not importing `PrevcStatus`) so
+ * `phases.ts` stays leaf-level and can be consumed anywhere.
+ */
+export interface PhaseStatusMap {
+  [phase: string]: { status: string } | undefined;
+}
+
+/**
+ * Return the next non-skipped phase after `currentPhase`, or `null` if
+ * there are no more active phases.
+ *
+ * Unlike `getNextPhase`, this consults the workflow status to skip over
+ * phases marked `skipped`. Throws with context when the status is missing
+ * an entry for any phase in `PREVC_PHASE_ORDER` — that is a data
+ * corruption bug we want to surface loudly rather than silently return
+ * null.
+ */
+export function getNextActivePhase(
+  currentPhase: PrevcPhase,
+  phases: PhaseStatusMap
+): PrevcPhase | null {
+  const currentIndex = PREVC_PHASE_ORDER.indexOf(currentPhase);
+  if (currentIndex < 0) {
+    throw new Error(
+      `getNextActivePhase: unknown current phase "${currentPhase}". ` +
+        `Expected one of ${PREVC_PHASE_ORDER.join(', ')}.`
+    );
+  }
+
+  for (let i = currentIndex + 1; i < PREVC_PHASE_ORDER.length; i++) {
+    const phase = PREVC_PHASE_ORDER[i];
+    const entry = phases[phase];
+    if (!entry || typeof entry.status !== 'string') {
+      throw new Error(
+        `getNextActivePhase: status is missing a valid entry for phase "${phase}". ` +
+          `This indicates a corrupted workflow status document.`
+      );
+    }
+    if (entry.status !== 'skipped') {
+      return phase;
+    }
+  }
+
+  return null;
+}
