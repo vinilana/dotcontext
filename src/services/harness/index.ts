@@ -115,6 +115,12 @@ export {
   type HarnessPolicyEvaluationResult,
 } from './policyService';
 export {
+  createI18nCoverageSensor,
+  executeI18nCoverage,
+  type I18nCoverageOptions,
+  type I18nCoverageReport,
+} from './sensors/i18nCoverage';
+export {
   HarnessWorkflowStateService,
   type HarnessWorkflowStateServiceOptions,
   type HarnessWorkflowRecord,

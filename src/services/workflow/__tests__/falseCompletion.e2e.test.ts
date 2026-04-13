@@ -190,6 +190,57 @@ describe('false completion e2e', () => {
     expect(status.project.current_phase).toBe('E');
   });
 
+  it('E -> V with i18n-coverage required: blocks until sensor runs and locales are complete', async () => {
+    await service.init({ name: 'i18n-coverage-gate', scale: 'MEDIUM', autonomous: true });
+    await service.advance(); // P -> R
+    await service.advance(); // R -> E
+
+    // Three locales, base complete, target1 incomplete, target2 complete.
+    const localesDir = path.join(tempDir, 'locales');
+    await fs.ensureDir(localesDir);
+    await fs.writeJson(path.join(localesDir, 'en.json'), { hello: 'Hello', bye: 'Bye' });
+    await fs.writeJson(path.join(localesDir, 'pt.json'), { hello: 'Olá' });
+    await fs.writeJson(path.join(localesDir, 'es.json'), { hello: 'Hola', bye: 'Adios' });
+
+    await service.defineHarnessTask({
+      title: 'Translate locales with sensor gate',
+      requiredSensors: ['i18n-coverage'],
+      requiredArtifacts: [
+        { kind: 'glob', glob: 'locales/*.json', minMatches: 3, fromFilesystem: true },
+      ],
+    });
+
+    // Step 1: sensor not yet run -> gate must block citing the sensor.
+    const err1 = await service.advance().then(() => null, (e) => e);
+    expect(err1).toBeTruthy();
+    const reasons1 =
+      err1 instanceof HarnessWorkflowBlockedError
+        ? err1.reasons.join(' | ')
+        : String(err1?.message ?? '');
+    expect(reasons1).toMatch(/i18n-coverage/);
+
+    // Step 2: run sensor while pt.json is incomplete -> sensor fails -> still blocked.
+    const failedRun = await service.runHarnessSensors(['i18n-coverage']);
+    expect(failedRun.runs[0].status).toBe('failed');
+    const err2 = await service.advance().then(() => null, (e) => e);
+    expect(err2).toBeTruthy();
+    const reasons2 =
+      err2 instanceof HarnessWorkflowBlockedError
+        ? err2.reasons.join(' | ')
+        : String(err2?.message ?? '');
+    expect(reasons2).toMatch(/i18n-coverage/);
+
+    // Step 3: complete pt.json, re-run sensor -> passes -> advance succeeds.
+    await fs.writeJson(path.join(localesDir, 'pt.json'), { hello: 'Olá', bye: 'Tchau' });
+    const okRun = await service.runHarnessSensors(['i18n-coverage']);
+    expect(okRun.runs[0].status).toBe('passed');
+
+    const next = await service.advance();
+    expect(next).toBe('V');
+    const status = await service.getStatus();
+    expect(status.project.current_phase).toBe('V');
+  });
+
   it('E -> V succeeds once required sensors pass and artifacts are recorded', async () => {
     await service.init({ name: 'evidence-ok', scale: 'MEDIUM', autonomous: true });
 

@@ -34,6 +34,7 @@ import {
   type HarnessHandoffContract,
   type WorkflowHarnessBinding,
 } from '../harness';
+import { createI18nCoverageSensor } from '../harness/sensors/i18nCoverage';
 
 const exec = promisify(execCallback);
 
@@ -304,6 +305,10 @@ export class HarnessSessionFacade {
   }
 
   private registerDefaultSensors(): void {
+    // Built-in sensors are registered first so the shell-catalog loop below
+    // can override them by id if the user's sensors.json declares one.
+    this.sensorsService.registerSensor(createI18nCoverageSensor(this.repoPath));
+
     const definitions = this.sensorCatalogService.resolveEffectiveSensorsSync();
 
     for (const definition of definitions) {
