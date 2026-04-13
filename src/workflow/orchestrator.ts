@@ -23,7 +23,7 @@ import { PlanLinker } from './plans/planLinker';
 import { assertPhaseStatusConverges } from './plans/invariants';
 import { WorkflowGuidanceService } from './orchestration/workflowGuidanceService';
 import { buildNextAgentSuggestion } from './guidance';
-import type { WorkflowStatePort } from './status/workflowStatePort';
+import type { HarnessWorkflowStateService } from '../services/harness/workflowStateService';
 import { WorkflowSyncError } from './errors';
 
 /**
@@ -59,7 +59,7 @@ export class PrevcOrchestrator {
   private planLinker: PlanLinker;
   private guidanceService: WorkflowGuidanceService;
 
-  constructor(contextPath: string, workflowState: WorkflowStatePort) {
+  constructor(contextPath: string, workflowState: HarnessWorkflowStateService) {
     this.repoPath = path.dirname(contextPath);
     this.contextPath = contextPath;
     this.statusManager = new PrevcStatusManager(contextPath, workflowState);
