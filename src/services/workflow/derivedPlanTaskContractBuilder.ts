@@ -1,7 +1,7 @@
 import { getPhaseDefinition } from '../../workflow/phases';
 import type { LinkedPlan, PlanPhase, PlanStep } from '../../workflow/plans';
 import type { PrevcPhase } from '../../workflow/types';
-import type { HarnessTaskContract } from '../harness';
+import type { HarnessTaskContract, RequiredArtifactInput } from '../harness';
 
 /**
  * Conservative defaults for `requiredSensors` when a plan phase does not
@@ -28,8 +28,22 @@ export interface DerivedTaskContractInput {
   expectedOutputs: string[];
   acceptanceCriteria: string[];
   requiredSensors: string[];
-  requiredArtifacts: string[];
+  requiredArtifacts: RequiredArtifactInput[];
   metadata: Record<string, unknown>;
+}
+
+function uniqueArtifactSpecs(values: RequiredArtifactInput[]): RequiredArtifactInput[] {
+  const seen = new Set<string>();
+  const out: RequiredArtifactInput[] = [];
+  for (const value of values) {
+    if (value === null || value === undefined) continue;
+    const key = typeof value === 'string' ? `s:${value.trim()}` : `o:${JSON.stringify(value)}`;
+    if (typeof value === 'string' && value.trim().length === 0) continue;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(typeof value === 'string' ? value.trim() : value);
+  }
+  return out;
 }
 
 function uniqueStrings(values: Array<string | undefined | null>): string[] {
@@ -90,14 +104,14 @@ export class DerivedPlanTaskContractBuilder {
     const declaredSensors = uniqueStrings(
       matchingPlanPhases.flatMap((planPhase) => planPhase.requirements?.requiredSensors ?? [])
     );
-    const declaredArtifacts = uniqueStrings(
+    const declaredArtifacts = uniqueArtifactSpecs(
       matchingPlanPhases.flatMap((planPhase) => planPhase.requirements?.requiredArtifacts ?? [])
     );
     const fallbackSensors = declaredSensors.length === 0
       ? [...(DEFAULT_REQUIRED_SENSORS_BY_PHASE[phase] ?? [])]
       : [];
     const requiredSensors = declaredSensors.length > 0 ? declaredSensors : fallbackSensors;
-    const requiredArtifacts = declaredArtifacts;
+    const requiredArtifacts: RequiredArtifactInput[] = declaredArtifacts;
     const requirementsSource = declaredSensors.length > 0 || declaredArtifacts.length > 0
       ? 'plan-frontmatter'
       : fallbackSensors.length > 0

@@ -104,6 +104,34 @@ describe('DerivedPlanTaskContractBuilder', () => {
     expect(input.metadata.requirementsSource).toBe('none');
   });
 
+  it('propagates structured artifact specs (glob/file-count) without stringifying', () => {
+    const plan = makePlan([
+      {
+        id: 'phase-2',
+        name: 'Implementation',
+        prevcPhase: 'E',
+        steps: [],
+        status: 'pending',
+        requirements: {
+          requiredSensors: ['tests'],
+          requiredArtifacts: [
+            { kind: 'glob', glob: 'locales/**/*.json', minMatches: 5 },
+            { kind: 'file-count', glob: 'docs/*.md', min: 2 },
+            'i18n-coverage-report',
+          ],
+        },
+      },
+    ]);
+
+    const input = builder.build(plan, 'E');
+
+    expect(input.requiredArtifacts).toEqual([
+      { kind: 'glob', glob: 'locales/**/*.json', minMatches: 5 },
+      { kind: 'file-count', glob: 'docs/*.md', min: 2 },
+      'i18n-coverage-report',
+    ]);
+  });
+
   it('merges requirements across multiple plan phases targeting the same PREVC phase', () => {
     const plan = makePlan([
       {

@@ -6,6 +6,7 @@
  */
 
 import { PrevcPhase, PrevcRole, StatusType } from '../types';
+import type { RequiredArtifactInput } from '../../services/harness/taskContractsService';
 
 /**
  * Keyword-based mapping from plan-local phase names to PREVC phases.
@@ -70,8 +71,12 @@ export interface PlanStep {
 export interface PlanPhaseRequirements {
   /** Sensor ids that must have `status==='passed'` in the session */
   requiredSensors: string[];
-  /** Artifact names/paths that must have been recorded in the session */
-  requiredArtifacts: string[];
+  /**
+   * Artifact requirements that must be satisfied by recorded artifacts.
+   * Strings are interpreted as exact name matches; structured specs support
+   * glob and file-count matching. See `RequiredArtifactSpec`.
+   */
+  requiredArtifacts: RequiredArtifactInput[];
 }
 
 /**

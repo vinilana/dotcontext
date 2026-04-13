@@ -152,6 +152,44 @@ describe('false completion e2e', () => {
     );
   });
 
+  it('E -> V is blocked when glob spec minMatches is not satisfied (i18n scenario)', async () => {
+    await service.init({ name: 'i18n-gate', scale: 'MEDIUM', autonomous: true });
+    await service.advance(); // P -> R
+    await service.advance(); // R -> E
+
+    await service.defineHarnessTask({
+      title: 'Translate all locales',
+      requiredSensors: [],
+      requiredArtifacts: [
+        { kind: 'glob', glob: 'locales/**/*.json', minMatches: 5 },
+      ],
+    });
+
+    // Record only 2 of 5 required locales.
+    await service.recordHarnessArtifact({
+      name: 'pt-BR.json', kind: 'text', path: 'locales/pt-BR.json', content: '{}',
+    });
+    await service.recordHarnessArtifact({
+      name: 'en-US.json', kind: 'text', path: 'locales/en-US.json', content: '{}',
+    });
+
+    const error = await service.advance().then(() => null, (e) => e);
+    expect(error).toBeTruthy();
+    expect(
+      error instanceof WorkflowGateError || error instanceof HarnessWorkflowBlockedError
+    ).toBe(true);
+
+    const reasons =
+      error instanceof HarnessWorkflowBlockedError
+        ? error.reasons.join(' | ')
+        : String(error?.message ?? '');
+    expect(reasons).toMatch(/locales\/\*\*\/\*\.json/);
+    expect(reasons).toMatch(/got 2/);
+
+    const status = await service.getStatus();
+    expect(status.project.current_phase).toBe('E');
+  });
+
   it('E -> V succeeds once required sensors pass and artifacts are recorded', async () => {
     await service.init({ name: 'evidence-ok', scale: 'MEDIUM', autonomous: true });
 

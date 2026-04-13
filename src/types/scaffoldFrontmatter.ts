@@ -108,7 +108,15 @@ export interface PlanScaffoldFrontmatter extends BaseScaffoldFrontmatter {
      * complete. Propagated into the derived harness task contract's
      * `requiredArtifacts`.
      */
-    required_artifacts?: string[];
+    required_artifacts?: Array<string | {
+      kind: 'name'; name: string;
+    } | {
+      kind: 'path'; path: string;
+    } | {
+      kind: 'glob'; glob: string; minMatches?: number;
+    } | {
+      kind: 'file-count'; glob: string; min: number;
+    }>;
   }>;
 }
 
@@ -240,7 +248,15 @@ export function createPlanFrontmatter(
         deliverables?: string[];
       }>;
       required_sensors?: string[];
-      required_artifacts?: string[];
+      required_artifacts?: Array<string | {
+      kind: 'name'; name: string;
+    } | {
+      kind: 'path'; path: string;
+    } | {
+      kind: 'glob'; glob: string; minMatches?: number;
+    } | {
+      kind: 'file-count'; glob: string; min: number;
+    }>;
     }>;
   }
 ): PlanScaffoldFrontmatter {
@@ -382,6 +398,26 @@ const planStepSchema = z.object({
   deliverables: z.array(z.string()).optional(),
 });
 
+const requiredArtifactSpecSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('name'), name: z.string().min(1) }),
+  z.object({ kind: z.literal('path'), path: z.string().min(1) }),
+  z.object({
+    kind: z.literal('glob'),
+    glob: z.string().min(1),
+    minMatches: z.number().int().positive().optional(),
+  }),
+  z.object({
+    kind: z.literal('file-count'),
+    glob: z.string().min(1),
+    min: z.number().int().positive(),
+  }),
+]);
+
+const requiredArtifactInputSchema = z.union([
+  z.string().min(1),
+  requiredArtifactSpecSchema,
+]);
+
 const planPhaseSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -390,7 +426,7 @@ const planPhaseSchema = z.object({
   deliverables: z.array(z.string()).optional(),
   steps: z.array(planStepSchema).optional(),
   required_sensors: z.array(z.string().min(1)).optional(),
-  required_artifacts: z.array(z.string().min(1)).optional(),
+  required_artifacts: z.array(requiredArtifactInputSchema).optional(),
 });
 
 const agentEntrySchema = z.object({

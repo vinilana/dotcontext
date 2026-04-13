@@ -8,6 +8,7 @@
 import { load as loadYaml } from 'js-yaml';
 import { PrevcPhase } from '../workflow/types';
 import type { ScaffoldFrontmatter, ScaffoldFileType, ScaffoldStatus } from '../types/scaffoldFrontmatter';
+import type { RequiredArtifactInput, RequiredArtifactSpec } from '../services/harness/taskContractsService';
 
 /**
  * Legacy v1 frontmatter (simple status tracking)
@@ -57,7 +58,7 @@ export interface ParsedPlanPhaseFrontmatter {
   deliverables?: string[];
   steps?: ParsedPlanStepFrontmatter[];
   requiredSensors?: string[];
-  requiredArtifacts?: string[];
+  requiredArtifacts?: RequiredArtifactInput[];
 }
 
 /**
@@ -97,6 +98,57 @@ function normalizeStringArray(value: unknown): string[] | undefined {
     .filter((item): item is string => item !== null);
 
   return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeArtifactSpec(value: unknown): RequiredArtifactInput | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const obj = value as Record<string, unknown>;
+  const kind = typeof obj.kind === 'string' ? obj.kind : null;
+  switch (kind) {
+    case 'name':
+      return typeof obj.name === 'string' && obj.name.length > 0
+        ? ({ kind: 'name', name: obj.name } as RequiredArtifactSpec)
+        : null;
+    case 'path':
+      return typeof obj.path === 'string' && obj.path.length > 0
+        ? ({ kind: 'path', path: obj.path } as RequiredArtifactSpec)
+        : null;
+    case 'glob': {
+      if (typeof obj.glob !== 'string' || obj.glob.length === 0) return null;
+      const min = typeof obj.minMatches === 'number' && obj.minMatches > 0
+        ? obj.minMatches
+        : undefined;
+      const spec: RequiredArtifactSpec = min !== undefined
+        ? { kind: 'glob', glob: obj.glob, minMatches: min }
+        : { kind: 'glob', glob: obj.glob };
+      return spec;
+    }
+    case 'file-count': {
+      if (typeof obj.glob !== 'string' || obj.glob.length === 0) return null;
+      if (typeof obj.min !== 'number' || obj.min <= 0) return null;
+      return { kind: 'file-count', glob: obj.glob, min: obj.min } as RequiredArtifactSpec;
+    }
+    default:
+      return null;
+  }
+}
+
+function normalizeArtifactSpecArray(value: unknown): RequiredArtifactInput[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const out: RequiredArtifactInput[] = [];
+  for (const item of value) {
+    const spec = normalizeArtifactSpec(item);
+    if (spec !== null) out.push(spec);
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 function normalizePlanSteps(value: unknown): ParsedPlanStepFrontmatter[] | undefined {
@@ -160,7 +212,7 @@ function normalizePlanPhases(value: unknown): ParsedPlanPhaseFrontmatter[] | und
     const requiredSensors = normalizeStringArray(
       phase.required_sensors ?? phase.requiredSensors
     );
-    const requiredArtifacts = normalizeStringArray(
+    const requiredArtifacts = normalizeArtifactSpecArray(
       phase.required_artifacts ?? phase.requiredArtifacts
     );
 

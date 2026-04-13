@@ -233,7 +233,7 @@ export class PlanLinkerParser {
           ]);
 
           const requiredSensors = this.uniqueStrings(phase.requiredSensors ?? []);
-          const requiredArtifacts = this.uniqueStrings(phase.requiredArtifacts ?? []);
+          const requiredArtifacts = this.uniqueArtifactSpecs(phase.requiredArtifacts ?? []);
           const hasRequirements = requiredSensors.length > 0 || requiredArtifacts.length > 0;
 
           return {
@@ -416,6 +416,22 @@ export class PlanLinkerParser {
 
   private uniqueStrings(values: string[]): string[] {
     return [...new Set(values.map(value => value.trim()).filter(Boolean))];
+  }
+
+  private uniqueArtifactSpecs(
+    values: import('../../services/harness').RequiredArtifactInput[]
+  ): import('../../services/harness').RequiredArtifactInput[] {
+    const seen = new Set<string>();
+    const out: import('../../services/harness').RequiredArtifactInput[] = [];
+    for (const v of values) {
+      if (v === null || v === undefined) continue;
+      const key = typeof v === 'string' ? `s:${v.trim()}` : `o:${JSON.stringify(v)}`;
+      if (typeof v === 'string' && v.trim().length === 0) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(typeof v === 'string' ? v.trim() : v);
+    }
+    return out;
   }
 
   private inferPrevcPhaseFromPhaseName(phaseName: string): PrevcPhase {
