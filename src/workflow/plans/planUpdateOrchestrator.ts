@@ -21,6 +21,7 @@ import { PlanMarkdownProjector } from './planMarkdownProjector';
 import { PlanTrackingStore } from './planTrackingStore';
 import type { LinkedPlan, PlanDecision, PlanReference } from './types';
 import type { PlanExecutionTracking } from './executionTypes';
+import { AcceptanceFailedError, runAcceptance } from './acceptanceRunner';
 
 type LoadLinkedPlan = (planSlug: string) => Promise<LinkedPlan | null>;
 
@@ -118,7 +119,33 @@ export class PlanUpdateOrchestrator {
     );
 
     step.deliverables = planStep?.deliverables ?? step.deliverables;
-    step.status = status;
+
+    // Executable acceptance gate: when a step has an acceptance predicate and
+    // the caller is attempting to mark it `completed`, run the predicate first.
+    // On failure we persist the run for auditability but keep the prior
+    // status and throw AcceptanceFailedError for the caller to surface.
+    if (status === 'completed' && step.acceptance) {
+      const prevStatus = step.status;
+      const run = await runAcceptance(step.acceptance, { repoPath: this.repoPath });
+      step.acceptanceRun = run;
+      if (!run.passed) {
+        tracking.lastUpdated = now;
+        await this.trackingStore.save(planSlug, tracking);
+        this.indexProjector.invalidateCache();
+        throw new AcceptanceFailedError(
+          `Acceptance predicate failed for step ${stepIndex} in ${phaseId} of ${planSlug}` +
+            (run.timedOut ? ' (timed out)' : ` (exit ${run.exitCode ?? 'null'})`),
+          run,
+          { planSlug, phaseId, stepIndex }
+        );
+      }
+      step.status = 'completed';
+      // ensure we don't leave the step dangling in a weird prior state visible
+      // in tracking intermediate snapshots — we overwrite with completed below.
+      void prevStatus;
+    } else {
+      step.status = status;
+    }
     if (status === 'in_progress' && !step.startedAt) {
       step.startedAt = now;
     }
