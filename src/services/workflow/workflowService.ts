@@ -9,7 +9,7 @@ import * as fs from 'fs-extra';
 import { exec as execCallback } from 'child_process';
 import { promisify } from 'util';
 import { CollaborationSession, CollaborationManager } from '../../workflow/collaboration';
-import { GateCheckResult } from '../../workflow/gates';
+import { GateCheckResult, ExecutionEvidence } from '../../workflow/gates';
 import { PHASE_NAMES_PT } from '../../workflow/phases';
 import { createPlanLinker, type LinkedPlan } from '../../workflow/plans';
 import { ROLE_DISPLAY_NAMES } from '../../workflow/roles';
@@ -379,13 +379,26 @@ export class WorkflowService {
       ? await this.taskContractsService.getTaskContract(binding.activeTaskId)
       : null;
     const plannedNextPhase = await this.orchestrator.getNextPhase();
+
+    // Evaluate execution evidence for the current active task BEFORE advancing.
+    // The execution_evidence gate (in gateChecker) will block transitions that
+    // leave required sensors/artifacts unsatisfied, even when autonomous_mode
+    // is on — autonomous only suppresses policy gates (plan/approval).
+    const executionEvidence = await this.buildExecutionEvidence(
+      activeTaskBeforeAdvance,
+      binding.sessionId
+    );
+
     const nextContract = plannedNextPhase
       ? await this.createDerivedPlanTaskContract({
           phase: plannedNextPhase,
           sessionId: binding.sessionId,
         })
       : null;
-    const nextPhase = await this.orchestrator.completePhase(outputs, options);
+    const nextPhase = await this.orchestrator.completePhase(outputs, {
+      ...options,
+      executionEvidence,
+    });
 
     if (nextPhase) {
       binding.activeTaskId = nextContract?.id;
@@ -580,6 +593,32 @@ export class WorkflowService {
       sessionId: params.sessionId,
       status: 'ready',
     });
+  }
+
+  private async buildExecutionEvidence(
+    activeTask: HarnessTaskContract | null,
+    sessionId: string
+  ): Promise<ExecutionEvidence> {
+    if (!activeTask) {
+      return {
+        canComplete: false,
+        missingSensors: [],
+        missingArtifacts: [],
+        blockingFindings: [],
+        hasActiveContract: false,
+      };
+    }
+    const evaluation = await this.taskContractsService.evaluateTaskCompletion(
+      activeTask.id,
+      sessionId
+    );
+    return {
+      canComplete: evaluation.canComplete,
+      missingSensors: evaluation.missingSensors,
+      missingArtifacts: evaluation.missingArtifacts,
+      blockingFindings: evaluation.blockingFindings,
+      hasActiveContract: true,
+    };
   }
 
   private async createDerivedPlanTaskContract(params: {
