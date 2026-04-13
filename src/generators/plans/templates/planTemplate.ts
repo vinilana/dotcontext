@@ -5,6 +5,7 @@ import {
   serializeFrontmatter,
 } from '../../../types/scaffoldFrontmatter';
 import { PrevcPhase } from '../../../workflow/types';
+import { mergeSuggestionsIntoPhases } from '../../../workflow/plans/scaffoldSuggestions';
 
 interface TemplateStep {
   order: number;
@@ -105,7 +106,7 @@ ${taskRows}
 }
 
 export function renderPlanTemplate(context: PlanTemplateContext): string {
-  const { title, slug, summary, agents, docs, semantics, codebaseSnapshot } = context;
+  const { title, slug, summary, agents, docs, semantics, codebaseSnapshot, phaseSuggestions } = context;
   const planSummary = summary?.trim() || 'TODO: Summarize the desired outcome and the problem this plan addresses.';
 
   const phases: TemplatePhase[] = [
@@ -318,19 +319,22 @@ When to initiate rollback:
         ? agents.map((agent) => ({ type: agent.type, role: agent.responsibility }))
         : [{ type: 'documentation-writer', role: 'Create clear, comprehensive documentation' }],
       docs: docs.length > 0 ? docs.map((doc) => doc.file) : ['README.md'],
-      phases: phases.map((phase) => ({
-        id: phase.id,
-        name: phase.name,
-        prevc: phase.prevc,
-        summary: phase.objective,
-        deliverables: uniqueStrings(phase.steps.flatMap((step) => step.deliverables)),
-        steps: phase.steps.map((step) => ({
-          order: step.order,
-          description: step.description,
-          assignee: step.assignee,
-          deliverables: step.deliverables,
+      phases: mergeSuggestionsIntoPhases(
+        phases.map((phase) => ({
+          id: phase.id,
+          name: phase.name,
+          prevc: phase.prevc,
+          summary: phase.objective,
+          deliverables: uniqueStrings(phase.steps.flatMap((step) => step.deliverables)),
+          steps: phase.steps.map((step) => ({
+            order: step.order,
+            description: step.description,
+            assignee: step.assignee,
+            deliverables: step.deliverables,
+          })),
         })),
-      })),
+        phaseSuggestions ?? {}
+      ),
     }
   );
 
