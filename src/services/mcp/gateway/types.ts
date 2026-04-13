@@ -9,7 +9,7 @@
  */
 
 import type { PrevcPhase, PrevcRole } from '../../../workflow/types';
-import type { AgentType } from '../../../workflow/orchestration/agentOrchestrator';
+import type { AgentType } from '../../../workflow';
 
 // Action types for each gateway
 // Note: Workflow uses dedicated tools (workflow-init, workflow-status, workflow-advance, workflow-manage)

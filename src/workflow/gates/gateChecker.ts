@@ -79,11 +79,34 @@ export class WorkflowGateChecker {
   /**
    * Check all gates for the current phase transition
    */
+  /**
+   * Check all gates for the current phase transition.
+   *
+   * Design note: `nextPhase` is retained as an override so callers can
+   * ask "what would gates say if we jumped to X?" — useful for UI
+   * previews. We refuse overrides that target a phase the workflow has
+   * explicitly marked `skipped`, because forcing a gate decision onto
+   * a skipped phase would contradict the scale-based progression.
+   * Transitions to non-skipped phases out of normal order are still
+   * allowed (force flows stay possible).
+   */
   checkGates(
     status: PrevcStatus,
     nextPhase?: PrevcPhase
   ): GateCheckResult {
     const currentPhase = status.project.current_phase;
+
+    if (nextPhase) {
+      const targetEntry = status.phases?.[nextPhase];
+      if (targetEntry?.status === 'skipped') {
+        throw new Error(
+          `checkGates: refusing to evaluate transition to phase "${nextPhase}" ` +
+            `because it is marked as skipped. Omit nextPhase to use the next ` +
+            `active phase in sequence.`
+        );
+      }
+    }
+
     const targetPhase = nextPhase || this.getNextPhaseForStatus(status);
 
     // Get effective settings (use defaults if not set)

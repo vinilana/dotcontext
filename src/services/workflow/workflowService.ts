@@ -26,9 +26,9 @@ import {
   PhaseOrchestration,
 } from '../../workflow/types';
 import type { CollaborationSynthesis } from '../../workflow/types';
-import {
-  FileCollaborationStore,
-} from './fileCollaborationStore';
+import type { PlanLinker } from '../../workflow/plans';
+import { PHASE_NAMES_EN } from '../../workflow/phases';
+import { FileCollaborationStore } from './fileCollaborationStore';
 import { DerivedPlanTaskContractBuilder } from './derivedPlanTaskContractBuilder';
 import {
   HarnessRuntimeStateService,
@@ -258,6 +258,35 @@ export class WorkflowService {
    */
   async getSummary(): Promise<WorkflowSummary> {
     return this.orchestrator.getSummary();
+  }
+
+  /**
+   * Get the English display name for a PREVC phase.
+   *
+   * Facade method so MCP/CLI handlers do not need to import phase
+   * constants directly from the workflow barrel.
+   */
+  getPhaseDisplayName(phase: PrevcPhase): string {
+    return PHASE_NAMES_EN[phase];
+  }
+
+  /**
+   * Get the English display name for a PREVC role.
+   *
+   * Facade method for MCP/CLI handlers.
+   */
+  getRoleDisplayName(role: PrevcRole): string {
+    return ROLE_DISPLAY_NAMES[role];
+  }
+
+  /**
+   * Return a PlanLinker bound to this workflow's repository.
+   *
+   * Facade method so MCP/CLI handlers never import `createPlanLinker`
+   * directly from the workflow submodules.
+   */
+  getPlanLinkerForWorkflow(): PlanLinker {
+    return createPlanLinker(this.repoPath);
   }
 
   /**

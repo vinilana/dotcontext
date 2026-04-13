@@ -10,6 +10,9 @@
 // Types
 export * from './types';
 
+// Agent types (surfaced for MCP adapters)
+export { AGENT_TYPES, type AgentType } from './orchestration/agentOrchestrator';
+
 // Errors
 export {
   WorkflowError,
@@ -44,6 +47,7 @@ export {
   PHASE_NAMES_PT,
   getPhaseDefinition,
   getNextPhase,
+  getNextActivePhase,
   getPreviousPhase,
   isPhaseOptional,
   getRolesForPhase,

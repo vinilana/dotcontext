@@ -25,7 +25,7 @@ import {
   getScaleName,
   ProjectScale,
 } from '../../workflow';
-import { AGENT_TYPES } from '../../workflow/orchestration/agentOrchestrator';
+import { AGENT_TYPES } from '../../workflow';
 
 import {
   handleExplore,
