@@ -67,11 +67,42 @@ describe('workflowStatus', () => {
     await fs.ensureDir(path.join(tempDir, '.context', 'plans'));
     await fs.writeFile(
       path.join(tempDir, '.context', 'plans', 'status-rotation.md'),
-      '# Status Rotation\n\n> Status regression.\n\n### Phase 1 - Discovery & Alignment\n1. Review the current system state\n2. Capture the phase bootstrap outputs\n\n### Phase 2 - Implementation\n1. Execute the implementation work\n',
+      [
+        '---',
+        'type: plan',
+        'name: status-rotation',
+        'description: "Status regression."',
+        'planSlug: status-rotation',
+        'generated: "2026-04-13"',
+        'status: filled',
+        'scaffoldVersion: "2.0.0"',
+        'phases:',
+        '  - id: phase-1',
+        '    name: Discovery',
+        '    prevc: P',
+        '  - id: phase-2',
+        '    name: Implementation',
+        '    prevc: E',
+        '    required_sensors:',
+        '      - tests',
+        '---',
+        '',
+        '# Status Rotation',
+        '',
+        '> Status regression.',
+        '',
+        '### Phase 1 - Discovery & Alignment',
+        '1. Review the current system state',
+        '2. Capture the phase bootstrap outputs',
+        '',
+        '### Phase 2 - Implementation',
+        '1. Execute the implementation work',
+        '',
+      ].join('\n'),
       'utf-8'
     );
 
-    await parseResponse(await handlePlan({
+    parseResponse(await handlePlan({
       action: 'link',
       planSlug: 'status-rotation',
     }, { repoPath: tempDir }));

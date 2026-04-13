@@ -98,6 +98,17 @@ export interface PlanScaffoldFrontmatter extends BaseScaffoldFrontmatter {
       assignee?: string;
       deliverables?: string[];
     }>;
+    /**
+     * Sensor ids that must pass before this phase can complete. Propagated
+     * into the derived harness task contract's `requiredSensors`.
+     */
+    required_sensors?: string[];
+    /**
+     * Artifact names/paths that must be recorded before this phase can
+     * complete. Propagated into the derived harness task contract's
+     * `requiredArtifacts`.
+     */
+    required_artifacts?: string[];
   }>;
 }
 
@@ -228,6 +239,8 @@ export function createPlanFrontmatter(
         assignee?: string;
         deliverables?: string[];
       }>;
+      required_sensors?: string[];
+      required_artifacts?: string[];
     }>;
   }
 ): PlanScaffoldFrontmatter {
@@ -315,6 +328,18 @@ export function serializeFrontmatter(fm: ScaffoldFrontmatter): string {
             lines.push(`      - ${JSON.stringify(deliverable)}`);
           }
         }
+        if (phase.required_sensors && phase.required_sensors.length > 0) {
+          lines.push('    required_sensors:');
+          for (const sensor of phase.required_sensors) {
+            lines.push(`      - ${JSON.stringify(sensor)}`);
+          }
+        }
+        if (phase.required_artifacts && phase.required_artifacts.length > 0) {
+          lines.push('    required_artifacts:');
+          for (const artifact of phase.required_artifacts) {
+            lines.push(`      - ${JSON.stringify(artifact)}`);
+          }
+        }
         if (phase.steps && phase.steps.length > 0) {
           lines.push('    steps:');
           for (const step of phase.steps) {
@@ -364,6 +389,8 @@ const planPhaseSchema = z.object({
   summary: z.string().optional(),
   deliverables: z.array(z.string()).optional(),
   steps: z.array(planStepSchema).optional(),
+  required_sensors: z.array(z.string().min(1)).optional(),
+  required_artifacts: z.array(z.string().min(1)).optional(),
 });
 
 const agentEntrySchema = z.object({

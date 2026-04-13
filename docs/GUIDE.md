@@ -268,6 +268,58 @@ captured `tailStdout` / `tailStderr` and the non-zero `exitCode` rather than a
 500 error. On success, the step transitions to `completed` and the passing
 `acceptanceRun` is persisted.
 
+## Declaring Execution Requirements in Plans
+
+The `execution_evidence` gate (E -> V) only has teeth when the derived task
+contract actually declares what evidence is required. Plan frontmatter is the
+canonical place to declare it, per phase:
+
+```yaml
+---
+type: plan
+name: auth-rollout
+description: "Authentication rollout."
+planSlug: auth-rollout
+generated: "2026-04-13"
+status: filled
+scaffoldVersion: "2.0.0"
+phases:
+  - id: phase-1
+    prevc: P
+    name: Planning
+  - id: phase-2
+    prevc: E
+    name: Implementation
+    required_sensors:
+      - tests
+      - typecheck
+    required_artifacts:
+      - handoff-summary
+  - id: phase-3
+    prevc: V
+    name: Validation
+    required_sensors:
+      - tests
+      - lint
+---
+```
+
+`required_sensors` are sensor ids that must have `status==='passed'` in the
+harness session. `required_artifacts` are artifact names/paths that must have
+been recorded via `harness({ action: "recordArtifact", ... })`.
+
+Rules:
+
+- `plan({ action: "link", ... })` **hard-fails** if the plan has an Execution
+  (`prevc: E`) phase without `required_sensors`. Declare them or remove the E
+  phase from the plan. There is no escape flag — the point is to stop silent
+  "execution verified" claims at the source.
+- When a phase omits requirements, `DerivedPlanTaskContractBuilder` falls back
+  to conservative defaults: `E` -> `['tests']`, `V` -> `['tests', 'lint']`.
+  Phases P/R/C have no default and honor only what the plan declares.
+- Requirements propagate into the derived `HarnessTaskContract` on link and on
+  each `workflow-advance` that rotates the active contract.
+
 ## Phase Gates são Executáveis
 
 Phase advancement in PREVC is gated by three checks surfaced as

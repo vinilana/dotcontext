@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Plan frontmatter declares execution evidence per phase**
+  - `phases[].required_sensors` and `phases[].required_artifacts` in plan scaffold frontmatter populate the derived `HarnessTaskContract`'s required fields
+  - `DerivedPlanTaskContractBuilder` now honors declared requirements and falls back to conservative defaults when absent (`E` -> `['tests']`, `V` -> `['tests', 'lint']`; P/R/C have no default)
+  - `plan({ action: "link", ... })` hard-fails when a plan's Execution phase has no `required_sensors`, preventing silent "execution verified" claims at the source
+  - New builder tests under `src/services/workflow/derivedPlanTaskContractBuilder.test.ts` and an e2e rejection test under `src/services/workflow/__tests__/falseCompletion.e2e.test.ts`
+  - Documented under "Declaring Execution Requirements in Plans" in `docs/GUIDE.md`
+
 - **`execution_evidence` phase gate wires `evaluateTaskCompletion` into `workflow-advance`**
   - `GateCheckResult.gates` now includes `execution_evidence` with `missingSensors`, `missingArtifacts`, and `blockingFindings`
   - E → V transitions fail closed with `WorkflowGateError(gate='execution_evidence')` when the active task contract's required sensors/artifacts are not satisfied

@@ -59,6 +59,22 @@ export interface PlanStep {
 }
 
 /**
+ * Execution evidence requirements declared by a plan phase.
+ *
+ * These requirements populate the `requiredSensors` and `requiredArtifacts`
+ * fields of the derived harness task contract for the corresponding PREVC
+ * phase. The `execution_evidence` gate (E -> V) consults the task contract to
+ * decide whether execution has actually happened; declaring requirements on a
+ * plan phase is the canonical way to make that gate meaningful.
+ */
+export interface PlanPhaseRequirements {
+  /** Sensor ids that must have `status==='passed'` in the session */
+  requiredSensors: string[];
+  /** Artifact names/paths that must have been recorded in the session */
+  requiredArtifacts: string[];
+}
+
+/**
  * Phase within a plan (maps to PREVC phases)
  */
 export interface PlanPhase {
@@ -82,6 +98,12 @@ export interface PlanPhase {
   startedAt?: string;
   /** Completion timestamp */
   completedAt?: string;
+  /**
+   * Execution evidence required for this phase. Populated from plan
+   * frontmatter (`required_sensors` / `required_artifacts`) and fed into the
+   * derived task contract by `DerivedPlanTaskContractBuilder`.
+   */
+  requirements?: PlanPhaseRequirements;
 }
 
 /**

@@ -3,6 +3,23 @@ import type { LinkedPlan, PlanPhase, PlanStep } from '../../workflow/plans';
 import type { PrevcPhase } from '../../workflow/types';
 import type { HarnessTaskContract } from '../harness';
 
+/**
+ * Conservative defaults for `requiredSensors` when a plan phase does not
+ * declare any. These exist so the `execution_evidence` gate is never trivial:
+ * without them, a plan silent on requirements would derive a contract whose
+ * "required" sets are empty and the gate would degenerate into a no-op.
+ *
+ * - `E` (Execution): `['tests']` — code changed, tests must pass.
+ * - `V` (Validation): `['tests', 'lint']` — validation expects a clean build.
+ *
+ * Other phases have no default; callers declaring requirements on P/R/C do so
+ * explicitly via plan frontmatter.
+ */
+const DEFAULT_REQUIRED_SENSORS_BY_PHASE: Partial<Record<PrevcPhase, readonly string[]>> = {
+  E: ['tests'],
+  V: ['tests', 'lint'],
+};
+
 export interface DerivedTaskContractInput {
   title: string;
   description?: string;
@@ -70,6 +87,23 @@ export class DerivedPlanTaskContractBuilder {
       expectedOutputs
     );
 
+    const declaredSensors = uniqueStrings(
+      matchingPlanPhases.flatMap((planPhase) => planPhase.requirements?.requiredSensors ?? [])
+    );
+    const declaredArtifacts = uniqueStrings(
+      matchingPlanPhases.flatMap((planPhase) => planPhase.requirements?.requiredArtifacts ?? [])
+    );
+    const fallbackSensors = declaredSensors.length === 0
+      ? [...(DEFAULT_REQUIRED_SENSORS_BY_PHASE[phase] ?? [])]
+      : [];
+    const requiredSensors = declaredSensors.length > 0 ? declaredSensors : fallbackSensors;
+    const requiredArtifacts = declaredArtifacts;
+    const requirementsSource = declaredSensors.length > 0 || declaredArtifacts.length > 0
+      ? 'plan-frontmatter'
+      : fallbackSensors.length > 0
+        ? 'phase-defaults'
+        : 'none';
+
     return {
       title,
       description,
@@ -77,9 +111,10 @@ export class DerivedPlanTaskContractBuilder {
       inputs: plan.docs.map((doc) => `docs/${doc}`),
       expectedOutputs,
       acceptanceCriteria,
-      requiredSensors: [],
-      requiredArtifacts: [],
+      requiredSensors,
+      requiredArtifacts,
       metadata: {
+        requirementsSource,
         source: 'workflow.plan',
         planSlug: plan.ref.slug,
         prevcPhase: phase,

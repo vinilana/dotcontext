@@ -45,6 +45,36 @@ export class HarnessPlansService {
       };
     }
 
+    // Enforce that the linked plan declares execution evidence for any E
+    // (Execution) phase. Without it, the `execution_evidence` gate on E -> V
+    // would degrade to phase-default sensors only, and the plan author would
+    // have no visible contract surface for the actual required evidence.
+    // Hard-fail at link time so the caller must either declare requirements
+    // in `phases[].required_sensors` / `phases[].required_artifacts` or
+    // remove the E phase from the plan.
+    const linkedPlan = await this.linker.getLinkedPlan(planSlug);
+    const emptyExecutionPhases = (linkedPlan?.phases ?? [])
+      .filter((phase) => phase.prevcPhase === 'E')
+      .filter((phase) => {
+        const req = phase.requirements;
+        return !req || req.requiredSensors.length === 0;
+      });
+
+    if (emptyExecutionPhases.length > 0) {
+      const ids = emptyExecutionPhases.map((phase) => phase.id).join(', ');
+      throw new Error(
+        `Plan "${planSlug}" has Execution phase(s) [${ids}] without ` +
+          `"required_sensors". Declare them in the plan frontmatter so the ` +
+          `execution_evidence gate can verify the work actually happened. ` +
+          `Example:\n\n` +
+          `  phases:\n` +
+          `    - id: phase-2\n` +
+          `      prevc: E\n` +
+          `      required_sensors: [tests]\n` +
+          `      required_artifacts: [handoff-summary]\n`
+      );
+    }
+
     const service = new WorkflowService(this.repoPath);
     const workflowLink = await service.linkPlanToActiveWorkflow(planSlug);
     const workflowActive = workflowLink.workflowActive;

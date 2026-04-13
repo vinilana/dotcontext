@@ -56,6 +56,8 @@ export interface ParsedPlanPhaseFrontmatter {
   summary?: string;
   deliverables?: string[];
   steps?: ParsedPlanStepFrontmatter[];
+  requiredSensors?: string[];
+  requiredArtifacts?: string[];
 }
 
 /**
@@ -155,6 +157,12 @@ function normalizePlanPhases(value: unknown): ParsedPlanPhaseFrontmatter[] | und
 
     const steps = normalizePlanSteps(phase.steps);
     const deliverables = normalizeStringArray(phase.deliverables ?? phase.outputs);
+    const requiredSensors = normalizeStringArray(
+      phase.required_sensors ?? phase.requiredSensors
+    );
+    const requiredArtifacts = normalizeStringArray(
+      phase.required_artifacts ?? phase.requiredArtifacts
+    );
 
     phases.push({
       id,
@@ -163,6 +171,8 @@ function normalizePlanPhases(value: unknown): ParsedPlanPhaseFrontmatter[] | und
       summary: typeof phase.summary === 'string' ? phase.summary : undefined,
       deliverables,
       steps,
+      requiredSensors,
+      requiredArtifacts,
     });
   }
 

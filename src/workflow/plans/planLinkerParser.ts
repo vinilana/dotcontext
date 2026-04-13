@@ -232,6 +232,10 @@ export class PlanLinkerParser {
             ...steps.flatMap(step => [...(step.deliverables ?? []), ...(step.outputs ?? [])]),
           ]);
 
+          const requiredSensors = this.uniqueStrings(phase.requiredSensors ?? []);
+          const requiredArtifacts = this.uniqueStrings(phase.requiredArtifacts ?? []);
+          const hasRequirements = requiredSensors.length > 0 || requiredArtifacts.length > 0;
+
           return {
             id: phase.id,
             name: phase.name,
@@ -240,6 +244,9 @@ export class PlanLinkerParser {
             deliverables: deliverables.length > 0 ? deliverables : undefined,
             steps,
             status: 'pending' as const,
+            requirements: hasRequirements
+              ? { requiredSensors, requiredArtifacts }
+              : undefined,
           };
         })
       : bodyPhases;

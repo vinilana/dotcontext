@@ -13,6 +13,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { WorkflowGateError } from '../../../workflow/errors';
+import { HarnessPlansService } from '../../harness';
 import { HarnessWorkflowBlockedError, WorkflowService } from '../workflowService';
 
 async function makeRepo(): Promise<string> {
@@ -110,6 +111,45 @@ describe('false completion e2e', () => {
       (t) => t.id === harness.binding.activeTaskId
     );
     expect(activeTask?.status).toBe('ready');
+  });
+
+  it('plan link rejects a plan whose E phase declares no required_sensors', async () => {
+    await service.init({ name: 'link-rejects-empty', scale: 'MEDIUM' });
+
+    const plansDir = path.join(tempDir, '.context', 'plans');
+    await fs.ensureDir(plansDir);
+    await fs.writeFile(
+      path.join(plansDir, 'no-requirements.md'),
+      [
+        '---',
+        'type: plan',
+        'name: no-requirements',
+        'description: "Plan missing execution evidence on E phase."',
+        'planSlug: no-requirements',
+        'generated: "2026-04-13"',
+        'status: filled',
+        'scaffoldVersion: "2.0.0"',
+        'phases:',
+        '  - id: phase-1',
+        '    name: Planning',
+        '    prevc: P',
+        '  - id: phase-2',
+        '    name: Implementation',
+        '    prevc: E',
+        '---',
+        '',
+        '# No Requirements',
+        '',
+        '> Missing execution evidence.',
+        '',
+      ].join('\n'),
+      'utf-8'
+    );
+
+    const plans = new HarnessPlansService({ repoPath: tempDir });
+    await expect(plans.link('no-requirements')).rejects.toThrow(
+      /required_sensors/
+    );
   });
 
   it('E -> V succeeds once required sensors pass and artifacts are recorded', async () => {
