@@ -236,6 +236,38 @@ npx -y @dotcontext/cli@latest admin skill export
 
 Use the MCP `skill` tool when you want skill scaffolding or AI-assisted fill behavior. The CLI remains focused on discovery and export.
 
+## Executable Acceptance
+
+A plan step can declare a verifiable acceptance predicate. The harness runs it
+before allowing the step to be marked `completed`. A non-zero exit code rejects
+the transition and the step keeps its prior status; the result is recorded
+under `acceptanceRun` for auditing.
+
+Seed an acceptance on the tracked step (JSON under
+`.context/workflow/plan-tracking/<slug>.json`):
+
+```json
+{
+  "stepIndex": 1,
+  "description": "Cobertura i18n 100%",
+  "status": "in_progress",
+  "acceptance": {
+    "kind": "shell",
+    "command": ["npm", "test", "--", "i18n-coverage"],
+    "timeoutMs": 60000
+  }
+}
+```
+
+Shell safety: `command` is an argv array, always spawned with `shell: false`
+(no shell interpolation). Pass flags as separate array entries.
+
+When the harness attempts to mark the step `completed`, a failing predicate
+returns a structured response (via the MCP `plan.updateStep` action) with the
+captured `tailStdout` / `tailStderr` and the non-zero `exitCode` rather than a
+500 error. On success, the step transitions to `completed` and the passing
+`acceptanceRun` is persisted.
+
 ## Troubleshooting
 
 ### "CLI init/plan/fill command not found"
