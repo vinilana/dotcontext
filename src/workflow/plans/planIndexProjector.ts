@@ -2,9 +2,21 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 
 import { PlanLinkerParser } from './planLinkerParser';
-import { PlanExecutionTracking, PlanReference, WorkflowPlans } from './types';
+import { PlanReference, WorkflowPlans } from './types';
+import type { PlanExecutionTracking } from './executionTypes';
 
+/**
+ * Projects plan tracking records into the workflow index at
+ * `.context/workflow/plans.json`.
+ *
+ * Cache semantics: an in-memory cache of the last projected index is kept and
+ * only invalidated explicitly via `invalidateCache()` (called by the
+ * orchestrator after every write). Reads that bypass the cache still
+ * re-read `plans.json` from disk via `loadIndex()`.
+ */
 export class PlanIndexProjector {
+  private cachedIndex: WorkflowPlans | null = null;
+
   constructor(
     private readonly contextPath: string,
     private readonly workflowPath: string,
@@ -13,6 +25,9 @@ export class PlanIndexProjector {
     private readonly loadTrackings: () => Promise<PlanExecutionTracking[]>
   ) {}
 
+  /**
+   * Read the persisted index from disk without touching the cache.
+   */
   async loadIndex(): Promise<WorkflowPlans | null> {
     const plansFile = path.join(this.workflowPath, 'plans.json');
 
@@ -25,6 +40,24 @@ export class PlanIndexProjector {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Return a cached index if available, otherwise rebuild from tracking records.
+   */
+  async getIndex(): Promise<WorkflowPlans> {
+    if (this.cachedIndex) {
+      return this.cachedIndex;
+    }
+    return this.refreshIndex();
+  }
+
+  /**
+   * Explicitly invalidate the in-memory cache. Callers that mutate tracking
+   * state MUST invoke this before re-reading.
+   */
+  invalidateCache(): void {
+    this.cachedIndex = null;
   }
 
   async refreshIndex(): Promise<WorkflowPlans> {
@@ -46,6 +79,7 @@ export class PlanIndexProjector {
 
     await fs.ensureDir(this.workflowPath);
     await fs.writeJson(path.join(this.workflowPath, 'plans.json'), index, { spaces: 2 });
+    this.cachedIndex = index;
     return index;
   }
 

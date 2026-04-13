@@ -5,10 +5,7 @@
  * Supports both v1 (simple) and v2 (scaffold) frontmatter formats.
  */
 
-import * as fs from 'fs/promises';
-import { createReadStream } from 'fs';
 import { load as loadYaml } from 'js-yaml';
-import * as readline from 'readline';
 import { PrevcPhase } from '../workflow/types';
 import type { ScaffoldFrontmatter, ScaffoldFileType, ScaffoldStatus } from '../types/scaffoldFrontmatter';
 
@@ -297,31 +294,6 @@ export async function needsFill(filePath: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/**
- * Read only the first N lines of a file efficiently
- */
-async function readFirstLines(filePath: string, n: number): Promise<string[]> {
-  return new Promise((resolve, reject) => {
-    const lines: string[] = [];
-    const stream = createReadStream(filePath);
-    const rl = readline.createInterface({
-      input: stream,
-      crlfDelay: Infinity
-    });
-
-    rl.on('line', (line) => {
-      lines.push(line);
-      if (lines.length >= n) {
-        rl.close();
-        stream.destroy();
-      }
-    });
-
-    rl.on('close', () => resolve(lines));
-    rl.on('error', reject);
-  });
 }
 
 /**

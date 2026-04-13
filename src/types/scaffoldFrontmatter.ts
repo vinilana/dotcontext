@@ -6,6 +6,7 @@
  * generates complete content based on scaffold structure definitions.
  */
 
+import { z } from 'zod';
 import { PrevcPhase } from '../workflow/types';
 
 /**
@@ -343,3 +344,55 @@ export function serializeFrontmatter(fm: ScaffoldFrontmatter): string {
 
   return lines.join('\n');
 }
+
+/**
+ * Zod schemas for validating scaffold/plan frontmatter at I/O boundaries.
+ */
+const prevcPhaseSchema = z.enum(['P', 'R', 'E', 'V', 'C']);
+
+const planStepSchema = z.object({
+  order: z.number(),
+  description: z.string(),
+  assignee: z.string().optional(),
+  deliverables: z.array(z.string()).optional(),
+});
+
+const planPhaseSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  prevc: prevcPhaseSchema,
+  summary: z.string().optional(),
+  deliverables: z.array(z.string()).optional(),
+  steps: z.array(planStepSchema).optional(),
+});
+
+const agentEntrySchema = z.object({
+  type: z.string().min(1),
+  role: z.string(),
+});
+
+export const planScaffoldFrontmatterSchema = z.object({
+  type: z.literal('plan'),
+  name: z.string().min(1),
+  description: z.string().min(1),
+  generated: z.string().min(1),
+  status: z.enum(['unfilled', 'filled']),
+  scaffoldVersion: z.literal('2.0.0'),
+  planSlug: z.string().min(1),
+  summary: z.string().optional(),
+  agents: z.array(agentEntrySchema).optional(),
+  docs: z.array(z.string()).optional(),
+  phases: z.array(planPhaseSchema).optional(),
+});
+
+export type PlanScaffoldFrontmatterValidated = z.infer<typeof planScaffoldFrontmatterSchema>;
+
+/**
+ * Validate plan frontmatter parsed from YAML. Returns parsed value or null if
+ * invalid. Keep at the boundary; do not pepper throughout the codebase.
+ */
+export function validatePlanFrontmatter(raw: unknown): PlanScaffoldFrontmatterValidated | null {
+  const result = planScaffoldFrontmatterSchema.safeParse(raw);
+  return result.success ? result.data : null;
+}
+

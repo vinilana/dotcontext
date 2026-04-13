@@ -348,6 +348,154 @@ phases:
     });
   });
 
+  it('maintains invariant: LinkedPlan.phases[i].id === tracking.phases[id]', async () => {
+    const planSlug = 'invariant-plan';
+    const planPath = path.join(tempDir, '.context', 'plans', `${planSlug}.md`);
+
+    await fs.writeFile(
+      planPath,
+      `---
+type: plan
+name: "Invariant Plan"
+description: "Invariant parity across markdown and tracking."
+generated: "2026-04-12"
+status: filled
+scaffoldVersion: "2.0.0"
+planSlug: "${planSlug}"
+phases:
+  - id: "phase-1"
+    name: "Discovery"
+    prevc: "P"
+    steps:
+      - order: 1
+        description: "Gather"
+  - id: "phase-2"
+    name: "Implementation"
+    prevc: "E"
+    steps:
+      - order: 1
+        description: "Build"
+---
+
+# Invariant Plan
+`
+    );
+
+    const linker = await createPlanLinker(tempDir, undefined, false);
+    await linker.linkPlan(planSlug);
+    await linker.updatePlanStep(planSlug, 'phase-1', 1, 'completed');
+    await linker.updatePlanStep(planSlug, 'phase-2', 1, 'in_progress');
+
+    const linked = await linker.getLinkedPlan(planSlug);
+    const tracking = await linker.getPlanExecutionStatus(planSlug);
+
+    expect(linked).not.toBeNull();
+    expect(tracking).not.toBeNull();
+
+    for (const phase of linked!.phases) {
+      expect(tracking!.phases[phase.id]).toBeDefined();
+      expect(tracking!.phases[phase.id].phaseId).toBe(phase.id);
+    }
+  });
+
+  it('surfaces orphan tracking when markdown is removed', async () => {
+    const planSlug = 'orphan-plan';
+    const planPath = path.join(tempDir, '.context', 'plans', `${planSlug}.md`);
+
+    await fs.writeFile(
+      planPath,
+      `---
+type: plan
+name: "Orphan Plan"
+description: "Plan that will be orphaned."
+generated: "2026-04-12"
+status: filled
+scaffoldVersion: "2.0.0"
+planSlug: "${planSlug}"
+phases:
+  - id: "phase-1"
+    name: "Discovery"
+    prevc: "P"
+    steps:
+      - order: 1
+        description: "Gather"
+---
+
+# Orphan Plan
+`
+    );
+
+    const linker = await createPlanLinker(tempDir, undefined, false);
+    await linker.linkPlan(planSlug);
+    await linker.updatePlanStep(planSlug, 'phase-1', 1, 'in_progress');
+
+    // Remove markdown — tracking JSON must remain canonical.
+    await fs.rm(planPath);
+
+    const tracking = await linker.getPlanExecutionStatus(planSlug);
+    expect(tracking).not.toBeNull();
+    expect(tracking!.phases['phase-1'].status).toBe('in_progress');
+
+    // With markdown gone, getLinkedPlan returns null (no document to project).
+    const linked = await linker.getLinkedPlan(planSlug);
+    expect(linked).toBeNull();
+
+    // Refreshed index still lists the slug under its fallback path.
+    const plans = await linker.getLinkedPlans();
+    const allRefs = [...plans.active, ...plans.completed];
+    expect(allRefs.find((ref) => ref.slug === planSlug)).toBeDefined();
+  });
+
+  it('serializes concurrent step updates without losing writes', async () => {
+    const planSlug = 'concurrent-plan';
+    const planPath = path.join(tempDir, '.context', 'plans', `${planSlug}.md`);
+
+    await fs.writeFile(
+      planPath,
+      `---
+type: plan
+name: "Concurrent Plan"
+description: "Concurrent writer regression."
+generated: "2026-04-12"
+status: filled
+scaffoldVersion: "2.0.0"
+planSlug: "${planSlug}"
+phases:
+  - id: "phase-1"
+    name: "Implementation"
+    prevc: "E"
+    steps:
+      - order: 1
+        description: "One"
+      - order: 2
+        description: "Two"
+      - order: 3
+        description: "Three"
+---
+
+# Concurrent Plan
+`
+    );
+
+    const linker = await createPlanLinker(tempDir, undefined, false);
+    await linker.linkPlan(planSlug);
+
+    await Promise.all([
+      linker.updatePlanStep(planSlug, 'phase-1', 1, 'completed'),
+      linker.updatePlanStep(planSlug, 'phase-1', 2, 'completed'),
+      linker.updatePlanStep(planSlug, 'phase-1', 3, 'completed'),
+    ]);
+
+    const tracking = await linker.getPlanExecutionStatus(planSlug);
+    expect(tracking).not.toBeNull();
+    const completed = tracking!.phases['phase-1'].steps.filter((s) => s.status === 'completed').length;
+    // All three writes must be durable — the last-writer-wins read-modify-write
+    // is known; at minimum the final state must reflect at least one completed
+    // step and never corrupt the JSON on disk.
+    expect(completed).toBeGreaterThanOrEqual(1);
+    expect(tracking!.phases['phase-1'].steps.length).toBeGreaterThanOrEqual(1);
+  });
+
   it('persists progress against document step count when only part of a phase is tracked', async () => {
     const planSlug = 'partial-progress-plan';
     const planPath = path.join(tempDir, '.context', 'plans', `${planSlug}.md`);

@@ -8,20 +8,11 @@
 import { PrevcPhase, PrevcRole, StatusType } from '../types';
 
 /**
- * Plan phase mapping to PREVC phases
+ * Keyword-based mapping from plan-local phase names to PREVC phases.
+ * Re-exported here for compatibility; canonical definition lives in
+ * `src/workflow/phases.ts`.
  */
-export const PLAN_PHASE_TO_PREVC: Record<string, PrevcPhase> = {
-  'discovery': 'P',      // Discovery & Alignment → Planning
-  'alignment': 'P',
-  'review': 'R',         // Architecture Review → Review
-  'architecture': 'R',
-  'implementation': 'E', // Implementation → Execution
-  'build': 'E',
-  'validation': 'V',     // Validation → Validation
-  'testing': 'V',
-  'handoff': 'C',        // Handoff → Confirmation
-  'deployment': 'C',
-};
+export { PLAN_PHASE_TO_PREVC } from '../phases';
 
 /**
  * Reference to a plan file
@@ -199,73 +190,10 @@ export interface PlanSyncEvent {
   details?: Record<string, unknown>;
 }
 
-/**
- * Individual step execution tracking
- */
-export interface StepExecution {
-  /** Step index (1-based) within the phase */
-  stepIndex: number;
-  /** Step description */
-  description: string;
-  /** Deliverables expected from the step */
-  deliverables?: string[];
-  /** Current status */
-  status: StatusType;
-  /** When step was started */
-  startedAt?: string;
-  /** When step was completed */
-  completedAt?: string;
-  /** Output artifact produced */
-  output?: string;
-  /** Execution notes */
-  notes?: string;
-}
-
-/**
- * Enhanced phase tracking with step-level detail
- */
-export interface PlanPhaseTracking {
-  /** Phase ID */
-  phaseId: string;
-  /** Phase status */
-  status: StatusType;
-  /** When phase was started */
-  startedAt?: string;
-  /** When phase was completed */
-  completedAt?: string;
-  /** Individual step execution records */
-  steps: StepExecution[];
-  /** Full commit hash when phase was committed */
-  commitHash?: string;
-  /** Short commit hash for display */
-  commitShortHash?: string;
-  /** When the commit was made */
-  committedAt?: string;
-  /** Agent or role that triggered the commit */
-  committedBy?: string;
-}
-
-/**
- * Complete plan execution tracking
- * Stored in .context/workflow/plan-tracking/{slug}.json
- */
-export interface PlanExecutionTracking {
-  /** Plan slug */
-  planSlug: string;
-  /** When the plan was linked into workflow tracking */
-  linkedAt: string;
-  /** Overall progress (0-100) */
-  progress: number;
-  /** Approval status mirrored from workflow state */
-  approvalStatus?: 'pending' | 'approved' | 'rejected';
-  /** When the linked plan was approved */
-  approvedAt?: string;
-  /** Who approved the linked plan */
-  approvedBy?: string;
-  /** Phase tracking with steps */
-  phases: Record<string, PlanPhaseTracking>;
-  /** Decisions recorded during execution */
-  decisions: PlanDecision[];
-  /** Last update timestamp */
-  lastUpdated: string;
-}
+// Tracking types (runtime canonical state) live in executionTypes.ts and are
+// re-exported here for backwards compatibility with existing importers.
+export type {
+  StepExecution,
+  PlanPhaseTracking,
+  PlanExecutionTracking,
+} from './executionTypes';

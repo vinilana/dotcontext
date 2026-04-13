@@ -79,7 +79,11 @@ export class PlanTrackingStore {
   async save(planSlug: string, tracking: PlanExecutionTracking): Promise<void> {
     const trackingFile = this.getTrackingFile(planSlug);
     await fs.ensureDir(path.dirname(trackingFile));
-    await fs.writeFile(trackingFile, JSON.stringify(tracking, null, 2), 'utf-8');
+    // Atomic write via tmp file + rename so concurrent writers never observe
+    // a partially-serialized JSON document.
+    const tmpFile = `${trackingFile}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`;
+    await fs.writeFile(tmpFile, JSON.stringify(tracking, null, 2), 'utf-8');
+    await fs.rename(tmpFile, trackingFile);
   }
 
   async loadAll(): Promise<PlanExecutionTracking[]> {

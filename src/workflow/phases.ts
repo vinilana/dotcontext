@@ -10,6 +10,23 @@ import {
 export const PREVC_PHASE_ORDER: PrevcPhase[] = [...PREVC_PHASE_SEQUENCE];
 
 /**
+ * Keyword-based mapping from plan-local phase names to PREVC phases.
+ * Lives here (not in plans/*) so plan tooling stays a consumer of phase definitions.
+ */
+export const PLAN_PHASE_TO_PREVC: Record<string, PrevcPhase> = {
+  discovery: 'P',
+  alignment: 'P',
+  review: 'R',
+  architecture: 'R',
+  implementation: 'E',
+  build: 'E',
+  validation: 'V',
+  testing: 'V',
+  handoff: 'C',
+  deployment: 'C',
+};
+
+/**
  * Complete definition of all PREVC phases
  */
 export const PREVC_PHASES: Record<PrevcPhase, PhaseDefinition> = Object.fromEntries(
