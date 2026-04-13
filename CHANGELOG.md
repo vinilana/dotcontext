@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Built-in `tests-passing` sensor** (`src/services/harness/sensors/testsPassing.ts`)
+  - Default `kind: 'jest'` runs `npm test -- --runInBand --json`, parses jest's JSON output, and reports `{ numPassedTests, numFailedTests, numTotalTestSuites, failures: [{ name, message }] }`; passes iff exit 0 *and* `numFailedTests === 0`
+  - `kind: 'exit-code'` mode for non-jest runners passes iff the configured `testCommand` argv exits 0
+  - Configurable `testCommand` (string[]) and `timeoutMs` (default 300s); spawn(..., { shell: false }) with explicit argv — no shell interpolation
+  - Registered by default in `HarnessSessionFacade.registerDefaultSensors`
+- **Built-in `typecheck-clean` sensor** (`src/services/harness/sensors/typecheckClean.ts`)
+  - Default command `npx tsc --noEmit`; passes iff exit 0
+  - On failure, captures the last `tailLines` (default 50) of combined stdout/stderr on `output.tail` plus the `output.exitCode`
+  - Configurable `command` (string[]), `timeoutMs` (default 120s), and `tailLines`
+  - Registered by default in `HarnessSessionFacade.registerDefaultSensors`
+- **Plan scaffolding auto-detects per-phase requirements** (`src/workflow/plans/scaffoldSuggestions.ts`)
+  - `suggestPhaseRequirements(repoPath)` probes the working tree and proposes phase-scoped `required_sensors` so plan authors do not need to know the sensor catalog up front
+  - Detection rules: `locales/*.json` or `i18n/*.json` → `i18n-coverage` in E; real `scripts.test` in `package.json` → `tests-passing` in V; `tsconfig.json` → `typecheck-clean` in V; `.eslintrc*` / `eslint.config.*` / `eslintConfig` in `package.json` → `lint` in V
+  - `mergeSuggestionsIntoPhases` only fills `required_sensors`/`required_artifacts` for phases that did not already declare them — never overwrites an explicit author choice; existing scaffolds keep working unchanged
+  - Wired into `PlanGenerator` via `renderPlanTemplate` so `context({ action: "scaffoldPlan", ... })` emits the suggestions in the YAML frontmatter
+  - Documented under "Built-in Sensors" and "Plan scaffolding auto-detects requirements" in `docs/GUIDE.md`
 - **`RequiredArtifactSpec.fromFilesystem: true`** for `glob` and `file-count` kinds
   - When set, `evaluateTaskCompletion` also scans the project working tree (relative to `repoPath`) and unions filesystem hits with recorded session artifacts, eliminating the false-blocked case where a file exists in the repo but `recordArtifact` was never called
   - Hard-coded ignore list (`node_modules`, `.git`, `dist`), 5s scan timeout, refusal to escape `repoPath`; I/O failures and timeouts surface as `blockingFinding` entries (`filesystem scan failed for <pattern>: ...`) instead of crashing

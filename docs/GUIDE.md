@@ -404,6 +404,44 @@ caller's responsibility.
 
 ## Built-in Sensors
 
+Three sensors are registered by default in every harness session and only
+execute when a plan/task contract declares them under `required_sensors`.
+
+| Sensor            | What it checks                                                                  | Configurable options                                |
+| ----------------- | ------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `i18n-coverage`   | Every non-base locale file has the same keyset as the base locale               | `baseLocale`, `localesDir`, `format`                |
+| `tests-passing`   | Test suite runs cleanly (jest `--json` parsed, or generic exit-code mode)       | `kind` (`jest` \| `exit-code`), `testCommand`, `timeoutMs` |
+| `typecheck-clean` | `tsc --noEmit` (or configured command) reports zero errors                      | `command`, `timeoutMs`, `tailLines`                 |
+
+All sensors spawn child processes with `shell: false` and an explicit argv
+array (no shell interpolation). Failure modes are reported as structured
+sensor runs — sensors never throw on tooling failure.
+
+### `tests-passing`
+
+Default command: `npm test -- --runInBand --json`. In `kind: 'jest'` (the
+default), the sensor parses the JSON object on stdout and reports
+`{ numPassedTests, numFailedTests, numTotalTestSuites, failures }`. It
+passes only when exit code is `0` *and* `numFailedTests === 0`.
+
+For non-jest runners, set `kind: 'exit-code'` and provide `testCommand`:
+
+```yaml
+required_sensors:
+  - tests-passing
+# In the task contract metadata or sensor context:
+# { kind: 'exit-code', testCommand: ['pnpm', 'vitest', 'run'] }
+```
+
+Default timeout is 300s (`timeoutMs`).
+
+### `typecheck-clean`
+
+Default command: `npx tsc --noEmit`. Passes iff the process exits `0`. On
+failure, captures the last `tailLines` (default 50) of combined stdout/stderr
+on `output.tail`, and surfaces the exit code on `output.exitCode`. Default
+timeout is 120s.
+
 ### `i18n-coverage`
 
 Compares translation keys between a base locale file and every other locale
@@ -447,6 +485,45 @@ Failure modes (all reported with the offending file/path, never crash):
 - `localesDir` missing
 - malformed JSON in any `<locale>.json`
 - base locale absent from `localesDir`
+
+## Plan scaffolding auto-detects requirements
+
+When `context({ action: "scaffoldPlan", ... })` runs against a real repo,
+the generator probes the working tree and seeds plausible
+`required_sensors` per PREVC phase so the author does not need to know the
+sensor catalog up front. Suggestions are only applied when the scaffold
+phase has no `required_sensors` declared — never overwriting an explicit
+choice.
+
+Detection rules:
+
+| Detected feature                                          | Phase | Suggested sensor   |
+| --------------------------------------------------------- | ----- | ------------------ |
+| `locales/*.json` or `i18n/*.json`                         | E     | `i18n-coverage`    |
+| `package.json` with a real `scripts.test` (not the npm placeholder) | V     | `tests-passing`    |
+| `tsconfig.json` at the repo root                          | V     | `typecheck-clean`  |
+| `.eslintrc*`, `eslint.config.*`, or `eslintConfig` in `package.json` | V     | `lint`             |
+
+Example output for a repo with `locales/`, `tsconfig.json`, and
+`scripts.test`:
+
+```yaml
+phases:
+  - id: phase-2
+    name: Implementation & Iteration
+    prevc: E
+    required_sensors:
+      - i18n-coverage
+  - id: phase-3
+    name: Validation & Handoff
+    prevc: V
+    required_sensors:
+      - tests-passing
+      - typecheck-clean
+```
+
+The author is free to delete or extend the suggested entries before
+linking the plan; the merge is one-shot at scaffold time.
 
 ## Troubleshooting
 
