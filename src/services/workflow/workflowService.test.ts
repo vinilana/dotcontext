@@ -2,6 +2,7 @@ import * as fs from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 
+import { HarnessPlansService } from '../harness';
 import { HarnessWorkflowStateService } from '../harness/workflowStateService';
 import { HarnessWorkflowBlockedError, WorkflowService } from './workflowService';
 
@@ -85,6 +86,128 @@ describe('WorkflowService harness integration', () => {
     expect(firstTask.id).not.toBe(binding?.activeTaskId);
   });
 
+  it('persists collaboration sessions across fresh workflow service instances', async () => {
+    const session = await service.startCollaboration('Architecture review', ['architect', 'developer']);
+    const sessionId = session.getId();
+
+    service.contributeToCollaboration(
+      sessionId,
+      'architect',
+      'I recommend extracting collaboration persistence into a file-backed store.'
+    );
+
+    const reloadedService = new WorkflowService(tempDir);
+    reloadedService.contributeToCollaboration(
+      sessionId,
+      'developer',
+      'We should keep the session durable across MCP calls.'
+    );
+
+    const synthesis = await reloadedService.endCollaboration(sessionId);
+    const persisted = await fs.readJson(
+      path.join(tempDir, '.context', 'workflow', 'collaboration-sessions.json')
+    );
+
+    expect(synthesis).not.toBeNull();
+    expect(synthesis?.participants).toEqual(['architect', 'developer']);
+    expect(synthesis?.contributions).toHaveLength(2);
+    expect(synthesis?.contributions.map((contribution) => contribution.role)).toEqual([
+      'architect',
+      'developer',
+    ]);
+    expect(persisted.version).toBe(2);
+    expect(persisted.sessions).toHaveLength(1);
+    expect(persisted.sessions[0].id).toBe(sessionId);
+    expect(persisted.sessions[0].status).toBe('concluded');
+    expect(persisted.sessions[0].contributions).toHaveLength(2);
+  });
+
+  it('bootstraps a task contract for the linked plan phase and rotates it on workflow advance', async () => {
+    await service.init({
+      name: 'plan-bootstrap',
+      scale: 'MEDIUM',
+      autonomous: true,
+    });
+
+    await fs.ensureDir(path.join(tempDir, '.context', 'plans'));
+    await fs.writeFile(
+      path.join(tempDir, '.context', 'plans', 'plan-bootstrap.md'),
+      `---
+type: plan
+name: "Plan Bootstrap"
+description: "Bootstrap contract regression."
+generated: "2026-04-12"
+status: filled
+scaffoldVersion: "2.0.0"
+planSlug: "plan-bootstrap"
+summary: "Bootstrap contract regression."
+phases:
+  - id: "phase-1"
+    name: "Discovery & Alignment"
+    prevc: "P"
+    summary: "Review the current system state and capture the discovery outputs."
+    deliverables:
+      - "discovery-brief"
+    steps:
+      - order: 1
+        description: "Review the current system state"
+        deliverables:
+          - "system-review"
+      - order: 2
+        description: "Capture the phase bootstrap outputs"
+        deliverables:
+          - "bootstrap-output"
+  - id: "phase-2"
+    name: "Implementation"
+    prevc: "R"
+    summary: "Validate the implementation approach before execution."
+    deliverables:
+      - "review-signoff"
+    steps:
+      - order: 1
+        description: "Validate the implementation approach"
+        deliverables:
+          - "implementation-review"
+---
+
+# Plan Bootstrap
+`,
+      'utf-8'
+    );
+
+    await new HarnessPlansService({ repoPath: tempDir }).link('plan-bootstrap');
+
+    const beforeAdvance = await service.getHarnessStatus();
+    expect(beforeAdvance).not.toBeNull();
+    expect(beforeAdvance?.binding.activeTaskId).toBeDefined();
+    expect(beforeAdvance?.taskContracts).toHaveLength(1);
+
+    const bootstrapTaskId = beforeAdvance?.binding.activeTaskId;
+    const bootstrapTask = beforeAdvance?.taskContracts.find((task) => task.id === bootstrapTaskId);
+
+    expect(bootstrapTask).toBeTruthy();
+    expect(bootstrapTask?.status).toBe('ready');
+    expect(bootstrapTask?.expectedOutputs).toEqual(['discovery-brief', 'system-review', 'bootstrap-output']);
+    expect(bootstrapTask?.acceptanceCriteria).toEqual([
+      'Review the current system state',
+      'Capture the phase bootstrap outputs',
+    ]);
+
+    const nextPhase = await service.advance();
+    const afterAdvance = await service.getHarnessStatus();
+
+    expect(nextPhase).toBe('R');
+    expect(afterAdvance?.taskContracts).toHaveLength(2);
+    expect(afterAdvance?.binding.activeTaskId).toBeDefined();
+    expect(afterAdvance?.binding.activeTaskId).not.toBe(bootstrapTaskId);
+    expect(afterAdvance?.taskContracts.find((task) => task.id === bootstrapTaskId)?.status).toBe('completed');
+    expect(afterAdvance?.taskContracts.find((task) => task.id === afterAdvance?.binding.activeTaskId)?.status).toBe('ready');
+    expect(afterAdvance?.taskContracts.find((task) => task.id === afterAdvance?.binding.activeTaskId)?.expectedOutputs).toEqual([
+      'review-signoff',
+      'implementation-review',
+    ]);
+  });
+
   it('blocks workflow advance when required harness checks are missing', async () => {
     await service.init({
       name: 'beta',
@@ -151,7 +274,11 @@ describe('WorkflowService harness integration', () => {
   it('registers sensors from project scripts instead of assuming a universal Node set', async () => {
     const sensors = service.listAvailableSensors();
 
-    expect(sensors.map((sensor) => sensor.id)).toEqual(['build']);
+    // Filter out built-in sensors (e.g. i18n-coverage) to assert only the
+    // project-script-derived set.
+    const shellSensors = sensors.map((s) => s.id).filter((id) => !['i18n-coverage', 'tests-passing', 'typecheck-clean'].includes(id));
+    expect(shellSensors).toEqual(['build']);
+    expect(sensors.map((s) => s.id)).toContain('i18n-coverage');
   });
 
   it('detects Python sensors without assuming Node scripts', async () => {
@@ -164,7 +291,8 @@ describe('WorkflowService harness integration', () => {
       const pythonService = new WorkflowService(pythonDir);
       const sensors = pythonService.listAvailableSensors();
 
-      expect(sensors.map((sensor) => sensor.id)).toEqual(['test', 'typecheck']);
+      const shellSensors = sensors.map((s) => s.id).filter((id) => !['i18n-coverage', 'tests-passing', 'typecheck-clean'].includes(id));
+      expect(shellSensors).toEqual(['test', 'typecheck']);
     } finally {
       await fs.remove(pythonDir);
     }
@@ -201,7 +329,8 @@ describe('WorkflowService harness integration', () => {
     const customizedService = new WorkflowService(tempDir);
     const sensors = customizedService.listAvailableSensors();
 
-    expect(sensors.map((sensor) => sensor.id)).toEqual(['quality']);
+    const shellSensors = sensors.map((s) => s.id).filter((id) => !['i18n-coverage', 'tests-passing', 'typecheck-clean'].includes(id));
+    expect(shellSensors).toEqual(['quality']);
   });
 
   it('enforces artifact policy rules during workflow execution', async () => {

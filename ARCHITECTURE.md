@@ -110,7 +110,7 @@ sequenceDiagram
     A->>H: Create or load session
     H->>S: Persist session state
 
-    A->>H: Define task contract
+    A->>H: Link plan / define task contract
     H->>S: Persist contract
 
     A->>H: Run sensors / add artifacts / append traces
@@ -118,6 +118,9 @@ sequenceDiagram
 
     A->>H: Evaluate backpressure + task completion
     H->>H: Apply policies and completion rules
+
+    A->>H: Advance PREVC phase
+    H->>S: Complete active contract and persist next derived contract
 
     alt completion allowed
         H->>S: Checkpoint or complete session
@@ -131,6 +134,8 @@ sequenceDiagram
     H->>S: Read runtime history
     H-->>A: Replay or dataset output
 ```
+
+When a linked plan includes structured `phases[].steps[].deliverables`, the workflow layer derives the active task contract from that metadata. `plan link` bootstraps the current phase contract, and `workflow-advance` rotates it while the harness remains responsible for persistence and completion checks.
 
 ## Current Repository Shape
 

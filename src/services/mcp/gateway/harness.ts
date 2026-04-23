@@ -188,7 +188,7 @@ export async function handleHarness(
             expectedOutputs: params.expectedOutputs,
             acceptanceCriteria: params.acceptanceCriteria,
             requiredSensors: params.requiredSensors,
-            requiredArtifacts: params.requiredArtifacts,
+            requiredArtifacts: params.requiredArtifacts as import('../../harness').RequiredArtifactInput[] | undefined,
             status: params.status,
             metadata: params.metadata,
           }),

@@ -6,22 +6,14 @@
  */
 
 import { PrevcPhase, PrevcRole, StatusType } from '../types';
+import type { RequiredArtifactInput } from '../../services/harness/taskContractsService';
 
 /**
- * Plan phase mapping to PREVC phases
+ * Keyword-based mapping from plan-local phase names to PREVC phases.
+ * Re-exported here for compatibility; canonical definition lives in
+ * `src/workflow/phases.ts`.
  */
-export const PLAN_PHASE_TO_PREVC: Record<string, PrevcPhase> = {
-  'discovery': 'P',      // Discovery & Alignment → Planning
-  'alignment': 'P',
-  'review': 'R',         // Architecture Review → Review
-  'architecture': 'R',
-  'implementation': 'E', // Implementation → Execution
-  'build': 'E',
-  'validation': 'V',     // Validation → Validation
-  'testing': 'V',
-  'handoff': 'C',        // Handoff → Confirmation
-  'deployment': 'C',
-};
+export { PLAN_PHASE_TO_PREVC } from '../phases';
 
 /**
  * Reference to a plan file
@@ -57,12 +49,34 @@ export interface PlanStep {
   description: string;
   /** Assigned role/owner */
   assignee?: PrevcRole | string;
+  /** Deliverables expected from this step */
+  deliverables?: string[];
   /** Step status */
   status: StatusType;
   /** Output artifacts produced */
   outputs?: string[];
   /** Completion timestamp */
   completedAt?: string;
+}
+
+/**
+ * Execution evidence requirements declared by a plan phase.
+ *
+ * These requirements populate the `requiredSensors` and `requiredArtifacts`
+ * fields of the derived harness task contract for the corresponding PREVC
+ * phase. The `execution_evidence` gate (E -> V) consults the task contract to
+ * decide whether execution has actually happened; declaring requirements on a
+ * plan phase is the canonical way to make that gate meaningful.
+ */
+export interface PlanPhaseRequirements {
+  /** Sensor ids that must have `status==='passed'` in the session */
+  requiredSensors: string[];
+  /**
+   * Artifact requirements that must be satisfied by recorded artifacts.
+   * Strings are interpreted as exact name matches; structured specs support
+   * glob and file-count matching. See `RequiredArtifactSpec`.
+   */
+  requiredArtifacts: RequiredArtifactInput[];
 }
 
 /**
@@ -75,6 +89,10 @@ export interface PlanPhase {
   name: string;
   /** Mapped PREVC phase */
   prevcPhase: PrevcPhase;
+  /** Optional canonical phase summary/objective */
+  summary?: string;
+  /** Deliverables expected from the overall phase */
+  deliverables?: string[];
   /** Steps in this phase */
   steps: PlanStep[];
   /** Phase status */
@@ -85,6 +103,12 @@ export interface PlanPhase {
   startedAt?: string;
   /** Completion timestamp */
   completedAt?: string;
+  /**
+   * Execution evidence required for this phase. Populated from plan
+   * frontmatter (`required_sensors` / `required_artifacts`) and fed into the
+   * derived task contract by `DerivedPlanTaskContractBuilder`.
+   */
+  requirements?: PlanPhaseRequirements;
 }
 
 /**
@@ -193,69 +217,10 @@ export interface PlanSyncEvent {
   details?: Record<string, unknown>;
 }
 
-/**
- * Individual step execution tracking
- */
-export interface StepExecution {
-  /** Step index (1-based) within the phase */
-  stepIndex: number;
-  /** Step description */
-  description: string;
-  /** Current status */
-  status: StatusType;
-  /** When step was started */
-  startedAt?: string;
-  /** When step was completed */
-  completedAt?: string;
-  /** Output artifact produced */
-  output?: string;
-  /** Execution notes */
-  notes?: string;
-}
-
-/**
- * Enhanced phase tracking with step-level detail
- */
-export interface PlanPhaseTracking {
-  /** Phase ID */
-  phaseId: string;
-  /** Phase status */
-  status: StatusType;
-  /** When phase was started */
-  startedAt?: string;
-  /** When phase was completed */
-  completedAt?: string;
-  /** Individual step execution records */
-  steps: StepExecution[];
-  /** Full commit hash when phase was committed */
-  commitHash?: string;
-  /** Short commit hash for display */
-  commitShortHash?: string;
-  /** When the commit was made */
-  committedAt?: string;
-  /** Agent or role that triggered the commit */
-  committedBy?: string;
-}
-
-/**
- * Complete plan execution tracking
- * Stored in .context/workflow/plan-tracking/{slug}.json
- */
-export interface PlanExecutionTracking {
-  /** Plan slug */
-  planSlug: string;
-  /** Overall progress (0-100) */
-  progress: number;
-  /** Approval status mirrored from workflow state */
-  approvalStatus?: 'pending' | 'approved' | 'rejected';
-  /** When the linked plan was approved */
-  approvedAt?: string;
-  /** Who approved the linked plan */
-  approvedBy?: string;
-  /** Phase tracking with steps */
-  phases: Record<string, PlanPhaseTracking>;
-  /** Decisions recorded during execution */
-  decisions: PlanDecision[];
-  /** Last update timestamp */
-  lastUpdated: string;
-}
+// Tracking types (runtime canonical state) live in executionTypes.ts and are
+// re-exported here for backwards compatibility with existing importers.
+export type {
+  StepExecution,
+  PlanPhaseTracking,
+  PlanExecutionTracking,
+} from './executionTypes';

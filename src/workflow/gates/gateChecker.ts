@@ -12,6 +12,7 @@ import {
   GateType,
 } from '../types';
 import { WorkflowGateError } from '../errors';
+import { getNextActivePhase, PREVC_PHASE_ORDER } from '../phases';
 
 /**
  * Status of an individual gate
@@ -21,6 +22,27 @@ export interface GateStatus {
   passed: boolean;
   /** Whether the gate is required for this transition */
   required: boolean;
+  /** For execution_evidence: sensors declared by the task contract that never ran/passed */
+  missingSensors?: string[];
+  /** For execution_evidence: required artifacts never recorded */
+  missingArtifacts?: string[];
+  /** For execution_evidence: human-readable blocking reasons */
+  blockingFindings?: string[];
+}
+
+/**
+ * Execution evidence summary consumed by the gate checker.
+ * Shaped to mirror `HarnessTaskCompletionResult` while keeping gateChecker
+ * transport-agnostic (no import of the harness service).
+ */
+export interface ExecutionEvidence {
+  /** True when the active task contract has no missing sensors/artifacts */
+  canComplete: boolean;
+  missingSensors: string[];
+  missingArtifacts: string[];
+  blockingFindings: string[];
+  /** Indicates no active task contract was found for the current phase */
+  hasActiveContract: boolean;
 }
 
 /**
@@ -78,68 +100,143 @@ export class WorkflowGateChecker {
   /**
    * Check all gates for the current phase transition
    */
+  /**
+   * Check all gates for the current phase transition.
+   *
+   * Design note: `nextPhase` is retained as an override so callers can
+   * ask "what would gates say if we jumped to X?" — useful for UI
+   * previews. We refuse overrides that target a phase the workflow has
+   * explicitly marked `skipped`, because forcing a gate decision onto
+   * a skipped phase would contradict the scale-based progression.
+   * Transitions to non-skipped phases out of normal order are still
+   * allowed (force flows stay possible).
+   */
   checkGates(
     status: PrevcStatus,
-    nextPhase?: PrevcPhase
+    nextPhase?: PrevcPhase,
+    executionEvidence?: ExecutionEvidence
   ): GateCheckResult {
     const currentPhase = status.project.current_phase;
-    const targetPhase = nextPhase || this.getNextPhase(currentPhase);
 
-    // Get effective settings (use defaults if not set)
-    const settings = this.getEffectiveSettings(status);
-
-    // If autonomous mode is enabled, all gates pass
-    if (settings.autonomous_mode) {
-      return {
-        canAdvance: true,
-        gates: {
-          plan_required: { passed: true, required: false },
-          approval_required: { passed: true, required: false },
-        },
-      };
+    if (nextPhase) {
+      if (!PREVC_PHASE_ORDER.includes(nextPhase)) {
+        throw new Error(
+          `checkGates: nextPhase "${nextPhase}" is not a valid PREVC phase. ` +
+            `Expected one of ${PREVC_PHASE_ORDER.join(', ')}.`
+        );
+      }
+      const targetEntry = status.phases?.[nextPhase];
+      if (!targetEntry) {
+        throw new Error(
+          `checkGates: nextPhase "${nextPhase}" has no entry in status.phases. ` +
+            `The workflow status is missing this phase; cannot evaluate transition.`
+        );
+      }
+      if (targetEntry.status === 'skipped') {
+        throw new Error(
+          `checkGates: refusing to evaluate transition to phase "${nextPhase}" ` +
+            `because it is marked as skipped. Omit nextPhase to use the next ` +
+            `active phase in sequence.`
+        );
+      }
     }
+
+    const targetPhase = nextPhase || this.getNextPhaseForStatus(status);
+    const settings = this.getEffectiveSettings(status);
 
     const result: GateCheckResult = {
       canAdvance: true,
       gates: {
         plan_required: { passed: true, required: false },
         approval_required: { passed: true, required: false },
+        execution_evidence: { passed: true, required: false },
       },
     };
 
+    // autonomous_mode suppresses only plan_required / approval_required.
+    // Execution evidence is never suppressed — "autonomous" does not mean
+    // "skip verification that the work actually happened".
+    const suppressPolicyGates = settings.autonomous_mode;
+
     // Check P → R transition: requires linked plan
-    if (currentPhase === 'P' && targetPhase === 'R') {
+    if (!suppressPolicyGates && currentPhase === 'P' && targetPhase === 'R') {
       if (settings.require_plan) {
         result.gates.plan_required.required = true;
         const hasPlan = this.hasLinkedPlan(status);
         result.gates.plan_required.passed = hasPlan;
 
-        if (!hasPlan) {
+        if (!hasPlan && result.canAdvance) {
           result.canAdvance = false;
           result.blockingGate = 'plan_required';
           result.blockingReason = 'A plan must be linked before advancing from Planning to Review phase.';
-          result.hint = 'Use scaffoldPlan and linkPlan to create and link a plan, or enable autonomous mode.';
+          result.hint = 'Use plan({ action: "link", planSlug: "plan-name" }) after scaffoldPlan/workflow-init, or enable autonomous mode.';
         }
       }
     }
 
     // Check R → E transition: requires plan approval
-    if (currentPhase === 'R' && targetPhase === 'E') {
+    if (!suppressPolicyGates && currentPhase === 'R' && targetPhase === 'E') {
       if (settings.require_approval) {
         result.gates.approval_required.required = true;
         const isApproved = this.isPlanApproved(status);
         result.gates.approval_required.passed = isApproved;
 
-        if (!isApproved) {
+        if (!isApproved && result.canAdvance) {
           result.canAdvance = false;
           result.blockingGate = 'approval_required';
           result.blockingReason = 'The plan must be approved before advancing from Review to Execution phase.';
-          result.hint = 'Use workflowApprovePlan to approve the plan, or enable autonomous mode.';
+          result.hint = 'Use workflow-manage({ action: "approvePlan", planSlug: "plan-name" }) or enable autonomous mode.';
+        }
+      }
+    }
+
+    // Execution evidence gate: E → V must show that the active task contract
+    // can complete (required sensors passed, required artifacts recorded).
+    if (this.phaseRequiresEvidence(currentPhase, targetPhase)) {
+      result.gates.execution_evidence.required = true;
+      const evidence = executionEvidence;
+
+      if (!evidence || !evidence.hasActiveContract) {
+        result.gates.execution_evidence.passed = false;
+        result.gates.execution_evidence.blockingFindings = [
+          'No active task contract found for the current phase; cannot verify execution.',
+        ];
+        if (result.canAdvance) {
+          result.canAdvance = false;
+          result.blockingGate = 'execution_evidence';
+          result.blockingReason =
+            'Cannot advance from Execution to Validation without an active task contract.';
+          result.hint =
+            'Link a plan (plan({ action: "link", ... })) so a derived task contract is created, or define one explicitly via workflow defineTask.';
+        }
+      } else {
+        result.gates.execution_evidence.passed = evidence.canComplete;
+        result.gates.execution_evidence.missingSensors = evidence.missingSensors;
+        result.gates.execution_evidence.missingArtifacts = evidence.missingArtifacts;
+        result.gates.execution_evidence.blockingFindings = evidence.blockingFindings;
+
+        if (!evidence.canComplete && result.canAdvance) {
+          result.canAdvance = false;
+          result.blockingGate = 'execution_evidence';
+          result.blockingReason =
+            'Execution evidence is incomplete: ' +
+            (evidence.blockingFindings.length > 0
+              ? evidence.blockingFindings.join('; ')
+              : 'required sensors/artifacts missing.');
+          result.hint =
+            'Run the required sensors via harness({ action: "runSensors", sensorIds: [...] }) and record the required artifacts via harness({ action: "recordArtifact", ... }) before advancing.';
         }
       }
     }
 
     return result;
+  }
+
+  private phaseRequiresEvidence(
+    currentPhase: PrevcPhase,
+    targetPhase: PrevcPhase | null
+  ): boolean {
+    return currentPhase === 'E' && targetPhase === 'V';
   }
 
   /**
@@ -170,17 +267,21 @@ export class WorkflowGateChecker {
    */
   enforceGates(
     status: PrevcStatus,
-    options: { force?: boolean; nextPhase?: PrevcPhase } = {}
+    options: {
+      force?: boolean;
+      nextPhase?: PrevcPhase;
+      executionEvidence?: ExecutionEvidence;
+    } = {}
   ): void {
     if (options.force) {
       return;
     }
 
-    const result = this.checkGates(status, options.nextPhase);
+    const result = this.checkGates(status, options.nextPhase, options.executionEvidence);
 
     if (!result.canAdvance && result.blockingGate) {
       const currentPhase = status.project.current_phase;
-      const targetPhase = options.nextPhase || this.getNextPhase(currentPhase);
+      const targetPhase = options.nextPhase || this.getNextPhaseForStatus(status);
 
       throw new WorkflowGateError({
         message: result.blockingReason!,
@@ -238,13 +339,8 @@ export class WorkflowGateChecker {
     return status.approval?.plan_approved === true;
   }
 
-  /**
-   * Get the next phase in the workflow sequence
-   */
-  private getNextPhase(current: PrevcPhase): PrevcPhase | null {
-    const order: PrevcPhase[] = ['P', 'R', 'E', 'V', 'C'];
-    const idx = order.indexOf(current);
-    return idx >= 0 && idx < order.length - 1 ? order[idx + 1] : null;
+  private getNextPhaseForStatus(status: PrevcStatus): PrevcPhase | null {
+    return getNextActivePhase(status.project.current_phase, status.phases);
   }
 }
 

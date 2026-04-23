@@ -21,6 +21,55 @@ function generateSessionId(): string {
   return `collab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
+type CollaborationSessionLifecycle = CollaborationStatus['status'];
+
+export interface CollaborationSessionRecord {
+  id: string;
+  topic: string;
+  participants: PrevcRole[];
+  contributions: Array<{
+    role: PrevcRole;
+    message: string;
+    timestamp: number;
+  }>;
+  status: CollaborationSessionLifecycle;
+  startedAt: number;
+}
+
+export interface CollaborationSessionStore {
+  loadSessions(): CollaborationSessionRecord[];
+  saveSessions(sessions: CollaborationSessionRecord[]): void;
+}
+
+class InMemoryCollaborationSessionStore implements CollaborationSessionStore {
+  private sessions: CollaborationSessionRecord[] = [];
+
+  loadSessions(): CollaborationSessionRecord[] {
+    return this.sessions.map((session) => ({
+      ...session,
+      participants: [...session.participants],
+      contributions: session.contributions.map((contribution) => ({ ...contribution })),
+    }));
+  }
+
+  saveSessions(sessions: CollaborationSessionRecord[]): void {
+    this.sessions = sessions.map((session) => ({
+      ...session,
+      participants: [...session.participants],
+      contributions: session.contributions.map((contribution) => ({ ...contribution })),
+    }));
+  }
+}
+
+interface CollaborationSessionState {
+  id: string;
+  topic: string;
+  activeRoles: PrevcRole[];
+  contributions: Contribution[];
+  status: CollaborationSessionLifecycle;
+  startedAt: Date;
+}
+
 /**
  * Collaboration Session
  *
@@ -31,16 +80,50 @@ export class CollaborationSession {
   private topic: string;
   private activeRoles: PrevcRole[];
   private contributions: Contribution[];
-  private status: 'active' | 'synthesizing' | 'concluded';
+  private status: CollaborationSessionLifecycle;
   private startedAt: Date;
 
-  constructor(topic: string, participants?: PrevcRole[]) {
-    this.id = generateSessionId();
-    this.topic = topic;
-    this.activeRoles = participants || [];
-    this.contributions = [];
-    this.status = 'active';
-    this.startedAt = new Date();
+  constructor(
+    topic: string,
+    participants?: PrevcRole[],
+    state?: CollaborationSessionState
+  ) {
+    this.id = state?.id ?? generateSessionId();
+    this.topic = state?.topic ?? topic;
+    this.activeRoles = state?.activeRoles ?? participants ?? [];
+    this.contributions = state?.contributions ?? [];
+    this.status = state?.status ?? 'active';
+    this.startedAt = state?.startedAt ?? new Date();
+  }
+
+  static fromRecord(record: CollaborationSessionRecord): CollaborationSession {
+    return new CollaborationSession(record.topic, record.participants, {
+      id: record.id,
+      topic: record.topic,
+      activeRoles: [...record.participants],
+      contributions: record.contributions.map((contribution) => ({
+        role: contribution.role,
+        message: contribution.message,
+        timestamp: new Date(contribution.timestamp),
+      })),
+      status: record.status,
+      startedAt: new Date(record.startedAt),
+    });
+  }
+
+  toRecord(): CollaborationSessionRecord {
+    return {
+      id: this.id,
+      topic: this.topic,
+      participants: [...this.activeRoles],
+      contributions: this.contributions.map((contribution) => ({
+        role: contribution.role,
+        message: contribution.message,
+        timestamp: contribution.timestamp.getTime(),
+      })),
+      status: this.status,
+      startedAt: this.startedAt.getTime(),
+    };
   }
 
   /**
@@ -323,14 +406,34 @@ export class CollaborationSession {
  * Manages multiple collaboration sessions.
  */
 export class CollaborationManager {
+  private readonly store: CollaborationSessionStore;
   private sessions: Map<string, CollaborationSession> = new Map();
 
+  constructor(store: CollaborationSessionStore = new InMemoryCollaborationSessionStore()) {
+    this.store = store;
+    for (const record of this.store.loadSessions()) {
+      const session = CollaborationSession.fromRecord(record);
+      this.sessions.set(session.getId(), session);
+    }
+  }
+
+  private persistSessions(): void {
+    this.store.saveSessions(
+      Array.from(this.sessions.values()).map((session) => session.toRecord())
+    );
+  }
+
   /**
-   * Create a new collaboration session
+   * Start and persist a new collaboration session
    */
-  createSession(topic: string, participants?: PrevcRole[]): CollaborationSession {
+  async startSession(
+    topic: string,
+    participants?: PrevcRole[]
+  ): Promise<CollaborationSession> {
     const session = new CollaborationSession(topic, participants);
-    this.sessions.set(session.getStatus().id, session);
+    await session.start(topic, participants);
+    this.sessions.set(session.getId(), session);
+    this.persistSessions();
     return session;
   }
 
@@ -339,6 +442,19 @@ export class CollaborationManager {
    */
   getSession(id: string): CollaborationSession | undefined {
     return this.sessions.get(id);
+  }
+
+  /**
+   * Add a persisted contribution to a collaboration session
+   */
+  contribute(id: string, role: PrevcRole, message: string): void {
+    const session = this.sessions.get(id);
+    if (!session) {
+      throw new Error(`Session not found: ${id}`);
+    }
+
+    session.contribute(role, message);
+    this.persistSessions();
   }
 
   /**
@@ -360,6 +476,7 @@ export class CollaborationManager {
     }
 
     const synthesis = await session.synthesize();
+    this.persistSessions();
     return synthesis;
   }
 
@@ -372,5 +489,6 @@ export class CollaborationManager {
         this.sessions.delete(id);
       }
     }
+    this.persistSessions();
   }
 }

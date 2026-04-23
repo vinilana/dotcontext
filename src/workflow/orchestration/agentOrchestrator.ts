@@ -1,84 +1,36 @@
-/**
- * Agent Orchestrator
- *
- * Maps PREVC workflow roles and phases to specialized agents,
- * providing intelligent agent selection and sequencing.
- */
-
 import { PrevcPhase, PrevcRole } from '../types';
 import { ROLE_TO_SPECIALISTS } from '../roles';
+import {
+  PREVC_PHASE_MODEL,
+  PREVC_PHASE_SEQUENCE,
+  PREVC_ROLE_MODEL,
+  PREVC_ROLE_SEQUENCE,
+} from '../registries/prevcModel';
+import {
+  BUILT_IN_AGENTS,
+  type BuiltInAgentType,
+} from '../agents/agentRegistry';
 
 /**
  * Available agent types from the existing system
  */
-export const AGENT_TYPES = [
-  'code-reviewer',
-  'bug-fixer',
-  'feature-developer',
-  'refactoring-specialist',
-  'test-writer',
-  'documentation-writer',
-  'performance-optimizer',
-  'security-auditor',
-  'backend-specialist',
-  'frontend-specialist',
-  'architect-specialist',
-  'devops-specialist',
-  'database-specialist',
-  'mobile-specialist',
-] as const;
+export const AGENT_TYPES = BUILT_IN_AGENTS;
 
-export type AgentType = (typeof AGENT_TYPES)[number];
+export type AgentType = BuiltInAgentType;
 
 /**
  * Mapping from PREVC phases to relevant agent types
  */
-export const PHASE_TO_AGENTS: Record<PrevcPhase, AgentType[]> = {
-  P: ['architect-specialist', 'documentation-writer', 'frontend-specialist'],
-  R: ['architect-specialist', 'code-reviewer', 'security-auditor'],
-  E: [
-    'feature-developer',
-    'backend-specialist',
-    'frontend-specialist',
-    'database-specialist',
-    'mobile-specialist',
-    'bug-fixer',
-  ],
-  V: [
-    'test-writer',
-    'code-reviewer',
-    'security-auditor',
-    'performance-optimizer',
-  ],
-  C: ['documentation-writer', 'devops-specialist'],
-};
+export const PHASE_TO_AGENTS: Record<PrevcPhase, AgentType[]> = Object.fromEntries(
+  PREVC_PHASE_SEQUENCE.map((phase) => [phase, [...PREVC_PHASE_MODEL[phase].recommendedAgents]])
+) as Record<PrevcPhase, AgentType[]>;
 
 /**
  * Mapping from PREVC roles to agent types
  */
-export const ROLE_TO_AGENTS: Record<PrevcRole, AgentType[]> = {
-  planner: ['architect-specialist', 'documentation-writer'],
-  designer: ['frontend-specialist'],
-  architect: ['architect-specialist', 'backend-specialist', 'database-specialist'],
-  developer: [
-    'feature-developer',
-    'bug-fixer',
-    'backend-specialist',
-    'frontend-specialist',
-    'mobile-specialist',
-    'database-specialist',
-  ],
-  qa: ['test-writer', 'security-auditor', 'performance-optimizer'],
-  reviewer: ['code-reviewer', 'security-auditor'],
-  documenter: ['documentation-writer'],
-  'solo-dev': [
-    'refactoring-specialist',
-    'bug-fixer',
-    'feature-developer',
-    'test-writer',
-    'documentation-writer',
-  ],
-};
+export const ROLE_TO_AGENTS: Record<PrevcRole, AgentType[]> = Object.fromEntries(
+  PREVC_ROLE_SEQUENCE.map((role) => [role, [...PREVC_ROLE_MODEL[role].agents]])
+) as Record<PrevcRole, AgentType[]>;
 
 /**
  * Task keywords to agent mapping for intelligent selection

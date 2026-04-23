@@ -6,6 +6,7 @@
  */
 
 import { PrevcRole } from './types';
+import { PREVC_ROLE_MODEL, PREVC_ROLE_SEQUENCE } from './registries/prevcModel';
 
 /**
  * All available PREVC roles
@@ -22,26 +23,20 @@ export const PREVC_ROLES = [
 ] as const;
 
 /**
- * Mapping from PREVC roles to existing agent types (specialists)
- * @deprecated Use ROLE_TO_AGENTS from orchestration/agentOrchestrator instead.
- * This mapping is kept for backward compatibility.
+ * Mapping from PREVC roles to existing agent types (specialists).
+ *
+ * Derived from the canonical `PREVC_ROLE_MODEL` so there is a single
+ * source of truth for `role -> specialists`. Historically this map
+ * diverged slightly (e.g. omitted `database-specialist` and
+ * `devops-specialist` under `developer`); we now prefer the canonical
+ * list from the role model.
+ *
+ * @deprecated Use `ROLE_TO_AGENTS` from orchestration/agentOrchestrator
+ * or read `PREVC_ROLE_MODEL[role].specialists` directly.
  */
-export const ROLE_TO_SPECIALISTS: Record<PrevcRole, string[]> = {
-  planner: [], // New role, no existing mapping
-  designer: ['frontend-specialist'],
-  architect: ['architect-specialist'],
-  developer: [
-    'feature-developer',
-    'bug-fixer',
-    'backend-specialist',
-    'frontend-specialist',
-    'mobile-specialist',
-  ],
-  qa: ['test-writer', 'security-auditor', 'performance-optimizer'],
-  reviewer: ['code-reviewer'],
-  documenter: ['documentation-writer'],
-  'solo-dev': ['refactoring-specialist', 'bug-fixer'],
-};
+export const ROLE_TO_SPECIALISTS: Record<PrevcRole, string[]> = Object.fromEntries(
+  PREVC_ROLE_SEQUENCE.map((role) => [role, [...PREVC_ROLE_MODEL[role].specialists]])
+) as Record<PrevcRole, string[]>;
 
 /**
  * Mapping from existing agent types to PREVC roles

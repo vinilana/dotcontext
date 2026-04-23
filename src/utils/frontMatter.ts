@@ -5,10 +5,10 @@
  * Supports both v1 (simple) and v2 (scaffold) frontmatter formats.
  */
 
-import * as fs from 'fs/promises';
-import { createReadStream } from 'fs';
-import * as readline from 'readline';
+import { load as loadYaml } from 'js-yaml';
+import { PrevcPhase } from '../workflow/types';
 import type { ScaffoldFrontmatter, ScaffoldFileType, ScaffoldStatus } from '../types/scaffoldFrontmatter';
+import type { RequiredArtifactInput, RequiredArtifactSpec } from '../services/harness/taskContractsService';
 
 /**
  * Legacy v1 frontmatter (simple status tracking)
@@ -40,6 +40,25 @@ export interface ParsedScaffoldFrontmatter {
   summary?: string;
   agents?: Array<{ type: string; role: string }>;
   docs?: string[];
+  planPhases?: ParsedPlanPhaseFrontmatter[];
+}
+
+export interface ParsedPlanStepFrontmatter {
+  order: number;
+  description: string;
+  assignee?: string;
+  deliverables?: string[];
+}
+
+export interface ParsedPlanPhaseFrontmatter {
+  id: string;
+  name: string;
+  prevc: PrevcPhase;
+  summary?: string;
+  deliverables?: string[];
+  steps?: ParsedPlanStepFrontmatter[];
+  requiredSensors?: string[];
+  requiredArtifacts?: RequiredArtifactInput[];
 }
 
 /**
@@ -50,6 +69,263 @@ export function isScaffoldFrontmatter(fm: FrontMatter | ParsedScaffoldFrontmatte
 }
 
 const FRONT_MATTER_DELIMITER = '---';
+
+function loadYamlFrontMatter(content: string): Record<string, unknown> | null {
+  try {
+    const parsed = loadYaml(content);
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeStringArray(value: unknown): string[] | undefined {
+  if (typeof value === 'string') {
+    return [value];
+  }
+
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const normalized = value
+    .map((item) => (typeof item === 'string' ? item : null))
+    .filter((item): item is string => item !== null);
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeArtifactSpec(value: unknown): RequiredArtifactInput | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const obj = value as Record<string, unknown>;
+  const kind = typeof obj.kind === 'string' ? obj.kind : null;
+  switch (kind) {
+    case 'name':
+      return typeof obj.name === 'string' && obj.name.length > 0
+        ? ({ kind: 'name', name: obj.name } as RequiredArtifactSpec)
+        : null;
+    case 'path':
+      return typeof obj.path === 'string' && obj.path.length > 0
+        ? ({ kind: 'path', path: obj.path } as RequiredArtifactSpec)
+        : null;
+    case 'glob': {
+      if (typeof obj.glob !== 'string' || obj.glob.length === 0) return null;
+      const min = typeof obj.minMatches === 'number' && obj.minMatches > 0
+        ? obj.minMatches
+        : undefined;
+      const spec: RequiredArtifactSpec = min !== undefined
+        ? { kind: 'glob', glob: obj.glob, minMatches: min }
+        : { kind: 'glob', glob: obj.glob };
+      return spec;
+    }
+    case 'file-count': {
+      if (typeof obj.glob !== 'string' || obj.glob.length === 0) return null;
+      if (typeof obj.min !== 'number' || obj.min <= 0) return null;
+      return { kind: 'file-count', glob: obj.glob, min: obj.min } as RequiredArtifactSpec;
+    }
+    default:
+      return null;
+  }
+}
+
+function normalizeArtifactSpecArray(value: unknown): RequiredArtifactInput[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const out: RequiredArtifactInput[] = [];
+  for (const item of value) {
+    const spec = normalizeArtifactSpec(item);
+    if (spec !== null) out.push(spec);
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+function normalizePlanSteps(value: unknown): ParsedPlanStepFrontmatter[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const steps: ParsedPlanStepFrontmatter[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      continue;
+    }
+
+    const step = item as Record<string, unknown>;
+    const order = typeof step.order === 'number'
+      ? step.order
+      : typeof step.order === 'string' && step.order.trim() !== '' && !Number.isNaN(Number(step.order))
+        ? Number(step.order)
+        : null;
+    const description = typeof step.description === 'string' ? step.description : null;
+
+    if (order === null || description === null) {
+      continue;
+    }
+
+    const deliverables = normalizeStringArray(step.deliverables ?? step.outputs);
+
+    steps.push({
+      order,
+      description,
+      assignee: typeof step.assignee === 'string' ? step.assignee : undefined,
+      deliverables,
+    });
+  }
+
+  return steps.length > 0 ? steps : undefined;
+}
+
+function normalizePlanPhases(value: unknown): ParsedPlanPhaseFrontmatter[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const phases: ParsedPlanPhaseFrontmatter[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      continue;
+    }
+
+    const phase = item as Record<string, unknown>;
+    const id = typeof phase.id === 'string' ? phase.id : null;
+    const name = typeof phase.name === 'string' ? phase.name : null;
+    const prevc = typeof phase.prevc === 'string' ? phase.prevc : null;
+
+    if (!id || !name || !prevc) {
+      continue;
+    }
+
+    const steps = normalizePlanSteps(phase.steps);
+    const deliverables = normalizeStringArray(phase.deliverables ?? phase.outputs);
+    const requiredSensors = normalizeStringArray(
+      phase.required_sensors ?? phase.requiredSensors
+    );
+    const requiredArtifacts = normalizeArtifactSpecArray(
+      phase.required_artifacts ?? phase.requiredArtifacts
+    );
+
+    phases.push({
+      id,
+      name,
+      prevc: prevc as PrevcPhase,
+      summary: typeof phase.summary === 'string' ? phase.summary : undefined,
+      deliverables,
+      steps,
+      requiredSensors,
+      requiredArtifacts,
+    });
+  }
+
+  return phases.length > 0 ? phases : undefined;
+}
+
+function normalizeParsedScaffoldFrontMatter(frontMatter: Record<string, unknown>): ParsedScaffoldFrontmatter | null {
+  const type = frontMatter.type;
+  const scaffoldVersion = frontMatter.scaffoldVersion;
+
+  if (type !== 'doc' && type !== 'agent' && type !== 'skill' && type !== 'plan') {
+    return null;
+  }
+
+  if (scaffoldVersion !== '2.0.0') {
+    return null;
+  }
+
+  const normalized: ParsedScaffoldFrontmatter = {
+    type,
+    name: typeof frontMatter.name === 'string' ? frontMatter.name : '',
+    description: typeof frontMatter.description === 'string' ? frontMatter.description : '',
+    generated: typeof frontMatter.generated === 'string' ? frontMatter.generated : '',
+    status: frontMatter.status === 'filled' ? 'filled' : 'unfilled',
+    scaffoldVersion: '2.0.0',
+  };
+
+  if (typeof frontMatter.category === 'string') {
+    normalized.category = frontMatter.category;
+  }
+
+  if (typeof frontMatter.agentType === 'string') {
+    normalized.agentType = frontMatter.agentType;
+  }
+
+  const phases = normalizeStringArray(frontMatter.phases);
+  if (phases) {
+    normalized.phases = phases;
+  }
+
+  if (typeof frontMatter.mode === 'boolean') {
+    normalized.mode = frontMatter.mode;
+  }
+
+  const disableModelInvocation = frontMatter.disableModelInvocation
+    ?? frontMatter['disable-model-invocation']
+    ?? frontMatter.disable_model_invocation;
+  if (typeof disableModelInvocation === 'boolean') {
+    normalized.disableModelInvocation = disableModelInvocation;
+  }
+
+  if (typeof frontMatter.skillSlug === 'string') {
+    normalized.skillSlug = frontMatter.skillSlug;
+  }
+
+  if (typeof frontMatter.planSlug === 'string') {
+    normalized.planSlug = frontMatter.planSlug;
+  }
+
+  if (typeof frontMatter.summary === 'string') {
+    normalized.summary = frontMatter.summary;
+  }
+
+  if (Array.isArray(frontMatter.agents)) {
+    normalized.agents = frontMatter.agents
+      .map((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          return null;
+        }
+
+        const agent = item as Record<string, unknown>;
+        if (typeof agent.type !== 'string') {
+          return null;
+        }
+
+        return {
+          type: agent.type,
+          role: typeof agent.role === 'string' ? agent.role : '',
+        };
+      })
+      .filter((item): item is { type: string; role: string } => item !== null);
+  }
+
+  const docs = normalizeStringArray(frontMatter.docs);
+  if (docs) {
+    normalized.docs = docs;
+  }
+
+  if (type === 'plan') {
+    const planPhases = normalizePlanPhases(frontMatter.phases);
+    if (planPhases) {
+      normalized.planPhases = planPhases;
+    }
+  }
+
+  if (!normalized.name || !normalized.description || !normalized.generated) {
+    return null;
+  }
+
+  return normalized;
+}
 
 /**
  * Check if a file needs to be filled by reading only the frontmatter block.
@@ -80,31 +356,6 @@ export async function needsFill(filePath: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/**
- * Read only the first N lines of a file efficiently
- */
-async function readFirstLines(filePath: string, n: number): Promise<string[]> {
-  return new Promise((resolve, reject) => {
-    const lines: string[] = [];
-    const stream = createReadStream(filePath);
-    const rl = readline.createInterface({
-      input: stream,
-      crlfDelay: Infinity
-    });
-
-    rl.on('line', (line) => {
-      lines.push(line);
-      if (lines.length >= n) {
-        rl.close();
-        stream.destroy();
-      }
-    });
-
-    rl.on('close', () => resolve(lines));
-    rl.on('error', reject);
-  });
 }
 
 /**
@@ -245,101 +496,19 @@ export function parseScaffoldFrontMatter(content: string): {
   }
 
   const frontMatterLines = lines.slice(1, endIndex);
-  const frontMatter: Record<string, unknown> = {};
-
-  let i = 0;
-  while (i < frontMatterLines.length) {
-    const line = frontMatterLines[i];
-
-    // Skip empty lines
-    if (!line.trim()) {
-      i++;
-      continue;
-    }
-
-    // Check for key: value pattern
-    const simpleMatch = line.match(/^(\w[\w-]*):\s*(.*)$/);
-    if (simpleMatch) {
-      const [, key, value] = simpleMatch;
-      const normalizedKey = key.replace(/-/g, '_'); // normalize kebab-case to snake_case
-
-      // Handle inline arrays [a, b, c]
-      if (value.startsWith('[') && value.endsWith(']')) {
-        const arrayContent = value.slice(1, -1);
-        frontMatter[normalizedKey] = arrayContent.split(',').map(s => s.trim().replace(/^["']|["']$/g, ''));
-      }
-      // Handle boolean
-      else if (value === 'true' || value === 'false') {
-        frontMatter[normalizedKey] = value === 'true';
-      }
-      // Handle quoted string
-      else if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        frontMatter[normalizedKey] = value.slice(1, -1);
-      }
-      // Handle nested array (value is empty, next lines start with -)
-      else if (!value && i + 1 < frontMatterLines.length && frontMatterLines[i + 1]?.trim().startsWith('-')) {
-        const nestedArray: unknown[] = [];
-        i++;
-
-        while (i < frontMatterLines.length) {
-          const nestedLine = frontMatterLines[i];
-          if (!nestedLine.trim().startsWith('-') && !nestedLine.startsWith('  ')) {
-            break;
-          }
-
-          const itemMatch = nestedLine.match(/^\s*-\s*(.*)$/);
-          if (itemMatch) {
-            const itemValue = itemMatch[1].trim();
-
-            // Check if this is a nested object (key: value on same line)
-            const objectMatch = itemValue.match(/^(\w+):\s*["']?(.*)["']?$/);
-            if (objectMatch) {
-              // Start of nested object
-              const nestedObj: Record<string, string> = {};
-              nestedObj[objectMatch[1]] = objectMatch[2].replace(/^["']|["']$/g, '');
-              i++;
-
-              // Read additional properties of the nested object
-              while (i < frontMatterLines.length) {
-                const propLine = frontMatterLines[i];
-                const propMatch = propLine.match(/^\s+(\w+):\s*["']?(.*)["']?$/);
-                if (propMatch && !propLine.trim().startsWith('-')) {
-                  nestedObj[propMatch[1]] = propMatch[2].replace(/^["']|["']$/g, '');
-                  i++;
-                } else {
-                  break;
-                }
-              }
-              nestedArray.push(nestedObj);
-              continue;
-            } else {
-              // Simple array item
-              nestedArray.push(itemValue.replace(/^["']|["']$/g, ''));
-            }
-          }
-          i++;
-        }
-
-        frontMatter[normalizedKey] = nestedArray;
-        continue;
-      }
-      // Handle simple string
-      else {
-        frontMatter[normalizedKey] = value;
-      }
-    }
-    i++;
-  }
+  const frontMatterContent = frontMatterLines.join('\n');
+  const frontMatter = loadYamlFrontMatter(frontMatterContent);
 
   const body = lines.slice(endIndex + 1).join('\n').replace(/^\n+/, '');
 
-  // Validate required scaffold fields
-  if (!frontMatter.scaffoldVersion || frontMatter.scaffoldVersion !== '2.0.0') {
+  if (!frontMatter) {
     return { frontMatter: null, body: content };
   }
 
+  const normalized = normalizeParsedScaffoldFrontMatter(frontMatter);
+
   return {
-    frontMatter: frontMatter as unknown as ParsedScaffoldFrontmatter,
+    frontMatter: normalized,
     body,
   };
 }

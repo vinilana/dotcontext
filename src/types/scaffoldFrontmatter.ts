@@ -6,6 +6,7 @@
  * generates complete content based on scaffold structure definitions.
  */
 
+import { z } from 'zod';
 import { PrevcPhase } from '../workflow/types';
 
 /**
@@ -84,8 +85,39 @@ export interface PlanScaffoldFrontmatter extends BaseScaffoldFrontmatter {
   agents?: Array<{ type: string; role: string }>;
   /** Linked documentation */
   docs?: string[];
-  /** Plan phases */
-  phases?: Array<{ id: string; name: string; prevc: PrevcPhase }>;
+  /** Plan phases with structured steps and deliverables */
+  phases?: Array<{
+    id: string;
+    name: string;
+    prevc: PrevcPhase;
+    summary?: string;
+    deliverables?: string[];
+    steps?: Array<{
+      order: number;
+      description: string;
+      assignee?: string;
+      deliverables?: string[];
+    }>;
+    /**
+     * Sensor ids that must pass before this phase can complete. Propagated
+     * into the derived harness task contract's `requiredSensors`.
+     */
+    required_sensors?: string[];
+    /**
+     * Artifact names/paths that must be recorded before this phase can
+     * complete. Propagated into the derived harness task contract's
+     * `requiredArtifacts`.
+     */
+    required_artifacts?: Array<string | {
+      kind: 'name'; name: string;
+    } | {
+      kind: 'path'; path: string;
+    } | {
+      kind: 'glob'; glob: string; minMatches?: number;
+    } | {
+      kind: 'file-count'; glob: string; min: number;
+    }>;
+  }>;
 }
 
 /**
@@ -203,7 +235,29 @@ export function createPlanFrontmatter(
     summary?: string;
     agents?: Array<{ type: string; role: string }>;
     docs?: string[];
-    phases?: Array<{ id: string; name: string; prevc: PrevcPhase }>;
+    phases?: Array<{
+      id: string;
+      name: string;
+      prevc: PrevcPhase;
+      summary?: string;
+      deliverables?: string[];
+      steps?: Array<{
+        order: number;
+        description: string;
+        assignee?: string;
+        deliverables?: string[];
+      }>;
+      required_sensors?: string[];
+      required_artifacts?: Array<string | {
+      kind: 'name'; name: string;
+    } | {
+      kind: 'path'; path: string;
+    } | {
+      kind: 'glob'; glob: string; minMatches?: number;
+    } | {
+      kind: 'file-count'; glob: string; min: number;
+    }>;
+    }>;
   }
 ): PlanScaffoldFrontmatter {
   return {
@@ -260,27 +314,64 @@ export function serializeFrontmatter(fm: ScaffoldFrontmatter): string {
   if (isPlanFrontmatter(fm)) {
     lines.push(`planSlug: ${fm.planSlug}`);
     if (fm.summary) {
-      lines.push(`summary: ${fm.summary}`);
+      lines.push(`summary: ${JSON.stringify(fm.summary)}`);
     }
     if (fm.agents && fm.agents.length > 0) {
       lines.push('agents:');
       for (const agent of fm.agents) {
-        lines.push(`  - type: "${agent.type}"`);
-        lines.push(`    role: "${agent.role}"`);
+        lines.push(`  - type: ${JSON.stringify(agent.type)}`);
+        lines.push(`    role: ${JSON.stringify(agent.role)}`);
       }
     }
     if (fm.docs && fm.docs.length > 0) {
       lines.push('docs:');
       for (const doc of fm.docs) {
-        lines.push(`  - "${doc}"`);
+        lines.push(`  - ${JSON.stringify(doc)}`);
       }
     }
     if (fm.phases && fm.phases.length > 0) {
       lines.push('phases:');
       for (const phase of fm.phases) {
-        lines.push(`  - id: "${phase.id}"`);
-        lines.push(`    name: "${phase.name}"`);
-        lines.push(`    prevc: "${phase.prevc}"`);
+        lines.push(`  - id: ${JSON.stringify(phase.id)}`);
+        lines.push(`    name: ${JSON.stringify(phase.name)}`);
+        lines.push(`    prevc: ${JSON.stringify(phase.prevc)}`);
+        if (phase.summary) {
+          lines.push(`    summary: ${JSON.stringify(phase.summary)}`);
+        }
+        if (phase.deliverables && phase.deliverables.length > 0) {
+          lines.push('    deliverables:');
+          for (const deliverable of phase.deliverables) {
+            lines.push(`      - ${JSON.stringify(deliverable)}`);
+          }
+        }
+        if (phase.required_sensors && phase.required_sensors.length > 0) {
+          lines.push('    required_sensors:');
+          for (const sensor of phase.required_sensors) {
+            lines.push(`      - ${JSON.stringify(sensor)}`);
+          }
+        }
+        if (phase.required_artifacts && phase.required_artifacts.length > 0) {
+          lines.push('    required_artifacts:');
+          for (const artifact of phase.required_artifacts) {
+            lines.push(`      - ${JSON.stringify(artifact)}`);
+          }
+        }
+        if (phase.steps && phase.steps.length > 0) {
+          lines.push('    steps:');
+          for (const step of phase.steps) {
+            lines.push(`      - order: ${step.order}`);
+            lines.push(`        description: ${JSON.stringify(step.description)}`);
+            if (step.assignee) {
+              lines.push(`        assignee: ${JSON.stringify(step.assignee)}`);
+            }
+            if (step.deliverables && step.deliverables.length > 0) {
+              lines.push('        deliverables:');
+              for (const deliverable of step.deliverables) {
+                lines.push(`          - ${JSON.stringify(deliverable)}`);
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -294,3 +385,77 @@ export function serializeFrontmatter(fm: ScaffoldFrontmatter): string {
 
   return lines.join('\n');
 }
+
+/**
+ * Zod schemas for validating scaffold/plan frontmatter at I/O boundaries.
+ */
+const prevcPhaseSchema = z.enum(['P', 'R', 'E', 'V', 'C']);
+
+const planStepSchema = z.object({
+  order: z.number(),
+  description: z.string(),
+  assignee: z.string().optional(),
+  deliverables: z.array(z.string()).optional(),
+});
+
+const requiredArtifactSpecSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('name'), name: z.string().min(1) }),
+  z.object({ kind: z.literal('path'), path: z.string().min(1) }),
+  z.object({
+    kind: z.literal('glob'),
+    glob: z.string().min(1),
+    minMatches: z.number().int().positive().optional(),
+  }),
+  z.object({
+    kind: z.literal('file-count'),
+    glob: z.string().min(1),
+    min: z.number().int().positive(),
+  }),
+]);
+
+const requiredArtifactInputSchema = z.union([
+  z.string().min(1),
+  requiredArtifactSpecSchema,
+]);
+
+const planPhaseSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  prevc: prevcPhaseSchema,
+  summary: z.string().optional(),
+  deliverables: z.array(z.string()).optional(),
+  steps: z.array(planStepSchema).optional(),
+  required_sensors: z.array(z.string().min(1)).optional(),
+  required_artifacts: z.array(requiredArtifactInputSchema).optional(),
+});
+
+const agentEntrySchema = z.object({
+  type: z.string().min(1),
+  role: z.string(),
+});
+
+export const planScaffoldFrontmatterSchema = z.object({
+  type: z.literal('plan'),
+  name: z.string().min(1),
+  description: z.string().min(1),
+  generated: z.string().min(1),
+  status: z.enum(['unfilled', 'filled']),
+  scaffoldVersion: z.literal('2.0.0'),
+  planSlug: z.string().min(1),
+  summary: z.string().optional(),
+  agents: z.array(agentEntrySchema).optional(),
+  docs: z.array(z.string()).optional(),
+  phases: z.array(planPhaseSchema).optional(),
+});
+
+export type PlanScaffoldFrontmatterValidated = z.infer<typeof planScaffoldFrontmatterSchema>;
+
+/**
+ * Validate plan frontmatter parsed from YAML. Returns parsed value or null if
+ * invalid. Keep at the boundary; do not pepper throughout the codebase.
+ */
+export function validatePlanFrontmatter(raw: unknown): PlanScaffoldFrontmatterValidated | null {
+  const result = planScaffoldFrontmatterSchema.safeParse(raw);
+  return result.success ? result.data : null;
+}
+

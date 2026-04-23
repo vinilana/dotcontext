@@ -8,7 +8,8 @@
  * - Project: Removed - use context init + workflow-init instead
  */
 
-import type { PrevcPhase, PrevcRole, AgentType } from '../../../workflow';
+import type { PrevcPhase, PrevcRole } from '../../../workflow/types';
+import type { AgentType } from '../../../workflow';
 
 // Action types for each gateway
 // Note: Workflow uses dedicated tools (workflow-init, workflow-status, workflow-advance, workflow-manage)
@@ -199,7 +200,7 @@ export interface HarnessParams {
   expectedOutputs?: string[];
   acceptanceCriteria?: string[];
   requiredSensors?: string[];
-  requiredArtifacts?: string[];
+  requiredArtifacts?: Array<string | Record<string, unknown>>;
   from?: string;
   to?: string;
   artifacts?: string[];

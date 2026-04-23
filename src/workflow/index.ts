@@ -1,24 +1,28 @@
 /**
  * PREVC Workflow System
  *
- * A structured workflow for software development with 5 phases:
- * P - Planejamento (Planning)
- * R - Revisão (Review)
- * E - Execução (Execution)
- * V - Validação (Validation)
- * C - Confirmação (Confirmation)
+ * Stable workflow barrel.
+ *
+ * Prefer direct imports for internal-only registries, guidance helpers,
+ * collaboration infrastructure, and orchestration implementation details.
  */
 
 // Types
 export * from './types';
 
+// Agent types (surfaced for MCP adapters)
+export { AGENT_TYPES, type AgentType } from './orchestration/agentOrchestrator';
+
 // Errors
 export {
   WorkflowError,
   WorkflowGateError,
+  WorkflowSyncError,
+  WorkflowStateDesyncError,
   NoPlanToApproveError,
   NoWorkflowError,
 } from './errors';
+export type { PhaseStatusDivergence } from './errors';
 
 // Gates
 export {
@@ -32,13 +36,10 @@ export {
 // Roles
 export {
   PREVC_ROLES,
-  ROLE_TO_SPECIALISTS,
-  SPECIALIST_TO_ROLE,
   ROLE_DISPLAY_NAMES,
   ROLE_DISPLAY_NAMES_EN,
+  ROLE_DISPLAY_NAMES_PT,
   isValidRole,
-  getRoleForSpecialist,
-  getSpecialistsForRole,
 } from './roles';
 
 // Phases
@@ -49,6 +50,7 @@ export {
   PHASE_NAMES_PT,
   getPhaseDefinition,
   getNextPhase,
+  getNextActivePhase,
   getPreviousPhase,
   isPhaseOptional,
   getRolesForPhase,
@@ -56,15 +58,6 @@ export {
   isValidPhase,
   getPhaseOrder,
 } from './phases';
-
-// Configuration
-export {
-  ROLE_CONFIG,
-  getRoleConfig,
-  getRolesForPhase as getRolesForPhaseFromConfig,
-  getOutputsForRole,
-  getResponsibilitiesForRole,
-} from './prevcConfig';
 
 // Scaling
 export { ProjectScale } from './types';
@@ -82,14 +75,6 @@ export {
 
 // Status Management
 export { PrevcStatusManager } from './status/statusManager';
-export {
-  createInitialStatus,
-  createQuickFlowStatus,
-  createSmallProjectStatus,
-  createMediumProjectStatus,
-  createLargeProjectStatus,
-  generateResumeContext,
-} from './status/templates';
 
 // Orchestrator
 export {
@@ -98,30 +83,6 @@ export {
   CompletePhaseOptions,
   InitWorkflowOptions,
 } from './orchestrator';
-
-// Collaboration
-export {
-  CollaborationSession,
-  CollaborationManager,
-} from './collaboration';
-
-// Orchestration
-export {
-  AgentOrchestrator,
-  agentOrchestrator,
-  AgentType,
-  AGENT_TYPES,
-  PHASE_TO_AGENTS,
-  ROLE_TO_AGENTS,
-  DocumentLinker,
-  documentLinker,
-  DocType,
-  DocGuide,
-  DOCUMENT_GUIDES,
-  AGENT_TO_DOCS,
-  PHASE_TO_DOCS,
-  ROLE_TO_DOCS,
-} from './orchestration';
 
 // Plan Integration
 export {
@@ -136,18 +97,8 @@ export {
   WorkflowPlans,
   AgentLineupEntry,
   PLAN_PHASE_TO_PREVC,
+  AcceptanceFailedError,
 } from './plans';
-
-// Agent Registry
-export {
-  BUILT_IN_AGENTS,
-  BuiltInAgentType,
-  AgentMetadata,
-  DiscoveredAgents,
-  isBuiltInAgent,
-  AgentRegistry,
-  createAgentRegistry,
-} from './agents';
 
 // Skills
 export {

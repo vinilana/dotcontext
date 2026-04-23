@@ -6,9 +6,44 @@ import { handlePlan } from './plan';
 import { handleWorkflowAdvance } from './workflowAdvance';
 import { handleWorkflowInit } from './workflowInit';
 import { handleWorkflowManage } from './workflowManage';
+import { handleWorkflowStatus } from './workflowStatus';
 
 function parseResponse(response: { content: Array<{ text: string }> }) {
   return JSON.parse(response.content[0].text);
+}
+
+/**
+ * Build a minimal plan markdown with canonical frontmatter that declares
+ * `required_sensors` on the Execution phase. `HarnessPlansService.link`
+ * hard-fails when an E phase is missing `required_sensors`, so every plan
+ * fixture used in these integration tests must declare them.
+ */
+function planFixtureWithEvidence(slug: string, title: string, summary: string): string {
+  return [
+    '---',
+    'type: plan',
+    `name: ${slug}`,
+    `description: ${JSON.stringify(summary)}`,
+    `planSlug: ${slug}`,
+    'generated: "2026-04-13"',
+    'status: filled',
+    'scaffoldVersion: "2.0.0"',
+    'phases:',
+    '  - id: phase-1',
+    '    name: Discovery',
+    '    prevc: P',
+    '  - id: phase-2',
+    '    name: Implementation',
+    '    prevc: E',
+    '    required_sensors:',
+    '      - tests',
+    '---',
+    '',
+    `# ${title}`,
+    '',
+    `> ${summary}`,
+    '',
+  ].join('\n');
 }
 
 describe('workflow MCP harness integration', () => {
@@ -163,7 +198,7 @@ describe('workflow MCP harness integration', () => {
     await fs.ensureDir(path.join(tempDir, '.context', 'plans'));
     await fs.writeFile(
       path.join(tempDir, '.context', 'plans', 'core-plan.md'),
-      '# Core Plan\n\n> Approval persistence test.\n',
+      planFixtureWithEvidence('core-plan', 'Core Plan', 'Approval persistence test.'),
       'utf-8'
     );
 
@@ -215,11 +250,76 @@ describe('workflow MCP harness integration', () => {
     expect(workflowState.status.approval.approved_at).toBeDefined();
   });
 
+  it('bootstraps a task contract for the linked plan and rotates it on workflow advance', async () => {
+    await handleWorkflowInit({
+      name: 'bootstrap-rotation',
+      scale: 'MEDIUM',
+      autonomous: true,
+      repoPath: tempDir,
+    }, { repoPath: tempDir });
+
+    await fs.ensureDir(path.join(tempDir, '.context', 'plans'));
+    await fs.writeFile(
+      path.join(tempDir, '.context', 'plans', 'bootstrap-rotation.md'),
+      planFixtureWithEvidence(
+        'bootstrap-rotation',
+        'Bootstrap Rotation',
+        'Contract rotation regression.'
+      ) +
+        '\n### Phase 1 - Discovery & Alignment\n1. Review the current system state\n2. Capture the phase bootstrap outputs\n\n### Phase 2 - Implementation\n1. Execute the implementation work\n',
+      'utf-8'
+    );
+
+    const linkResponse = parseResponse(await handlePlan({
+      action: 'link',
+      planSlug: 'bootstrap-rotation',
+    }, { repoPath: tempDir }));
+
+    expect(linkResponse.success).toBe(true);
+    expect(linkResponse.workflowActive).toBe(true);
+    expect(linkResponse.planCreatedForGates).toBe(true);
+
+    const beforeAdvance = parseResponse(await handleWorkflowStatus({
+      repoPath: tempDir,
+    }, { repoPath: tempDir }));
+
+    expect(beforeAdvance.success).toBe(true);
+    expect(beforeAdvance.harness.binding.activeTaskId).toBeDefined();
+    expect(beforeAdvance.harness.taskContracts).toHaveLength(1);
+
+    const bootstrapTaskId = beforeAdvance.harness.binding.activeTaskId;
+    expect(beforeAdvance.harness.taskContracts[0].id).toBe(bootstrapTaskId);
+    expect(beforeAdvance.harness.taskContracts[0].status).toBe('ready');
+
+    const advanceResponse = parseResponse(await handleWorkflowAdvance({
+      repoPath: tempDir,
+    }, { repoPath: tempDir }));
+
+    expect(advanceResponse.success).toBe(true);
+    expect(advanceResponse.nextPhase.code).toBe('R');
+
+    const afterAdvance = parseResponse(await handleWorkflowStatus({
+      repoPath: tempDir,
+    }, { repoPath: tempDir }));
+
+    expect(afterAdvance.success).toBe(true);
+    expect(afterAdvance.currentPhase.code).toBe('R');
+    expect(afterAdvance.harness.taskContracts).toHaveLength(2);
+    expect(afterAdvance.harness.binding.activeTaskId).toBeDefined();
+    expect(afterAdvance.harness.binding.activeTaskId).not.toBe(bootstrapTaskId);
+    expect(afterAdvance.harness.taskContracts.find((task: { id: string; status: string }) => task.id === bootstrapTaskId)?.status).toBe('completed');
+    expect(afterAdvance.harness.taskContracts.find((task: { id: string; status: string }) => task.id === afterAdvance.harness.binding.activeTaskId)?.status).toBe('ready');
+  });
+
   it('instructs the caller to start workflow-init before relying on a linked plan', async () => {
     await fs.ensureDir(path.join(tempDir, '.context', 'plans'));
     await fs.writeFile(
       path.join(tempDir, '.context', 'plans', 'standalone-plan.md'),
-      '# Standalone Plan\n\n> Created before workflow initialization.\n',
+      planFixtureWithEvidence(
+        'standalone-plan',
+        'Standalone Plan',
+        'Created before workflow initialization.'
+      ),
       'utf-8'
     );
 
@@ -250,12 +350,12 @@ describe('workflow MCP harness integration', () => {
     await fs.ensureDir(path.join(tempDir, '.context', 'plans'));
     await fs.writeFile(
       path.join(tempDir, '.context', 'plans', 'primary-plan.md'),
-      '# Primary Plan\n\n> Canonical workflow plan.\n',
+      planFixtureWithEvidence('primary-plan', 'Primary Plan', 'Canonical workflow plan.'),
       'utf-8'
     );
     await fs.writeFile(
       path.join(tempDir, '.context', 'plans', 'other-plan.md'),
-      '# Other Plan\n\n> Divergent plan.\n',
+      planFixtureWithEvidence('other-plan', 'Other Plan', 'Divergent plan.'),
       'utf-8'
     );
 

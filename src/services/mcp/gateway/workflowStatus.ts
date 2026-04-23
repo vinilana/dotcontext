@@ -7,7 +7,6 @@
 import * as path from 'path';
 import { WorkflowService } from '../../workflow';
 import {
-  PHASE_NAMES_EN,
   getScaleName,
   ProjectScale,
 } from '../../../workflow';
@@ -61,7 +60,7 @@ export async function handleWorkflowStatus(
       scale: getScaleName(summary.scale as ProjectScale),
       currentPhase: {
         code: summary.currentPhase,
-        name: PHASE_NAMES_EN[summary.currentPhase],
+        name: service.getPhaseDisplayName(summary.currentPhase),
       },
       progress: summary.progress,
       isComplete: summary.isComplete,

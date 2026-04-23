@@ -5,15 +5,15 @@
  */
 
 import {
-  PHASE_NAMES_EN,
-  ROLE_DISPLAY_NAMES,
   agentOrchestrator,
   documentLinker,
   AgentType,
   AGENT_TYPES,
-  createPlanLinker,
-} from '../../workflow';
-import type { PrevcPhase, PrevcRole } from '../../workflow';
+} from '../../workflow/orchestration';
+import { PHASE_NAMES_EN } from '../../workflow/phases';
+import { createPlanLinker } from '../../workflow/plans';
+import { ROLE_DISPLAY_NAMES } from '../../workflow/roles';
+import type { PrevcPhase, PrevcRole } from '../../workflow/types';
 
 export interface HarnessAgentsServiceOptions {
   repoPath: string;

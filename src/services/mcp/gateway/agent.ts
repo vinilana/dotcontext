@@ -6,9 +6,7 @@
  *           getAgentDocs, getPhaseDocs, listAgentTypes
  */
 
-import {
-  AgentType,
-} from '../../../workflow';
+import type { AgentType } from '../../../workflow';
 import { HarnessAgentsService } from '../../harness';
 
 import type { AgentParams } from './types';

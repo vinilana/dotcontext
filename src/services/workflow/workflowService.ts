@@ -6,65 +6,36 @@
 
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { exec as execCallback } from 'child_process';
-import { promisify } from 'util';
+import { CollaborationSession, CollaborationManager } from '../../workflow/collaboration';
+import { GateCheckResult, ExecutionEvidence } from '../../workflow/gates';
+import { PHASE_NAMES_EN, PHASE_NAMES_PT } from '../../workflow/phases';
+import { createPlanLinker, type LinkedPlan } from '../../workflow/plans';
+import { ROLE_DISPLAY_NAMES } from '../../workflow/roles';
+import { getScaleName, getScaleFromName } from '../../workflow/scaling';
+import { PrevcOrchestrator, type WorkflowSummary } from '../../workflow/orchestrator';
 import {
-  PrevcOrchestrator,
-  WorkflowSummary,
   PrevcStatus,
   PrevcPhase,
   PrevcRole,
   ProjectScale,
   ProjectContext,
-  CollaborationSession,
-  CollaborationManager,
-  CollaborationSynthesis,
   WorkflowSettings,
   PlanApproval,
-  GateCheckResult,
   PhaseOrchestration,
-  getScaleName,
-  getScaleFromName,
-  PHASE_NAMES_PT,
-  ROLE_DISPLAY_NAMES,
-} from '../../workflow';
+} from '../../workflow/types';
+import type { CollaborationSynthesis } from '../../workflow/types';
+import type { PlanLinker } from '../../workflow/plans';
+import { FileCollaborationStore } from './fileCollaborationStore';
+import { DerivedPlanTaskContractBuilder } from './derivedPlanTaskContractBuilder';
 import {
-  HarnessRuntimeStateService,
-  HarnessSensorCatalogService,
-  HarnessSensorsService,
-  HarnessTaskContractsService,
-  HarnessPolicyService,
-  HarnessWorkflowStateService,
   type HarnessArtifactKind,
   type HarnessTaskContract,
-  type HarnessHandoffContract,
-  type HarnessSensorRun,
-  type HarnessSessionRecord,
   type HarnessSensorDefinition,
   type WorkflowHarnessBinding,
 } from '../harness';
+import { HarnessSessionFacade, type WorkflowHarnessStatus } from './harnessSessionFacade';
 
-const exec = promisify(execCallback);
-
-export interface WorkflowHarnessStatus {
-  binding: WorkflowHarnessBinding;
-  session: HarnessSessionRecord;
-  availableSensors: Array<Pick<HarnessSensorDefinition, 'id' | 'name' | 'description'>>;
-  sensorRuns: HarnessSensorRun[];
-  taskContracts: HarnessTaskContract[];
-  handoffs: HarnessHandoffContract[];
-  policyRules: number;
-  completionCheck: {
-    blocked: boolean;
-    reasons: string[];
-    taskCompletion: {
-      canComplete: boolean;
-      missingSensors: string[];
-      missingArtifacts: string[];
-      blockingFindings: string[];
-    } | null;
-  };
-}
+export type { WorkflowHarnessStatus };
 
 export class HarnessWorkflowBlockedError extends Error {
   constructor(
@@ -75,6 +46,12 @@ export class HarnessWorkflowBlockedError extends Error {
     super(message);
     this.name = 'HarnessWorkflowBlockedError';
   }
+}
+
+interface WorkflowPlanLinkResult {
+  workflowActive: boolean;
+  planCreatedForGates: boolean;
+  taskContract: HarnessTaskContract | null;
 }
 
 /**
@@ -116,12 +93,8 @@ export class WorkflowService {
   private contextPath: string;
   private orchestrator: PrevcOrchestrator;
   private collaborationManager: CollaborationManager;
-  private runtimeStateService: HarnessRuntimeStateService;
-  private sensorCatalogService: HarnessSensorCatalogService;
-  private sensorsService: HarnessSensorsService;
-  private taskContractsService: HarnessTaskContractsService;
-  private policyService: HarnessPolicyService;
-  private workflowStateService: HarnessWorkflowStateService;
+  private harness: HarnessSessionFacade;
+  private derivedTaskBuilder: DerivedPlanTaskContractBuilder;
   private deps: WorkflowServiceDependencies;
 
   constructor(
@@ -135,23 +108,24 @@ export class WorkflowService {
     this.contextPath = path.basename(resolvedPath) === '.context'
       ? resolvedPath
       : path.join(resolvedPath, '.context');
-    this.orchestrator = new PrevcOrchestrator(this.contextPath);
-    this.collaborationManager = new CollaborationManager();
-    this.runtimeStateService = new HarnessRuntimeStateService({ repoPath: this.repoPath });
-    this.sensorCatalogService = new HarnessSensorCatalogService({
+    this.harness = new HarnessSessionFacade({
       repoPath: this.repoPath,
       contextPath: this.contextPath,
     });
-    this.sensorsService = new HarnessSensorsService({ stateService: this.runtimeStateService });
-    this.taskContractsService = new HarnessTaskContractsService({
-      repoPath: this.repoPath,
-      stateService: this.runtimeStateService,
-    });
-    this.policyService = new HarnessPolicyService({ repoPath: this.repoPath });
-    this.workflowStateService = new HarnessWorkflowStateService({ contextPath: this.contextPath });
+    this.orchestrator = new PrevcOrchestrator(this.contextPath, this.harness.workflowStateService);
+    this.collaborationManager = new CollaborationManager(
+      new FileCollaborationStore(this.contextPath)
+    );
+    this.derivedTaskBuilder = new DerivedPlanTaskContractBuilder();
     this.deps = deps;
-    this.registerDefaultSensors();
   }
+
+  // Narrow accessors used by advance/handoff/plan-sync logic below.
+  // Fresh `get` each call keeps the facade as the single owner.
+  private get runtimeStateService() { return this.harness.runtimeStateService; }
+  private get sensorsService() { return this.harness.sensorsService; }
+  private get taskContractsService() { return this.harness.taskContractsService; }
+  private get policyService() { return this.harness.policyService; }
 
   /**
    * Create a WorkflowService with the given repository path
@@ -225,7 +199,7 @@ export class WorkflowService {
       options.archivePrevious
     );
 
-    await this.ensureHarnessSession(options.name, options.description);
+    await this.harness.ensureHarnessSession(options.name, options.description);
 
     this.deps.ui?.displaySuccess(
       `Workflow PREVC initialized: ${options.name} (Scale: ${getScaleName(scale)})`
@@ -248,6 +222,18 @@ export class WorkflowService {
     return this.orchestrator.getSummary();
   }
 
+  getPhaseDisplayName(phase: PrevcPhase): string {
+    return PHASE_NAMES_EN[phase];
+  }
+
+  getRoleDisplayName(role: PrevcRole): string {
+    return ROLE_DISPLAY_NAMES[role];
+  }
+
+  getPlanLinkerForWorkflow(): PlanLinker {
+    return createPlanLinker(this.repoPath);
+  }
+
   /**
    * Get formatted status for CLI display
    */
@@ -260,7 +246,7 @@ export class WorkflowService {
 
     lines.push(`📋 Workflow: ${summary.name}`);
     lines.push(`📊 Scale: ${getScaleName(summary.scale as ProjectScale)}`);
-    lines.push(`📍 Current Phase: ${PHASE_NAMES_PT[summary.currentPhase]} (${summary.currentPhase})`);
+    lines.push(`📍 Current Phase: ${PHASE_NAMES_PT[summary.currentPhase as PrevcPhase]} (${summary.currentPhase})`);
     lines.push(`📈 Progress: ${summary.progress.percentage}% (${summary.progress.completed}/${summary.progress.total} phases)`);
     lines.push('');
     lines.push('Phases:');
@@ -333,24 +319,70 @@ export class WorkflowService {
       }
     }
 
-    const nextPhase = await this.orchestrator.completePhase(outputs, options);
     const binding = await this.requireHarnessBinding();
+    const activeTaskBeforeAdvance = binding.activeTaskId
+      ? await this.taskContractsService.getTaskContract(binding.activeTaskId)
+      : null;
+    const plannedNextPhase = await this.orchestrator.getNextPhase();
+
+    const executionEvidence = await this.buildExecutionEvidence(
+      activeTaskBeforeAdvance,
+      binding.sessionId
+    );
+
+    const nextContract = plannedNextPhase
+      ? await this.createDerivedPlanTaskContract({
+          phase: plannedNextPhase,
+          sessionId: binding.sessionId,
+        })
+      : null;
+    const nextPhase = await this.orchestrator.completePhase(outputs, {
+      ...options,
+      executionEvidence,
+    });
 
     if (nextPhase) {
+      binding.activeTaskId = nextContract?.id;
       const session = await this.runtimeStateService.checkpointSession(binding.sessionId, {
         note: `Advanced workflow phase ${currentPhase} -> ${nextPhase}`,
-        data: { from: currentPhase, to: nextPhase, outputs },
+        data: {
+          from: currentPhase,
+          to: nextPhase,
+          outputs,
+          nextTaskContractId: nextContract?.id,
+        },
       });
       binding.updatedAt = session.updatedAt;
       await this.saveHarnessBinding(binding);
+
+      if (activeTaskBeforeAdvance && !['completed', 'failed'].includes(activeTaskBeforeAdvance.status)) {
+        await this.taskContractsService.updateTaskContract(activeTaskBeforeAdvance.id, {
+          status: 'completed',
+          metadata: {
+            ...activeTaskBeforeAdvance.metadata,
+            completionReason: `Workflow advanced from ${currentPhase} to ${nextPhase}`,
+          },
+        });
+      }
 
       this.deps.ui?.displaySuccess(
         `Advanced from ${PHASE_NAMES_PT[currentPhase]} to ${PHASE_NAMES_PT[nextPhase]}`
       );
     } else {
       const session = await this.runtimeStateService.completeSession(binding.sessionId, 'Workflow completed');
+      binding.activeTaskId = undefined;
       binding.updatedAt = session.updatedAt;
       await this.saveHarnessBinding(binding);
+
+      if (activeTaskBeforeAdvance && !['completed', 'failed'].includes(activeTaskBeforeAdvance.status)) {
+        await this.taskContractsService.updateTaskContract(activeTaskBeforeAdvance.id, {
+          status: 'completed',
+          metadata: {
+            ...activeTaskBeforeAdvance.metadata,
+            completionReason: 'Workflow completed',
+          },
+        });
+      }
 
       this.deps.ui?.displaySuccess('Workflow completed!');
     }
@@ -358,16 +390,10 @@ export class WorkflowService {
     return nextPhase;
   }
 
-  /**
-   * Check workflow gates for the current phase transition
-   */
   async checkGates(): Promise<GateCheckResult> {
     return this.orchestrator.checkGates();
   }
 
-  /**
-   * Set workflow settings
-   */
   async setSettings(settings: Partial<WorkflowSettings>): Promise<WorkflowSettings> {
     const isHighRisk =
       typeof settings.autonomous_mode === 'boolean' ||
@@ -381,24 +407,14 @@ export class WorkflowService {
     return this.orchestrator.setSettings(settings);
   }
 
-  /**
-   * Get workflow settings
-   */
   async getSettings(): Promise<WorkflowSettings> {
     return this.orchestrator.getSettings();
   }
 
   listAvailableSensors(): Array<Pick<HarnessSensorDefinition, 'id' | 'name' | 'description'>> {
-    return this.sensorsService.listSensors().map((sensor) => ({
-      id: sensor.id,
-      name: sensor.name,
-      description: sensor.description,
-    }));
+    return this.harness.listAvailableSensors();
   }
 
-  /**
-   * Enable or disable autonomous mode
-   */
   async setAutonomousMode(enabled: boolean): Promise<WorkflowSettings> {
     await this.policyService.authorize({
       tool: 'workflow',
@@ -409,9 +425,6 @@ export class WorkflowService {
     return this.orchestrator.setSettings({ autonomous_mode: enabled });
   }
 
-  /**
-   * Mark that a plan has been created/linked
-   */
   async markPlanCreated(planSlug: string): Promise<void> {
     await this.policyService.authorize({
       tool: 'workflow',
@@ -422,9 +435,132 @@ export class WorkflowService {
     return this.orchestrator.markPlanCreated(planSlug);
   }
 
-  /**
-   * Approve the plan
-   */
+  async linkPlanToActiveWorkflow(planSlug: string): Promise<WorkflowPlanLinkResult> {
+    const workflowActive = await this.hasWorkflow();
+    if (!workflowActive) {
+      return {
+        workflowActive: false,
+        planCreatedForGates: false,
+        taskContract: null,
+      };
+    }
+
+    const taskContract = await this.syncActivePlanTaskContract(planSlug);
+    await this.markPlanCreated(planSlug);
+
+    return {
+      workflowActive: true,
+      planCreatedForGates: true,
+      taskContract,
+    };
+  }
+
+  async syncActivePlanTaskContract(
+    planSlug?: string,
+    phase?: PrevcPhase
+  ): Promise<HarnessTaskContract | null> {
+    const binding = await this.requireHarnessBinding();
+    const resolvedPhase = phase || await this.orchestrator.getCurrentPhase();
+    const activeTask = binding.activeTaskId
+      ? await this.taskContractsService.getTaskContract(binding.activeTaskId)
+      : null;
+    const contract = await this.upsertDerivedPlanTaskContract({
+      planSlug,
+      phase: resolvedPhase,
+      sessionId: binding.sessionId,
+      activeTask,
+    });
+
+    if (!contract) {
+      return null;
+    }
+
+    binding.activeTaskId = contract.id;
+    binding.updatedAt = contract.updatedAt;
+    await this.saveHarnessBinding(binding);
+    return contract;
+  }
+
+  private async upsertDerivedPlanTaskContract(params: {
+    planSlug?: string;
+    phase: PrevcPhase;
+    sessionId: string;
+    activeTask?: HarnessTaskContract | null;
+  }): Promise<HarnessTaskContract | null> {
+    const linkedPlan = await this.resolveLinkedPlan(params.planSlug);
+    if (!linkedPlan) {
+      return null;
+    }
+
+    const contractInput = this.derivedTaskBuilder.build(linkedPlan, params.phase);
+    if (this.derivedTaskBuilder.isSameDerivedTask(params.activeTask, linkedPlan.ref.slug, params.phase)) {
+      return this.taskContractsService.updateTaskContract(params.activeTask.id, {
+        title: contractInput.title,
+        description: contractInput.description,
+        owner: contractInput.owner,
+        inputs: contractInput.inputs,
+        expectedOutputs: contractInput.expectedOutputs,
+        acceptanceCriteria: contractInput.acceptanceCriteria,
+        requiredSensors: contractInput.requiredSensors,
+        requiredArtifacts: contractInput.requiredArtifacts,
+        status: params.activeTask.status === 'completed' || params.activeTask.status === 'failed'
+          ? 'ready'
+          : params.activeTask.status,
+        metadata: contractInput.metadata,
+      });
+    }
+
+    return this.taskContractsService.createTaskContract({
+      ...contractInput,
+      sessionId: params.sessionId,
+      status: 'ready',
+    });
+  }
+
+  private async buildExecutionEvidence(
+    activeTask: HarnessTaskContract | null,
+    sessionId: string
+  ): Promise<ExecutionEvidence> {
+    if (!activeTask) {
+      return {
+        canComplete: false,
+        missingSensors: [],
+        missingArtifacts: [],
+        blockingFindings: [],
+        hasActiveContract: false,
+      };
+    }
+    const evaluation = await this.taskContractsService.evaluateTaskCompletion(
+      activeTask.id,
+      sessionId
+    );
+    return {
+      canComplete: evaluation.canComplete,
+      missingSensors: evaluation.missingSensors,
+      missingArtifacts: evaluation.missingArtifacts,
+      blockingFindings: evaluation.blockingFindings,
+      hasActiveContract: true,
+    };
+  }
+
+  private async createDerivedPlanTaskContract(params: {
+    planSlug?: string;
+    phase: PrevcPhase;
+    sessionId: string;
+  }): Promise<HarnessTaskContract | null> {
+    const linkedPlan = await this.resolveLinkedPlan(params.planSlug);
+    if (!linkedPlan) {
+      return null;
+    }
+
+    const contractInput = this.derivedTaskBuilder.build(linkedPlan, params.phase);
+    return this.taskContractsService.createTaskContract({
+      ...contractInput,
+      sessionId: params.sessionId,
+      status: 'ready',
+    });
+  }
+
   async approvePlan(approver: PrevcRole | string, notes?: string): Promise<PlanApproval> {
     await this.policyService.authorize({
       tool: 'workflow',
@@ -436,16 +572,10 @@ export class WorkflowService {
     return this.orchestrator.approvePlan(approver, notes);
   }
 
-  /**
-   * Get approval status
-   */
   async getApproval(): Promise<PlanApproval | undefined> {
     return this.orchestrator.getApproval();
   }
 
-  /**
-   * Perform a handoff between agents
-   */
   async handoff(
     from: string,
     to: string,
@@ -495,29 +625,19 @@ export class WorkflowService {
     );
   }
 
-  /**
-   * Get orchestration guidance for a phase
-   */
   async getPhaseOrchestration(phase: PrevcPhase): Promise<PhaseOrchestration> {
     return this.orchestrator.getPhaseOrchestration(phase);
   }
 
-  /**
-   * Get next agent suggestion after a handoff
-   */
   getNextAgentSuggestion(currentAgent: string): { agent: string; reason: string } | null {
     return this.orchestrator.getNextAgentSuggestion(currentAgent);
   }
 
-  /**
-   * Start a collaboration session
-   */
   async startCollaboration(
     topic: string,
     participants?: PrevcRole[]
   ): Promise<CollaborationSession> {
-    const session = this.collaborationManager.createSession(topic, participants);
-    await session.start(topic, participants);
+    const session = await this.collaborationManager.startSession(topic, participants);
 
     this.deps.ui?.displaySuccess(
       `Collaboration started: ${topic}`
@@ -529,46 +649,26 @@ export class WorkflowService {
     return session;
   }
 
-  /**
-   * Add a contribution to a collaboration session
-   */
   contributeToCollaboration(
     sessionId: string,
     role: PrevcRole,
     message: string
   ): void {
-    const session = this.collaborationManager.getSession(sessionId);
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
-
-    session.contribute(role, message);
+    this.collaborationManager.contribute(sessionId, role, message);
   }
 
-  /**
-   * End a collaboration session and get synthesis
-   */
   async endCollaboration(sessionId: string): Promise<CollaborationSynthesis | null> {
     return this.collaborationManager.endSession(sessionId);
   }
 
-  /**
-   * Get recommended next actions
-   */
   async getRecommendedActions(): Promise<string[]> {
     return this.orchestrator.getRecommendedActions();
   }
 
-  /**
-   * Check if workflow is complete
-   */
   async isComplete(): Promise<boolean> {
     return this.orchestrator.isComplete();
   }
 
-  /**
-   * Update the current task
-   */
   async updateTask(task: string): Promise<void> {
     await this.policyService.authorize({
       tool: 'workflow',
@@ -579,9 +679,6 @@ export class WorkflowService {
     await this.orchestrator.updateCurrentTask(task);
   }
 
-  /**
-   * Start a role in the current phase
-   */
   async startRole(role: PrevcRole): Promise<void> {
     await this.policyService.authorize({
       tool: 'workflow',
@@ -595,9 +692,6 @@ export class WorkflowService {
     );
   }
 
-  /**
-   * Complete a role's work
-   */
   async completeRole(role: PrevcRole, outputs: string[]): Promise<void> {
     await this.policyService.authorize({
       tool: 'workflow',
@@ -619,56 +713,8 @@ export class WorkflowService {
     if (!(await this.hasWorkflow())) {
       return null;
     }
-
     const summary = await this.getSummary();
-    const binding = await this.ensureHarnessSession(summary.name);
-
-    const session = await this.runtimeStateService.getSession(binding.sessionId);
-    const allSensorRuns = await this.sensorsService.getSessionSensorRuns(binding.sessionId);
-    const policyRules = await this.policyService.listRules();
-    const latestRuns = new Map<string, HarnessSensorRun>();
-    for (const run of allSensorRuns) {
-      const current = latestRuns.get(run.sensorId);
-      if (!current || current.createdAt < run.createdAt) {
-        latestRuns.set(run.sensorId, run);
-      }
-    }
-    const sensorRuns = Array.from(latestRuns.values()).sort((a, b) => a.sensorId.localeCompare(b.sensorId));
-    const taskContracts = (await this.taskContractsService.listTaskContracts())
-      .filter((contract) => contract.sessionId === binding.sessionId);
-    const handoffs = (await this.taskContractsService.listHandoffContracts())
-      .filter((handoff) => handoff.sessionId === binding.sessionId);
-    const activeTask = binding.activeTaskId
-      ? taskContracts.find((contract) => contract.id === binding.activeTaskId) ?? null
-      : null;
-    const taskCompletion = activeTask
-      ? await this.taskContractsService.evaluateTaskCompletion(activeTask.id, binding.sessionId)
-      : null;
-    const backpressure = this.sensorsService.evaluateBackpressure(sensorRuns, { requireEvidence: true });
-    const reasons = [
-      ...backpressure.reasons,
-      ...(taskCompletion?.blockingFindings || []),
-    ];
-
-    return {
-      binding,
-      session,
-      availableSensors: this.listAvailableSensors(),
-      sensorRuns,
-      taskContracts,
-      handoffs,
-      policyRules: policyRules.length,
-      completionCheck: {
-        blocked: reasons.length > 0,
-        reasons,
-        taskCompletion: taskCompletion ? {
-          canComplete: taskCompletion.canComplete,
-          missingSensors: taskCompletion.missingSensors,
-          missingArtifacts: taskCompletion.missingArtifacts,
-          blockingFindings: taskCompletion.blockingFindings,
-        } : null,
-      },
-    };
+    return this.harness.getHarnessStatus(summary.name);
   }
 
   async checkpointHarnessSession(
@@ -676,27 +722,9 @@ export class WorkflowService {
     data?: unknown,
     artifactIds?: string[],
     pause?: boolean
-  ): Promise<{ binding: WorkflowHarnessBinding; session: HarnessSessionRecord }> {
+  ) {
     const binding = await this.requireHarnessBinding();
-    await this.policyService.authorize({
-      tool: 'workflow',
-      action: 'checkpoint',
-      risk: pause ? 'high' : 'medium',
-      metadata: {
-        note,
-        pause: Boolean(pause),
-        artifactCount: artifactIds?.length ?? 0,
-      },
-    });
-    const session = await this.runtimeStateService.checkpointSession(binding.sessionId, {
-      note,
-      data,
-      artifactIds,
-      pause,
-    });
-    binding.updatedAt = session.updatedAt;
-    await this.saveHarnessBinding(binding);
-    return { binding, session };
+    return this.harness.checkpointHarnessSession(binding, { note, data, artifactIds, pause });
   }
 
   async recordHarnessArtifact(input: {
@@ -707,17 +735,7 @@ export class WorkflowService {
     metadata?: Record<string, unknown>;
   }) {
     const binding = await this.requireHarnessBinding();
-    await this.policyService.authorize({
-      tool: 'workflow',
-      action: 'recordArtifact',
-      paths: input.path ? [input.path] : [input.name],
-      risk: input.path?.includes('secret') ? 'critical' : 'medium',
-      metadata: input.metadata,
-    });
-    const artifact = await this.runtimeStateService.addArtifact(binding.sessionId, input);
-    binding.updatedAt = artifact.createdAt;
-    await this.saveHarnessBinding(binding);
-    return artifact;
+    return this.harness.recordHarnessArtifact(binding, input);
   }
 
   async defineHarnessTask(input: {
@@ -728,178 +746,40 @@ export class WorkflowService {
     expectedOutputs?: string[];
     acceptanceCriteria?: string[];
     requiredSensors?: string[];
-    requiredArtifacts?: string[];
+    requiredArtifacts?: import('../harness').RequiredArtifactInput[];
     metadata?: Record<string, unknown>;
   }): Promise<HarnessTaskContract> {
     const binding = await this.requireHarnessBinding();
-    await this.policyService.authorize({
-      tool: 'workflow',
-      action: 'defineTask',
-      risk: input.requiredSensors?.includes('deploy') ? 'high' : 'medium',
-      metadata: {
-        ...input.metadata,
-        title: input.title,
-      },
-    });
-    const contract = await this.taskContractsService.createTaskContract({
-      ...input,
-      sessionId: binding.sessionId,
-      status: 'ready',
-    });
-
-    binding.activeTaskId = contract.id;
-    binding.updatedAt = contract.updatedAt;
-    await this.saveHarnessBinding(binding);
-    return contract;
+    return this.harness.defineHarnessTask(binding, input);
   }
 
   async runHarnessSensors(sensorIds: string[], metadata?: Record<string, unknown>) {
     const binding = await this.requireHarnessBinding();
-    const runs: HarnessSensorRun[] = [];
-
-    for (const sensorId of sensorIds) {
-      await this.policyService.authorize({
-        tool: 'workflow',
-        action: 'runSensors',
-        risk: sensorId === 'deploy' ? 'high' : 'medium',
-        metadata,
-      });
-      runs.push(await this.sensorsService.runSensor(sensorId, {
-        sessionId: binding.sessionId,
-        contractId: binding.activeTaskId,
-        metadata,
-      }));
-    }
-
-    return {
-      runs,
-      backpressure: this.sensorsService.evaluateBackpressure(runs, { requireEvidence: true }),
-    };
-  }
-
-  private async ensureHarnessSession(
-    workflowName: string,
-    description?: string
-  ): Promise<WorkflowHarnessBinding> {
-    const existing = await this.loadHarnessBinding();
-    if (existing && existing.workflowName === workflowName) {
-      try {
-        await this.runtimeStateService.getSession(existing.sessionId);
-        return existing;
-      } catch {
-        // Session was removed or became unreadable. Recreate below.
-      }
-    }
-
-    const session = await this.runtimeStateService.createSession({
-      name: workflowName,
-      metadata: {
-        workflow: true,
-        description,
-      },
-    });
-
-    const binding: WorkflowHarnessBinding = {
-      workflowName,
-      sessionId: session.id,
-      createdAt: new Date().toISOString(),
-      updatedAt: session.updatedAt,
-    };
-
-    await this.saveHarnessBinding(binding);
-    return binding;
+    return this.harness.runHarnessSensors(binding, sensorIds, metadata);
   }
 
   private async requireHarnessBinding(): Promise<WorkflowHarnessBinding> {
     const summary = await this.getSummary();
-    return this.ensureHarnessSession(summary.name);
+    return this.harness.ensureHarnessSession(summary.name);
   }
 
-  private async loadHarnessBinding(): Promise<WorkflowHarnessBinding | null> {
-    return this.workflowStateService.getBinding();
-  }
+  private async resolveLinkedPlan(planSlug?: string): Promise<LinkedPlan | null> {
+    const status = await this.getStatus();
+    const linker = createPlanLinker(this.repoPath);
+    const linkedPlans = await linker.getLinkedPlans();
+    const resolvedPlanSlug = planSlug
+      || status.project.plan
+      || linkedPlans.primary
+      || (linkedPlans.active.length === 1 ? linkedPlans.active[0].slug : undefined);
 
-  private async saveHarnessBinding(binding: WorkflowHarnessBinding): Promise<void> {
-    await this.workflowStateService.saveBinding(binding);
-  }
-
-  private registerDefaultSensors(): void {
-    const definitions = this.sensorCatalogService.resolveEffectiveSensorsSync();
-
-    for (const definition of definitions) {
-      if (this.sensorsService.getSensor(definition.id)) {
-        continue;
-      }
-
-      this.sensorsService.registerSensor({
-        id: definition.id,
-        name: definition.name,
-        severity: definition.severity,
-        blocking: definition.severity === 'critical',
-        execute: async () => {
-          if (definition.script) {
-            const hasScript = await this.hasPackageScript(definition.script);
-            if (!hasScript) {
-              return {
-                status: definition.severity === 'warning' ? 'skipped' : 'blocked',
-                summary: `Script not available: ${definition.script}`,
-                evidence: [`Missing package.json script: ${definition.script}`],
-              };
-            }
-          }
-
-          return this.executeShellSensor(definition.command, definition.name);
-        },
-      });
-    }
-  }
-
-  private async hasPackageScript(scriptName: string): Promise<boolean> {
-    const packageJsonPath = path.join(this.repoPath, 'package.json');
-    if (!(await fs.pathExists(packageJsonPath))) {
-      return false;
-    }
-
-    const packageJson = await fs.readJson(packageJsonPath) as { scripts?: Record<string, string> };
-    return Boolean(packageJson.scripts?.[scriptName]);
-  }
-
-  private async executeShellSensor(command: string, name: string) {
-    try {
-      const { stdout, stderr } = await exec(command, {
-        cwd: this.repoPath,
-        timeout: 300000,
-      });
-
-      return {
-        status: 'passed' as const,
-        summary: `${name} passed`,
-        evidence: [this.trimEvidence(stdout), this.trimEvidence(stderr)].filter(Boolean) as string[],
-        output: {
-          command,
-        },
-      };
-    } catch (error: any) {
-      return {
-        status: 'failed' as const,
-        summary: `${name} failed`,
-        evidence: [
-          this.trimEvidence(error?.stdout),
-          this.trimEvidence(error?.stderr || error?.message),
-        ].filter(Boolean) as string[],
-        details: {
-          command,
-          exitCode: typeof error?.code === 'number' ? error.code : undefined,
-        },
-      };
-    }
-  }
-
-  private trimEvidence(value?: string, maxLength: number = 2000): string | null {
-    if (!value) {
+    if (!resolvedPlanSlug) {
       return null;
     }
 
-    return value.length > maxLength ? `${value.slice(0, maxLength)}\n...[truncated]` : value;
+    return linker.getLinkedPlan(resolvedPlanSlug);
+  }
+
+  private async saveHarnessBinding(binding: WorkflowHarnessBinding): Promise<void> {
+    await this.harness.saveHarnessBinding(binding);
   }
 }

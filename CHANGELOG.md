@@ -5,6 +5,130 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Built-in `tests-passing` sensor** (`src/services/harness/sensors/testsPassing.ts`)
+  - Default `kind: 'jest'` runs `npm test -- --runInBand --json`, parses jest's JSON output, and reports `{ numPassedTests, numFailedTests, numTotalTestSuites, failures: [{ name, message }] }`; passes iff exit 0 *and* `numFailedTests === 0`
+  - `kind: 'exit-code'` mode for non-jest runners passes iff the configured `testCommand` argv exits 0
+  - Configurable `testCommand` (string[]) and `timeoutMs` (default 300s); spawn(..., { shell: false }) with explicit argv — no shell interpolation
+  - Registered by default in `HarnessSessionFacade.registerDefaultSensors`
+- **Built-in `typecheck-clean` sensor** (`src/services/harness/sensors/typecheckClean.ts`)
+  - Default command `npx tsc --noEmit`; passes iff exit 0
+  - On failure, captures the last `tailLines` (default 50) of combined stdout/stderr on `output.tail` plus the `output.exitCode`
+  - Configurable `command` (string[]), `timeoutMs` (default 120s), and `tailLines`
+  - Registered by default in `HarnessSessionFacade.registerDefaultSensors`
+- **Plan scaffolding auto-detects per-phase requirements** (`src/workflow/plans/scaffoldSuggestions.ts`)
+  - `suggestPhaseRequirements(repoPath)` probes the working tree and proposes phase-scoped `required_sensors` so plan authors do not need to know the sensor catalog up front
+  - Detection rules: `locales/*.json` or `i18n/*.json` → `i18n-coverage` in E; real `scripts.test` in `package.json` → `tests-passing` in V; `tsconfig.json` → `typecheck-clean` in V; `.eslintrc*` / `eslint.config.*` / `eslintConfig` in `package.json` → `lint` in V
+  - `mergeSuggestionsIntoPhases` only fills `required_sensors`/`required_artifacts` for phases that did not already declare them — never overwrites an explicit author choice; existing scaffolds keep working unchanged
+  - Wired into `PlanGenerator` via `renderPlanTemplate` so `context({ action: "scaffoldPlan", ... })` emits the suggestions in the YAML frontmatter
+  - Documented under "Built-in Sensors" and "Plan scaffolding auto-detects requirements" in `docs/GUIDE.md`
+- **`RequiredArtifactSpec.fromFilesystem: true`** for `glob` and `file-count` kinds
+  - When set, `evaluateTaskCompletion` also scans the project working tree (relative to `repoPath`) and unions filesystem hits with recorded session artifacts, eliminating the false-blocked case where a file exists in the repo but `recordArtifact` was never called
+  - Hard-coded ignore list (`node_modules`, `.git`, `dist`), 5s scan timeout, refusal to escape `repoPath`; I/O failures and timeouts surface as `blockingFinding` entries (`filesystem scan failed for <pattern>: ...`) instead of crashing
+  - Recorded artifacts and filesystem hits deduplicated by path so a file never counts twice
+  - Documented under "Structured artifact requirements -> fromFilesystem: true" in `docs/GUIDE.md`
+- **Built-in `i18n-coverage` sensor** (`src/services/harness/sensors/i18nCoverage.ts`)
+  - Compares translation keys between a configurable base locale (`baseLocale`, default `'en'`) and every other `<locale>.json` in `localesDir` (default `'locales'`); supports flat (`format: 'json'`) and nested (`format: 'json-nested'`) key extraction
+  - Persists structured output `{ coverage: { locale: ratio }, missingKeys: { locale: string[] } }` on the `sensor.run` trace; passes only when every non-base locale has zero missing keys
+  - Registered by default in every harness session via `HarnessSessionFacade.registerDefaultSensors`; only executes when a plan declares `required_sensors: [i18n-coverage]`
+  - Clear, non-crashing failure modes for missing `localesDir`, malformed JSON (with file name), and missing base locale
+  - Documented under "Built-in Sensors -> i18n-coverage" in `docs/GUIDE.md`
+
+- **Structured artifact requirements (`RequiredArtifactSpec`)**
+  - `HarnessTaskContract.requiredArtifacts` accepts `(string | RequiredArtifactSpec)[]`; strings remain backwards-compatible (interpreted as `{ kind: 'name', name }`)
+  - Four spec kinds: `name`, `path`, `glob` (with `minMatches`, default `1`), and `file-count` (`min`)
+  - `evaluateTaskCompletion` matches glob specs via `minimatch` against recorded session artifacts; `missingArtifacts` reports human-readable descriptions like `glob(locales/**/*.json) min=5 (got 2)`
+  - Plan frontmatter `required_artifacts` accepts the same shapes (zod discriminated union); specs propagate through `DerivedPlanTaskContractBuilder` without stringification
+  - MCP `defineTask`/`createTask` schemas widened to accept structured specs alongside strings
+  - Filesystem-glob (`fromFilesystem: true`) is intentionally out of scope; matching is restricted to recorded session artifacts
+  - Documented under "Structured artifact requirements" in `docs/GUIDE.md`
+- **`checkGates` validates `nextPhase` against `PREVC_PHASE_ORDER` and `status.phases`**
+  - Throws when `nextPhase` is not a valid PREVC phase, or is missing from `status.phases` (in addition to the existing `skipped` guard)
+
+- **Plan frontmatter declares execution evidence per phase**
+  - `phases[].required_sensors` and `phases[].required_artifacts` in plan scaffold frontmatter populate the derived `HarnessTaskContract`'s required fields
+  - `DerivedPlanTaskContractBuilder` now honors declared requirements and falls back to conservative defaults when absent (`E` -> `['tests']`, `V` -> `['tests', 'lint']`; P/R/C have no default)
+  - `plan({ action: "link", ... })` hard-fails when a plan's Execution phase has no `required_sensors`, preventing silent "execution verified" claims at the source
+  - New builder tests under `src/services/workflow/derivedPlanTaskContractBuilder.test.ts` and an e2e rejection test under `src/services/workflow/__tests__/falseCompletion.e2e.test.ts`
+  - Documented under "Declaring Execution Requirements in Plans" in `docs/GUIDE.md`
+
+- **`execution_evidence` phase gate wires `evaluateTaskCompletion` into `workflow-advance`**
+  - `GateCheckResult.gates` now includes `execution_evidence` with `missingSensors`, `missingArtifacts`, and `blockingFindings`
+  - E → V transitions fail closed with `WorkflowGateError(gate='execution_evidence')` when the active task contract's required sensors/artifacts are not satisfied
+  - End-to-end coverage for "LLM claims completion without evidence" under `src/services/workflow/__tests__/falseCompletion.e2e.test.ts`
+
+### Changed
+
+- **`autonomous_mode` no longer suppresses execution evidence**
+  - Autonomous mode now suppresses only the `plan_required` and `approval_required` policy gates
+  - `execution_evidence` remains active under autonomous mode; use `force: true` on `workflow-advance` for explicit overrides
+- **Silent plan-markdown sync failures now surface as `WorkflowSyncError`**
+  - `orchestrator.completePhase` no longer swallows `syncPlanMarkdown` errors after a phase transition; the error is logged with phase context and propagated so tracking/status/markdown divergence cannot hide
+
+### Added
+
+- **Structured plan metadata now supports canonical phase steps and deliverables**
+  - Plan frontmatter can now persist `phases[].summary`, `phases[].deliverables`, and `phases[].steps[].deliverables`
+  - Plan parsing now prefers canonical frontmatter metadata and falls back to markdown task tables or numbered lists only for legacy plans
+
+- **Workflow collaboration sessions are now durable across service and MCP calls**
+  - Collaboration state is now persisted under `.context/workflow/collaboration-sessions.json`
+  - Fresh `WorkflowService` instances rehydrate active and concluded collaboration sessions from disk
+  - Added dedicated store and tests covering persistence across manager and service recreation
+
+- **Workflow architecture now has explicit runtime, migration, and guidance components**
+  - Added dedicated status runtime, transition, execution-history, and legacy-migration services under `src/workflow/status/` and `src/workflow/legacy/`
+  - Added workflow guidance helpers and services outside the PREVC runtime orchestrator
+  - Added plan execution/index projection helpers so plan document parsing and execution tracking are composed explicitly
+
+### Changed
+
+- **Workflow-linked plans now bootstrap and rotate harness task contracts automatically**
+  - `plan link` creates a bootstrap task contract for the current PREVC phase when a workflow is active
+  - `workflow-advance` completes the previous active contract and derives the next phase contract from the linked plan
+  - The harness remains the persistence and evaluation layer for task contracts while workflow owns the phase-driven rotation logic
+
+- **PREVC workflow definitions now come from a shared canonical registry**
+  - Phase, role, agent, skill, and documentation mappings now derive from a central PREVC model instead of being duplicated across workflow modules
+  - Document guidance now points at real files under `.context/docs` instead of dead placeholder paths
+
+- **Workflow state management is now port-driven and facade-based**
+  - `PrevcStatusManager` now depends on a workflow state port instead of importing harness persistence directly
+  - Canonical status persistence, runtime mutation, legacy YAML migration, and execution history logic are now separated into smaller units
+
+- **Plan execution tracking is now the canonical workflow-plan runtime state**
+  - `plan-tracking/*.json` now drives linked plan progress, current phase, approval metadata, and step status
+  - Markdown plans are now treated as documentation plus projection targets, not as the source of runtime execution truth
+  - Workflow plan index refresh is now projected from plan documents plus tracking state
+
+- **Workflow orchestration guidance is now outside the runtime core**
+  - Textual orchestration instructions, recommended actions, and handoff guidance moved out of the PREVC runtime orchestrator into dedicated guidance services
+  - Internal consumers now import workflow submodules directly more often, reducing pressure on the public workflow barrel
+
+- **The workflow public barrel is narrower and more intentional**
+  - `src/workflow/index.ts` now favors a stable surface over re-exporting broad internal implementation details
+  - Internal services were rewired toward direct module imports where that avoided keeping internals public by accident
+
+- **Gate evaluation now follows the same executable phase progression as workflow state**
+  - Gate checks now use the next non-skipped PREVC phase instead of an independent hardcoded phase order
+  - Blocking hints were updated to current MCP/workflow commands
+
+### Fixed
+
+- **Linked plan execution state no longer drifts from tracking data**
+  - `getLinkedPlan()` now reflects tracked phase and step execution state instead of synthetic markdown defaults
+  - Progress calculation now uses planned document steps as the denominator when available, avoiding false `100%` progress from partially tracked phases
+
+- **Workflow collaboration no longer resets between calls**
+  - Collaboration sessions now survive new service instances and MCP request boundaries instead of living only in an in-memory `Map`
+
+- **Workflow document and gate guidance no longer point at stale behavior**
+  - Agent and phase documentation links now resolve to actual repository docs
+  - Gate remediation messages now reference current `plan(...)` and `workflow-manage(...)` calls instead of removed legacy command names
+
 ## [v0.9.2]
 
 ### Fixed

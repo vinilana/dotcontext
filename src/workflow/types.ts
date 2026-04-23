@@ -142,7 +142,7 @@ export interface WorkflowSettings {
 /**
  * Gate types for workflow phase transitions
  */
-export type GateType = 'plan_required' | 'approval_required';
+export type GateType = 'plan_required' | 'approval_required' | 'execution_evidence';
 
 /**
  * Plan approval status tracking

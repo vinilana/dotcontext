@@ -145,6 +145,10 @@ export class HarnessWorkflowStateService {
     return fs.pathExists(this.currentPath);
   }
 
+  existsSync(): boolean {
+    return fs.existsSync(this.currentPath);
+  }
+
   async loadRecord(): Promise<HarnessWorkflowRecord> {
     const raw = await fs.readJson(this.currentPath);
     const legacyBinding = await this.readLegacyBinding();

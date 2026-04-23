@@ -3,7 +3,9 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { ProjectScale } from '../types';
+import { getDefaultSettings } from '../gates';
 import { PrevcStatusManager } from './statusManager';
+import { HarnessWorkflowStateService } from '../../services/harness/workflowStateService';
 
 describe('PrevcStatusManager canonical persistence', () => {
   let tempDir: string;
@@ -13,7 +15,7 @@ describe('PrevcStatusManager canonical persistence', () => {
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'prevc-status-'));
     contextPath = path.join(tempDir, '.context');
-    manager = new PrevcStatusManager(contextPath);
+    manager = new PrevcStatusManager(contextPath, new HarnessWorkflowStateService({ contextPath }));
   });
 
   afterEach(async () => {
@@ -30,6 +32,13 @@ describe('PrevcStatusManager canonical persistence', () => {
     const projectionPath = path.join(contextPath, 'workflow', 'status.yaml');
 
     expect(created.project.name).toBe('canonical-alpha');
+    expect(created.project.settings).toEqual(getDefaultSettings(ProjectScale.SMALL));
+    expect(created.roles).toMatchObject({
+      planner: { status: 'pending' },
+      developer: { status: 'pending' },
+      qa: { status: 'pending' },
+    });
+    expect(created.execution?.history).toHaveLength(3);
     expect(await fs.pathExists(canonicalPath)).toBe(true);
     expect(await fs.pathExists(projectionPath)).toBe(false);
 

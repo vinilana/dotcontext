@@ -9,6 +9,10 @@ import { renderPlanTemplate } from './templates/planTemplate';
 import { renderPlanIndex } from './templates/indexTemplate';
 import { PlanAgentSummary, PlanIndexEntry, CodebaseSnapshot } from './templates/types';
 import { CodebaseAnalyzer, SemanticContext } from '../../services/semantic';
+import {
+  suggestPhaseRequirements,
+  type PhaseRequirementSuggestions,
+} from '../../workflow/plans/scaffoldSuggestions';
 
 interface PlanGeneratorOptions {
   planName: string;
@@ -89,6 +93,15 @@ export class PlanGenerator {
       ? []
       : getGuidesByKeys(selectedDocKeys || undefined);
 
+    let phaseSuggestions: PhaseRequirementSuggestions = {};
+    if (projectPath) {
+      try {
+        phaseSuggestions = await suggestPhaseRequirements(projectPath);
+      } catch (error) {
+        GeneratorUtils.logError('Phase requirement detection failed; continuing without suggestions', error, verbose);
+      }
+    }
+
     const content = renderPlanTemplate({
       title: planTitle,
       slug,
@@ -96,7 +109,8 @@ export class PlanGenerator {
       agents: agentSummaries,
       docs: docGuides,
       semantics,
-      codebaseSnapshot
+      codebaseSnapshot,
+      phaseSuggestions,
     });
 
     await GeneratorUtils.writeFileWithLogging(

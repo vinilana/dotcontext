@@ -1,148 +1,51 @@
-/**
- * Document Linker
- *
- * Links agents and workflow phases to relevant documentation sections,
- * enabling context-aware navigation and knowledge sharing.
- */
-
 import { PrevcPhase, PrevcRole } from '../types';
 import { AgentType } from './agentOrchestrator';
+import {
+  PREVC_AGENT_DOCS,
+  PREVC_DOC_GUIDES,
+  PREVC_PHASE_MODEL,
+  PREVC_PHASE_SEQUENCE,
+  PREVC_ROLE_MODEL,
+  PREVC_ROLE_SEQUENCE,
+  type PrevcDocGuide,
+  type PrevcDocType,
+} from '../registries/prevcModel';
 
 /**
  * Documentation types available in .context/docs/
  */
-export type DocType =
-  | 'architecture'
-  | 'data-flow'
-  | 'glossary'
-  | 'api'
-  | 'getting-started'
-  | 'deployment'
-  | 'security'
-  | 'testing'
-  | 'contributing'
-  | 'readme';
+export type DocType = PrevcDocType;
 
 /**
  * Document guide information
  */
-export interface DocGuide {
-  type: DocType;
-  path: string;
-  title: string;
-  description: string;
-}
+export interface DocGuide extends PrevcDocGuide {}
 
 /**
  * Standard documentation guides
  */
-export const DOCUMENT_GUIDES: DocGuide[] = [
-  {
-    type: 'architecture',
-    path: '.context/docs/architecture.md',
-    title: 'Architecture',
-    description: 'System architecture, patterns, and design decisions',
-  },
-  {
-    type: 'data-flow',
-    path: '.context/docs/data-flow.md',
-    title: 'Data Flow',
-    description: 'How data moves through the system',
-  },
-  {
-    type: 'glossary',
-    path: '.context/docs/glossary.md',
-    title: 'Glossary',
-    description: 'Domain terms and definitions',
-  },
-  {
-    type: 'api',
-    path: '.context/docs/api.md',
-    title: 'API Reference',
-    description: 'API endpoints and usage',
-  },
-  {
-    type: 'getting-started',
-    path: '.context/docs/getting-started.md',
-    title: 'Getting Started',
-    description: 'Setup and onboarding guide',
-  },
-  {
-    type: 'deployment',
-    path: '.context/docs/deployment.md',
-    title: 'Deployment',
-    description: 'Deployment procedures and environments',
-  },
-  {
-    type: 'security',
-    path: '.context/docs/security.md',
-    title: 'Security',
-    description: 'Security guidelines and practices',
-  },
-  {
-    type: 'testing',
-    path: '.context/docs/testing.md',
-    title: 'Testing',
-    description: 'Testing strategies and coverage',
-  },
-  {
-    type: 'contributing',
-    path: '.context/docs/contributing.md',
-    title: 'Contributing',
-    description: 'Contribution guidelines',
-  },
-  {
-    type: 'readme',
-    path: '.context/docs/README.md',
-    title: 'Documentation Index',
-    description: 'Overview of all documentation',
-  },
-];
+export const DOCUMENT_GUIDES: DocGuide[] = Object.values(PREVC_DOC_GUIDES);
 
 /**
  * Mapping from agent types to relevant documentation
  */
-export const AGENT_TO_DOCS: Record<AgentType, DocType[]> = {
-  'code-reviewer': ['architecture', 'contributing', 'glossary'],
-  'bug-fixer': ['architecture', 'data-flow', 'testing'],
-  'feature-developer': ['architecture', 'data-flow', 'api', 'getting-started'],
-  'refactoring-specialist': ['architecture', 'glossary', 'contributing'],
-  'test-writer': ['testing', 'architecture', 'api'],
-  'documentation-writer': ['readme', 'glossary', 'architecture', 'api'],
-  'performance-optimizer': ['architecture', 'data-flow', 'deployment'],
-  'security-auditor': ['security', 'architecture', 'api'],
-  'backend-specialist': ['architecture', 'api', 'data-flow', 'deployment'],
-  'frontend-specialist': ['architecture', 'data-flow', 'getting-started'],
-  'architect-specialist': ['architecture', 'data-flow', 'security', 'deployment'],
-  'devops-specialist': ['deployment', 'security', 'testing'],
-  'database-specialist': ['architecture', 'data-flow', 'glossary'],
-  'mobile-specialist': ['architecture', 'api', 'getting-started'],
-};
+export const AGENT_TO_DOCS: Record<AgentType, DocType[]> = Object.fromEntries(
+  Object.entries(PREVC_AGENT_DOCS).map(([agent, docs]) => [agent, [...docs]])
+) as Record<AgentType, DocType[]>;
 
 /**
  * Mapping from PREVC phases to relevant documentation
  */
-export const PHASE_TO_DOCS: Record<PrevcPhase, DocType[]> = {
-  P: ['architecture', 'glossary', 'readme'], // Planning
-  R: ['architecture', 'security', 'data-flow'], // Review
-  E: ['architecture', 'api', 'data-flow', 'getting-started'], // Execution
-  V: ['testing', 'security', 'api'], // Validation
-  C: ['deployment', 'readme', 'contributing'], // Confirmation
-};
+export const PHASE_TO_DOCS: Record<PrevcPhase, DocType[]> = Object.fromEntries(
+  PREVC_PHASE_SEQUENCE.map((phase) => [phase, [...PREVC_PHASE_MODEL[phase].docs]])
+) as Record<PrevcPhase, DocType[]>;
 
 /**
  * Mapping from PREVC roles to relevant documentation
  */
-export const ROLE_TO_DOCS: Record<PrevcRole, DocType[]> = {
-  planner: ['architecture', 'glossary', 'readme'],
-  designer: ['architecture', 'getting-started'],
-  architect: ['architecture', 'data-flow', 'security', 'deployment'],
-  developer: ['architecture', 'api', 'data-flow', 'getting-started'],
-  qa: ['testing', 'security', 'api'],
-  reviewer: ['architecture', 'contributing', 'glossary'],
-  documenter: ['readme', 'glossary', 'architecture', 'api', 'contributing'],
-  'solo-dev': ['architecture', 'api', 'testing', 'readme'],
-};
+export const ROLE_TO_DOCS: Record<PrevcRole, DocType[]> = Object.fromEntries(
+  PREVC_ROLE_SEQUENCE.map((role) => [role, [...PREVC_ROLE_MODEL[role].docs]])
+) as Record<PrevcRole, DocType[]>;
 
 /**
  * Document Linker class
@@ -304,7 +207,7 @@ export class DocumentLinker {
    */
   private getGuidesByTypes(types: DocType[]): DocGuide[] {
     return types
-      .map((type) => DOCUMENT_GUIDES.find((doc) => doc.type === type))
+      .map((type) => PREVC_DOC_GUIDES[type])
       .filter((doc): doc is DocGuide => doc !== undefined);
   }
 }
