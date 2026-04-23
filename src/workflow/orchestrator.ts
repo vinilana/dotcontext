@@ -18,11 +18,13 @@ import {
 import { PrevcStatusManager } from './status/statusManager';
 import { detectProjectScale, getScaleRoute } from './scaling';
 import { PREVC_PHASE_ORDER, getPhaseDefinition } from './phases';
-import { WorkflowGateChecker, GateCheckResult, getDefaultSettings } from './gates';
+import { WorkflowGateChecker, GateCheckResult, getDefaultSettings, ExecutionEvidence } from './gates';
 import { PlanLinker } from './plans/planLinker';
+import { assertPhaseStatusConverges } from './plans/invariants';
 import { WorkflowGuidanceService } from './orchestration/workflowGuidanceService';
 import { buildNextAgentSuggestion } from './guidance';
-import type { WorkflowStatePort } from './status/workflowStatePort';
+import type { HarnessWorkflowStateService } from '../services/harness/workflowStateService';
+import { WorkflowSyncError } from './errors';
 
 /**
  * Options for completing a phase
@@ -30,6 +32,8 @@ import type { WorkflowStatePort } from './status/workflowStatePort';
 export interface CompletePhaseOptions {
   /** Force advancement even if gates would block */
   force?: boolean;
+  /** Execution evidence from the active task contract, consumed by the execution_evidence gate */
+  executionEvidence?: ExecutionEvidence;
 }
 
 /**
@@ -55,7 +59,7 @@ export class PrevcOrchestrator {
   private planLinker: PlanLinker;
   private guidanceService: WorkflowGuidanceService;
 
-  constructor(contextPath: string, workflowState: WorkflowStatePort) {
+  constructor(contextPath: string, workflowState: HarnessWorkflowStateService) {
     this.repoPath = path.dirname(contextPath);
     this.contextPath = contextPath;
     this.statusManager = new PrevcStatusManager(contextPath, workflowState);
@@ -253,18 +257,34 @@ export class PrevcOrchestrator {
       this.gateChecker.enforceGates(status, {
         force: options.force,
         nextPhase,
+        executionEvidence: options.executionEvidence,
       });
     }
 
     const advancedPhase = await this.statusManager.completePhaseTransition(outputs);
 
-    // Auto-sync linked plan markdown with execution progress
+    // Auto-sync linked plan markdown with execution progress.
+    // Previously this was a silent-fail catch — divergence between tracking
+    // JSON, status YAML, and plan markdown then stayed invisible. Now we log
+    // and propagate so callers can decide whether to retry or roll back.
     if (status.project.plan) {
       try {
         await this.planLinker.syncPlanMarkdown(status.project.plan);
-      } catch {
-        // Silent fail - plan sync is non-critical
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        console.error(
+          `[workflow] syncPlanMarkdown failed for plan "${status.project.plan}" ` +
+            `after ${currentPhase} -> ${advancedPhase ?? 'end'}: ${err.message}`
+        );
+        throw new WorkflowSyncError(status.project.plan, err);
       }
+
+      // Cross-source invariant: tracking JSON and status YAML must agree on
+      // per-phase status for any phase id present in both. Reload status
+      // because completePhaseTransition mutated it after the initial read.
+      const tracking = await this.planLinker.getPlanExecutionStatus(status.project.plan);
+      const postStatus = await this.statusManager.load();
+      assertPhaseStatusConverges(tracking, postStatus);
     }
 
     return advancedPhase;

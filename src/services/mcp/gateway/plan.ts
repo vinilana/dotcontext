@@ -8,6 +8,7 @@
  */
 
 import { HarnessPlansService } from '../../harness';
+import { AcceptanceFailedError } from '../../../workflow';
 
 import type { PlanParams } from './types';
 import type { MCPToolResponse } from './response';
@@ -103,6 +104,18 @@ export async function handlePlan(
         return createErrorResponse(`Unknown plan action: ${params.action}`);
     }
   } catch (error) {
+    if (error instanceof AcceptanceFailedError) {
+      return createJsonResponse({
+        success: false,
+        error: error.message,
+        acceptance: {
+          planSlug: error.planSlug,
+          phaseId: error.phaseId,
+          stepIndex: error.stepIndex,
+          run: error.run,
+        },
+      });
+    }
     return createErrorResponse(error);
   }
 }

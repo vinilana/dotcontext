@@ -69,4 +69,81 @@ describe('parseLegacyStatusYaml', () => {
     });
     expect(parsed.execution?.resume_context).toBe('Continuar execucao');
   });
+
+  it('strips inline comments from scalar values while preserving quoted # characters', () => {
+    const parsed = parseLegacyStatusYaml([
+      'project:',
+      '  name: hash-demo   # trailing comment',
+      '  scale: MEDIUM',
+      '  started: "2026-04-10T00:00:00.000Z"',
+      '  current_phase: P',
+      '',
+      'phases:',
+      '  P:',
+      '    status: in_progress  # currently running',
+      '    reason: "contains # inside quotes"',
+      '',
+    ].join('\n'));
+
+    expect(parsed.project.name).toBe('hash-demo');
+    expect(parsed.phases.P.status).toBe('in_progress');
+    expect(parsed.phases.P.reason).toBe('contains # inside quotes');
+  });
+
+  it('decodes escaped characters inside double-quoted scalars', () => {
+    const parsed = parseLegacyStatusYaml([
+      'project:',
+      '  name: "escaped \\"quoted\\" path"',
+      '  scale: SMALL',
+      '  started: "2026-04-10T00:00:00.000Z"',
+      '  current_phase: P',
+      '',
+      'phases:',
+      '  P:',
+      '    reason: \'it\'\'s fine\'',
+      '',
+    ].join('\n'));
+
+    expect(parsed.project.name).toBe('escaped "quoted" path');
+    expect(parsed.phases.P.reason).toBe("it's fine");
+  });
+
+  it('tolerates partial documents without throwing', () => {
+    const parsed = parseLegacyStatusYaml([
+      'project:',
+      '  name: partial-doc',
+      '  scale: SMALL',
+      '',
+      '# no phases/agents/roles/settings blocks declared',
+      '',
+    ].join('\n'));
+
+    expect(parsed.project.name).toBe('partial-doc');
+    expect(parsed.project.scale).toBe(ProjectScale.SMALL);
+    expect(parsed.phases.P.status).toBe('pending');
+    expect(parsed.agents).toEqual({});
+    expect(parsed.roles).toEqual({});
+    expect(parsed.project.settings).toBeUndefined();
+  });
+
+  it('skips malformed lines instead of crashing', () => {
+    const parsed = parseLegacyStatusYaml([
+      'project:',
+      '  name: robust',
+      '  scale: SMALL',
+      '  started: "2026-04-10T00:00:00.000Z"',
+      '  current_phase: P',
+      '  unknown_field: something',
+      '  nocolon-malformed',
+      '',
+      'phases:',
+      '  P:',
+      '    status: pending',
+      '    stray_key: ',
+      '',
+    ].join('\n'));
+
+    expect(parsed.project.name).toBe('robust');
+    expect(parsed.phases.P.status).toBe('pending');
+  });
 });

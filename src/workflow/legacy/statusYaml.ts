@@ -25,8 +25,66 @@ function createEmptyStatus(now: string): PrevcStatus {
   };
 }
 
+/**
+ * Strip an inline `# …` comment from a raw scalar fragment while respecting
+ * quoted regions (so `"value # not a comment"` stays intact).
+ */
+function stripInlineComment(value: string): string {
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    const prev = i > 0 ? value[i - 1] : '';
+    if (ch === '"' && prev !== '\\' && !inSingle) {
+      inDouble = !inDouble;
+    } else if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+    } else if (ch === '#' && !inSingle && !inDouble && (i === 0 || /\s/.test(prev))) {
+      return value.slice(0, i).trimEnd();
+    }
+  }
+  return value;
+}
+
+/**
+ * Unquote a YAML-ish scalar. Supports single- and double-quoted forms with
+ * escaped `\"`, `\\`, `\n`, and `\t` sequences inside double quotes. Returns
+ * the value verbatim when not quoted.
+ */
 function unquote(value: string): string {
-  return value.replace(/^["']|["']$/g, '');
+  const trimmed = value.trim();
+  if (trimmed.length < 2) {
+    return trimmed;
+  }
+
+  const first = trimmed[0];
+  const last = trimmed[trimmed.length - 1];
+
+  if (first === '"' && last === '"') {
+    const inner = trimmed.slice(1, -1);
+    return inner.replace(/\\(["\\nt])/g, (_, ch) => {
+      if (ch === 'n') return '\n';
+      if (ch === 't') return '\t';
+      return ch;
+    });
+  }
+  if (first === "'" && last === "'") {
+    // YAML single-quoted strings escape a single quote by doubling it.
+    return trimmed.slice(1, -1).replace(/''/g, "'");
+  }
+  return trimmed;
+}
+
+/**
+ * Parse a scalar value from the fragment after the first `:`.
+ * Strips inline comments, unquotes, and returns an empty string when missing.
+ */
+function parseScalar(valueParts: string[]): string {
+  const raw = valueParts.join(':').trim();
+  if (raw.length === 0) {
+    return '';
+  }
+  return unquote(stripInlineComment(raw));
 }
 
 /**
@@ -69,7 +127,7 @@ export function parseLegacyStatusYaml(
       currentSection = 'execution';
     } else if (currentSection === 'project' && line.startsWith('  ')) {
       const [key, ...valueParts] = trimmed.split(':');
-      const value = unquote(valueParts.join(':').trim());
+      const value = parseScalar(valueParts);
 
       if (key === 'name') {
         result.project.name = value;
@@ -95,7 +153,7 @@ export function parseLegacyStatusYaml(
         currentPhase = trimmed.replace(':', '') as PrevcPhase;
       } else if (currentPhase && line.startsWith('    ')) {
         const [key, ...valueParts] = trimmed.split(':');
-        const value = unquote(valueParts.join(':').trim());
+        const value = parseScalar(valueParts);
         if (key === 'status') {
           result.phases[currentPhase as PrevcPhase].status = value as
             | 'pending'
@@ -119,7 +177,7 @@ export function parseLegacyStatusYaml(
         result.agents[currentAgent] = { status: 'pending' };
       } else if (currentAgent && line.startsWith('    ')) {
         const [key, ...valueParts] = trimmed.split(':');
-        const value = unquote(valueParts.join(':').trim());
+        const value = parseScalar(valueParts);
         const agentStatus = result.agents[currentAgent] || { status: 'pending' };
 
         if (key === 'status') {
@@ -153,7 +211,7 @@ export function parseLegacyStatusYaml(
         result.roles[currentRole as PrevcRole] = {};
       } else if (currentRole && line.startsWith('    ')) {
         const [key, ...valueParts] = trimmed.split(':');
-        const value = unquote(valueParts.join(':').trim());
+        const value = parseScalar(valueParts);
         const roleStatus = result.roles[currentRole as PrevcRole] || {};
 
         if (key === 'status') {
@@ -185,7 +243,7 @@ export function parseLegacyStatusYaml(
       }
 
       const [key, ...valueParts] = trimmed.split(':');
-      const value = unquote(valueParts.join(':').trim());
+      const value = parseScalar(valueParts);
 
       if (key === 'autonomous_mode') {
         result.project.settings.autonomous_mode = value === 'true';
@@ -205,7 +263,7 @@ export function parseLegacyStatusYaml(
       }
 
       const [key, ...valueParts] = trimmed.split(':');
-      const value = unquote(valueParts.join(':').trim());
+      const value = parseScalar(valueParts);
 
       if (key === 'plan_created') {
         result.approval.plan_created = value === 'true';
@@ -232,7 +290,7 @@ export function parseLegacyStatusYaml(
       }
 
       const [key, ...valueParts] = trimmed.split(':');
-      const value = unquote(valueParts.join(':').trim());
+      const value = parseScalar(valueParts);
 
       if (key === 'last_activity') {
         result.execution.last_activity = value;

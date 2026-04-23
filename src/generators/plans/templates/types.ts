@@ -1,6 +1,7 @@
 import { AgentType } from '../../agents/agentTypes';
 import { GuideMeta } from '../../documentation/templates/types';
 import { SemanticContext } from '../../../services/semantic';
+import type { PhaseRequirementSuggestions } from '../../../workflow/plans/scaffoldSuggestions';
 
 export interface PlanAgentSummary {
   type: AgentType;
@@ -24,6 +25,7 @@ export interface PlanTemplateContext {
   docs: GuideMeta[];
   semantics?: SemanticContext;
   codebaseSnapshot?: CodebaseSnapshot;
+  phaseSuggestions?: PhaseRequirementSuggestions;
 }
 
 export interface PlanIndexEntry {

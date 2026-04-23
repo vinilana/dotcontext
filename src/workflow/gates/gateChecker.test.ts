@@ -261,7 +261,7 @@ describe('WorkflowGateChecker', () => {
         expect(result.gates.plan_required.required).toBe(false);
       });
 
-      it('should allow E → V without any gates', () => {
+      it('should block E → V when no execution evidence is provided', () => {
         const status = createMockStatus({
           project: {
             name: 'test',
@@ -272,7 +272,57 @@ describe('WorkflowGateChecker', () => {
         });
 
         const result = checker.checkGates(status, 'V');
+        expect(result.canAdvance).toBe(false);
+        expect(result.blockingGate).toBe('execution_evidence');
+        expect(result.gates.execution_evidence.required).toBe(true);
+      });
+
+      it('should allow E → V when execution evidence passes', () => {
+        const status = createMockStatus({
+          project: {
+            name: 'test',
+            scale: ProjectScale.MEDIUM,
+            started: new Date().toISOString(),
+            current_phase: 'E',
+          },
+        });
+
+        const result = checker.checkGates(status, 'V', {
+          canComplete: true,
+          hasActiveContract: true,
+          missingSensors: [],
+          missingArtifacts: [],
+          blockingFindings: [],
+        });
         expect(result.canAdvance).toBe(true);
+        expect(result.gates.execution_evidence.passed).toBe(true);
+      });
+
+      it('should block E → V when required sensors are missing even in autonomous mode', () => {
+        const status = createMockStatus({
+          project: {
+            name: 'test',
+            scale: ProjectScale.MEDIUM,
+            started: new Date().toISOString(),
+            current_phase: 'E',
+            settings: {
+              autonomous_mode: true,
+              require_plan: true,
+              require_approval: true,
+            },
+          },
+        });
+
+        const result = checker.checkGates(status, 'V', {
+          canComplete: false,
+          hasActiveContract: true,
+          missingSensors: ['tests'],
+          missingArtifacts: [],
+          blockingFindings: ['Missing required sensors: tests'],
+        });
+        expect(result.canAdvance).toBe(false);
+        expect(result.blockingGate).toBe('execution_evidence');
+        expect(result.gates.execution_evidence.missingSensors).toEqual(['tests']);
       });
 
       it('should allow V → C without any gates', () => {
@@ -321,6 +371,23 @@ describe('WorkflowGateChecker', () => {
       expect(() => {
         checker.enforceGates(status, { nextPhase: 'R' });
       }).toThrow();
+    });
+
+    it('should throw when nextPhase is not a valid PREVC phase', () => {
+      const status = createMockStatus();
+      expect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        checker.checkGates(status, 'X' as any);
+      }).toThrow(/not a valid PREVC phase/);
+    });
+
+    it('should throw when nextPhase has no entry in status.phases', () => {
+      const status = createMockStatus();
+      // Drop the V entry to simulate corrupted/missing status data.
+      delete (status.phases as Record<string, unknown>).V;
+      expect(() => {
+        checker.checkGates(status, 'V');
+      }).toThrow(/no entry in status\.phases/);
     });
 
     it('should not throw when force is true', () => {

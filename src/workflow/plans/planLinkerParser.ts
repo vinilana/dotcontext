@@ -232,6 +232,10 @@ export class PlanLinkerParser {
             ...steps.flatMap(step => [...(step.deliverables ?? []), ...(step.outputs ?? [])]),
           ]);
 
+          const requiredSensors = this.uniqueStrings(phase.requiredSensors ?? []);
+          const requiredArtifacts = this.uniqueArtifactSpecs(phase.requiredArtifacts ?? []);
+          const hasRequirements = requiredSensors.length > 0 || requiredArtifacts.length > 0;
+
           return {
             id: phase.id,
             name: phase.name,
@@ -240,6 +244,9 @@ export class PlanLinkerParser {
             deliverables: deliverables.length > 0 ? deliverables : undefined,
             steps,
             status: 'pending' as const,
+            requirements: hasRequirements
+              ? { requiredSensors, requiredArtifacts }
+              : undefined,
           };
         })
       : bodyPhases;
@@ -409,6 +416,22 @@ export class PlanLinkerParser {
 
   private uniqueStrings(values: string[]): string[] {
     return [...new Set(values.map(value => value.trim()).filter(Boolean))];
+  }
+
+  private uniqueArtifactSpecs(
+    values: import('../../services/harness').RequiredArtifactInput[]
+  ): import('../../services/harness').RequiredArtifactInput[] {
+    const seen = new Set<string>();
+    const out: import('../../services/harness').RequiredArtifactInput[] = [];
+    for (const v of values) {
+      if (v === null || v === undefined) continue;
+      const key = typeof v === 'string' ? `s:${v.trim()}` : `o:${JSON.stringify(v)}`;
+      if (typeof v === 'string' && v.trim().length === 0) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(typeof v === 'string' ? v.trim() : v);
+    }
+    return out;
   }
 
   private inferPrevcPhaseFromPhaseName(phaseName: string): PrevcPhase {

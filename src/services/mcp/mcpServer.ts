@@ -25,7 +25,7 @@ import {
   getScaleName,
   ProjectScale,
 } from '../../workflow';
-import { AGENT_TYPES } from '../../workflow/orchestration/agentOrchestrator';
+import { AGENT_TYPES } from '../../workflow';
 
 import {
   handleExplore,
@@ -398,8 +398,8 @@ Actions:
           .describe('(defineTask) Acceptance criteria'),
         requiredSensors: z.array(z.string()).optional()
           .describe('(defineTask) Required sensors'),
-        requiredArtifacts: z.array(z.string()).optional()
-          .describe('(defineTask) Required artifacts'),
+        requiredArtifacts: z.array(z.union([z.string(), z.record(z.string(), z.any())])).optional()
+          .describe('(defineTask) Required artifacts (string for exact name, or { kind: glob, glob, minMatches? } / { kind: file-count, glob, min } / { kind: name|path, ... })'),
         sensors: z.array(z.string()).optional()
           .describe('(runSensors) Sensors to execute'),
         data: z.any().optional()
@@ -682,7 +682,7 @@ Actions:
         expectedOutputs: z.array(z.string()).optional(),
         acceptanceCriteria: z.array(z.string()).optional(),
         requiredSensors: z.array(z.string()).optional(),
-        requiredArtifacts: z.array(z.string()).optional(),
+        requiredArtifacts: z.array(z.union([z.string(), z.record(z.string(), z.any())])).optional(),
         from: z.string().optional(),
         to: z.string().optional(),
         artifacts: z.array(z.string()).optional(),

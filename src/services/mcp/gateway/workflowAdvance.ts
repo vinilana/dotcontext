@@ -7,7 +7,6 @@
 import * as path from 'path';
 import { WorkflowService } from '../../workflow';
 import {
-  PHASE_NAMES_EN,
   WorkflowGateError,
 } from '../../../workflow';
 import { HarnessWorkflowBlockedError } from '../../workflow';
@@ -62,7 +61,7 @@ export async function handleWorkflowAdvance(
 
       if (nextPhase) {
         const orchestration = await service.getPhaseOrchestration(nextPhase);
-        const phaseName = PHASE_NAMES_EN[nextPhase];
+        const phaseName = service.getPhaseDisplayName(nextPhase);
         const startAgent = orchestration.startWith;
 
         const response: Record<string, unknown> = {

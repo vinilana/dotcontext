@@ -115,7 +115,7 @@ describe('WorkflowService harness integration', () => {
       'architect',
       'developer',
     ]);
-    expect(persisted.version).toBe(1);
+    expect(persisted.version).toBe(2);
     expect(persisted.sessions).toHaveLength(1);
     expect(persisted.sessions[0].id).toBe(sessionId);
     expect(persisted.sessions[0].status).toBe('concluded');
@@ -274,7 +274,11 @@ phases:
   it('registers sensors from project scripts instead of assuming a universal Node set', async () => {
     const sensors = service.listAvailableSensors();
 
-    expect(sensors.map((sensor) => sensor.id)).toEqual(['build']);
+    // Filter out built-in sensors (e.g. i18n-coverage) to assert only the
+    // project-script-derived set.
+    const shellSensors = sensors.map((s) => s.id).filter((id) => !['i18n-coverage', 'tests-passing', 'typecheck-clean'].includes(id));
+    expect(shellSensors).toEqual(['build']);
+    expect(sensors.map((s) => s.id)).toContain('i18n-coverage');
   });
 
   it('detects Python sensors without assuming Node scripts', async () => {
@@ -287,7 +291,8 @@ phases:
       const pythonService = new WorkflowService(pythonDir);
       const sensors = pythonService.listAvailableSensors();
 
-      expect(sensors.map((sensor) => sensor.id)).toEqual(['test', 'typecheck']);
+      const shellSensors = sensors.map((s) => s.id).filter((id) => !['i18n-coverage', 'tests-passing', 'typecheck-clean'].includes(id));
+      expect(shellSensors).toEqual(['test', 'typecheck']);
     } finally {
       await fs.remove(pythonDir);
     }
@@ -324,7 +329,8 @@ phases:
     const customizedService = new WorkflowService(tempDir);
     const sensors = customizedService.listAvailableSensors();
 
-    expect(sensors.map((sensor) => sensor.id)).toEqual(['quality']);
+    const shellSensors = sensors.map((s) => s.id).filter((id) => !['i18n-coverage', 'tests-passing', 'typecheck-clean'].includes(id));
+    expect(shellSensors).toEqual(['quality']);
   });
 
   it('enforces artifact policy rules during workflow execution', async () => {

@@ -10,4 +10,5 @@ export {
   getDefaultSettings,
   GateCheckResult,
   GateStatus,
+  ExecutionEvidence,
 } from './gateChecker';

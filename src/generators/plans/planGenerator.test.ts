@@ -73,4 +73,31 @@ describe('PlanGenerator', () => {
     const updatedContent = await fs.readFile(planPath, 'utf8');
     expect(updatedContent).toContain('Dry run');
   });
+
+  it('auto-detects repo features and seeds required_sensors in the scaffold', async () => {
+    await fs.ensureDir(path.join(tempDir, 'locales'));
+    await fs.writeJson(path.join(tempDir, 'locales', 'en.json'), { hi: 'hi' });
+    await fs.writeJson(path.join(tempDir, 'package.json'), {
+      name: 'sample',
+      version: '0.0.0',
+      scripts: { test: 'jest' },
+    });
+    await fs.writeJson(path.join(tempDir, 'tsconfig.json'), { compilerOptions: {} });
+
+    await generator.generatePlan({
+      planName: 'autodetect-plan',
+      outputDir,
+      projectPath: tempDir,
+      semantic: false,
+      selectedAgentTypes: null,
+      selectedDocKeys: null,
+    });
+
+    const planPath = path.join(outputDir, 'plans', 'autodetect-plan.md');
+    const content = await fs.readFile(planPath, 'utf8');
+    expect(content).toContain('required_sensors:');
+    expect(content).toContain('"i18n-coverage"');
+    expect(content).toContain('"tests-passing"');
+    expect(content).toContain('"typecheck-clean"');
+  });
 });

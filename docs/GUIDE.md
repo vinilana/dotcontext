@@ -236,6 +236,295 @@ npx -y @dotcontext/cli@latest admin skill export
 
 Use the MCP `skill` tool when you want skill scaffolding or AI-assisted fill behavior. The CLI remains focused on discovery and export.
 
+## Executable Acceptance
+
+A plan step can declare a verifiable acceptance predicate. The harness runs it
+before allowing the step to be marked `completed`. A non-zero exit code rejects
+the transition and the step keeps its prior status; the result is recorded
+under `acceptanceRun` for auditing.
+
+Seed an acceptance on the tracked step (JSON under
+`.context/workflow/plan-tracking/<slug>.json`):
+
+```json
+{
+  "stepIndex": 1,
+  "description": "Cobertura i18n 100%",
+  "status": "in_progress",
+  "acceptance": {
+    "kind": "shell",
+    "command": ["npm", "test", "--", "i18n-coverage"],
+    "timeoutMs": 60000
+  }
+}
+```
+
+Shell safety: `command` is an argv array, always spawned with `shell: false`
+(no shell interpolation). Pass flags as separate array entries.
+
+When the harness attempts to mark the step `completed`, a failing predicate
+returns a structured response (via the MCP `plan.updateStep` action) with the
+captured `tailStdout` / `tailStderr` and the non-zero `exitCode` rather than a
+500 error. On success, the step transitions to `completed` and the passing
+`acceptanceRun` is persisted.
+
+## Declaring Execution Requirements in Plans
+
+The `execution_evidence` gate (E -> V) only has teeth when the derived task
+contract actually declares what evidence is required. Plan frontmatter is the
+canonical place to declare it, per phase:
+
+```yaml
+---
+type: plan
+name: auth-rollout
+description: "Authentication rollout."
+planSlug: auth-rollout
+generated: "2026-04-13"
+status: filled
+scaffoldVersion: "2.0.0"
+phases:
+  - id: phase-1
+    prevc: P
+    name: Planning
+  - id: phase-2
+    prevc: E
+    name: Implementation
+    required_sensors:
+      - tests
+      - typecheck
+    required_artifacts:
+      - handoff-summary
+  - id: phase-3
+    prevc: V
+    name: Validation
+    required_sensors:
+      - tests
+      - lint
+---
+```
+
+`required_sensors` are sensor ids that must have `status==='passed'` in the
+harness session. `required_artifacts` are artifact names/paths that must have
+been recorded via `harness({ action: "recordArtifact", ... })`.
+
+### Structured artifact requirements
+
+`required_artifacts` accepts either bare strings (exact name match,
+backwards-compatible) or structured `RequiredArtifactSpec` objects. Specs let
+plans gatekeep multi-file work — e.g., "every locale must be translated" — that
+exact-name matching cannot express.
+
+Four `kind`s are supported:
+
+| `kind`         | Shape                                                  | Match                                                  |
+| -------------- | ------------------------------------------------------ | ------------------------------------------------------ |
+| `name`         | `{ kind: name, name: string }`                         | exact match against `artifact.path \|\| artifact.name` |
+| `path`         | `{ kind: path, path: string }`                         | exact path match                                       |
+| `glob`         | `{ kind: glob, glob: string, minMatches?: number }`    | minimatch glob; needs `>= minMatches` (default `1`)    |
+| `file-count`   | `{ kind: file-count, glob: string, min: number }`      | shorthand for glob with `minMatches = min`             |
+
+Example plan frontmatter:
+
+```yaml
+phases:
+  - id: phase-2
+    prevc: E
+    name: Implementation
+    required_sensors: [tests]
+    required_artifacts:
+      - { kind: glob, glob: "locales/**/*.json", minMatches: 5 }
+      - { kind: file-count, glob: "docs/migration/*.md", min: 2 }
+      - i18n-coverage-report   # legacy string == { kind: name, name: "i18n-coverage-report" }
+```
+
+When the gate blocks, `missingArtifacts` reports a human-readable description,
+e.g. `glob(locales/**/*.json) min=5 (got 2)`. By default, matching runs only
+against artifacts recorded on the active session.
+
+#### `fromFilesystem: true`
+
+For `glob` and `file-count`, set `fromFilesystem: true` to also scan the
+project working tree (relative to `repoPath`) and union those hits with
+recorded artifacts. This eliminates the false-blocked case where a file
+exists in the repo but no one called `recordArtifact`.
+
+```yaml
+required_artifacts:
+  - { kind: glob, glob: "locales/*.json", minMatches: 5, fromFilesystem: true }
+  - { kind: file-count, glob: "docs/migration/*.md", min: 2, fromFilesystem: true }
+```
+
+Scan rules:
+
+- Paths resolved outside `repoPath` are refused.
+- `node_modules`, `.git`, and `dist` are always excluded.
+- A 5s timeout protects against runaway scans; failure or timeout becomes a
+  `blockingFinding` (`filesystem scan failed for <pattern>: <reason>`) rather
+  than a crash.
+- Recorded artifacts and filesystem hits are deduplicated by path so the
+  same file never counts twice.
+
+Rules:
+
+- `plan({ action: "link", ... })` **hard-fails** if the plan has an Execution
+  (`prevc: E`) phase without `required_sensors`. Declare them or remove the E
+  phase from the plan. There is no escape flag — the point is to stop silent
+  "execution verified" claims at the source.
+- When a phase omits requirements, `DerivedPlanTaskContractBuilder` falls back
+  to conservative defaults: `E` -> `['tests']`, `V` -> `['tests', 'lint']`.
+  Phases P/R/C have no default and honor only what the plan declares.
+- Requirements propagate into the derived `HarnessTaskContract` on link and on
+  each `workflow-advance` that rotates the active contract.
+
+## Phase Gates são Executáveis
+
+Phase advancement in PREVC is gated by three checks surfaced as
+`GateCheckResult.gates`:
+
+| Gate | Transition | Suppressed by `autonomous_mode`? |
+| --- | --- | --- |
+| `plan_required` | P → R when `require_plan` is on | Yes |
+| `approval_required` | R → E when `require_approval` is on | Yes |
+| `execution_evidence` | E → V whenever an active task contract exists | **No** |
+
+`execution_evidence` consults the active `HarnessTaskContract` via
+`evaluateTaskCompletion`. The gate fails closed when:
+
+- the active task has `requiredSensors` that never passed in this session, or
+- the active task has `requiredArtifacts` that were never recorded, or
+- no active task contract exists for the current phase.
+
+`autonomous_mode=true` only bypasses the policy gates
+(`plan_required`, `approval_required`). It intentionally does **not** bypass
+`execution_evidence` — "autonomous" does not mean "skip verification that
+the work actually happened". To genuinely override, use `force: true` when
+calling `workflow-advance`, which skips gate enforcement entirely at the
+caller's responsibility.
+
+## Built-in Sensors
+
+Three sensors are registered by default in every harness session and only
+execute when a plan/task contract declares them under `required_sensors`.
+
+| Sensor            | What it checks                                                                  | Configurable options                                |
+| ----------------- | ------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `i18n-coverage`   | Every non-base locale file has the same keyset as the base locale               | `baseLocale`, `localesDir`, `format`                |
+| `tests-passing`   | Test suite runs cleanly (jest `--json` parsed, or generic exit-code mode)       | `kind` (`jest` \| `exit-code`), `testCommand`, `timeoutMs` |
+| `typecheck-clean` | `tsc --noEmit` (or configured command) reports zero errors                      | `command`, `timeoutMs`, `tailLines`                 |
+
+All sensors spawn child processes with `shell: false` and an explicit argv
+array (no shell interpolation). Failure modes are reported as structured
+sensor runs — sensors never throw on tooling failure.
+
+### `tests-passing`
+
+Default command: `npm test -- --runInBand --json`. In `kind: 'jest'` (the
+default), the sensor parses the JSON object on stdout and reports
+`{ numPassedTests, numFailedTests, numTotalTestSuites, failures }`. It
+passes only when exit code is `0` *and* `numFailedTests === 0`.
+
+For non-jest runners, set `kind: 'exit-code'` and provide `testCommand`:
+
+```yaml
+required_sensors:
+  - tests-passing
+# In the task contract metadata or sensor context:
+# { kind: 'exit-code', testCommand: ['pnpm', 'vitest', 'run'] }
+```
+
+Default timeout is 300s (`timeoutMs`).
+
+### `typecheck-clean`
+
+Default command: `npx tsc --noEmit`. Passes iff the process exits `0`. On
+failure, captures the last `tailLines` (default 50) of combined stdout/stderr
+on `output.tail`, and surfaces the exit code on `output.exitCode`. Default
+timeout is 120s.
+
+### `i18n-coverage`
+
+Compares translation keys between a base locale file and every other locale
+file in a configured directory. Registered by default in every harness
+session, but only executed when a plan/task contract declares it under
+`required_sensors`.
+
+Options (passed via `runSensors` `metadata` or `context`):
+
+| Option        | Default     | Meaning                                                  |
+| ------------- | ----------- | -------------------------------------------------------- |
+| `baseLocale`  | `'en'`      | locale id used as the source of truth keyset             |
+| `localesDir`  | `'locales'` | directory (repo-relative) containing `<locale>.json`     |
+| `format`      | `'json'`    | `'json'` (top-level keys) or `'json-nested'` (flattened) |
+
+Plan declaration:
+
+```yaml
+phases:
+  - id: phase-2
+    prevc: E
+    name: Implementation
+    required_sensors:
+      - i18n-coverage
+    required_artifacts:
+      - { kind: glob, glob: "locales/*.json", minMatches: 3, fromFilesystem: true }
+```
+
+Output (persisted in the `sensor.run` trace):
+
+```json
+{
+  "coverage":   { "en": 1, "pt": 1, "es": 0.66 },
+  "missingKeys": { "en": [], "pt": [], "es": ["b", "c"] }
+}
+```
+
+Pass condition: every non-base locale has `missingKeys.length === 0`.
+Failure modes (all reported with the offending file/path, never crash):
+
+- `localesDir` missing
+- malformed JSON in any `<locale>.json`
+- base locale absent from `localesDir`
+
+## Plan scaffolding auto-detects requirements
+
+When `context({ action: "scaffoldPlan", ... })` runs against a real repo,
+the generator probes the working tree and seeds plausible
+`required_sensors` per PREVC phase so the author does not need to know the
+sensor catalog up front. Suggestions are only applied when the scaffold
+phase has no `required_sensors` declared — never overwriting an explicit
+choice.
+
+Detection rules:
+
+| Detected feature                                          | Phase | Suggested sensor   |
+| --------------------------------------------------------- | ----- | ------------------ |
+| `locales/*.json` or `i18n/*.json`                         | E     | `i18n-coverage`    |
+| `package.json` with a real `scripts.test` (not the npm placeholder) | V     | `tests-passing`    |
+| `tsconfig.json` at the repo root                          | V     | `typecheck-clean`  |
+| `.eslintrc*`, `eslint.config.*`, or `eslintConfig` in `package.json` | V     | `lint`             |
+
+Example output for a repo with `locales/`, `tsconfig.json`, and
+`scripts.test`:
+
+```yaml
+phases:
+  - id: phase-2
+    name: Implementation & Iteration
+    prevc: E
+    required_sensors:
+      - i18n-coverage
+  - id: phase-3
+    name: Validation & Handoff
+    prevc: V
+    required_sensors:
+      - tests-passing
+      - typecheck-clean
+```
+
+The author is free to delete or extend the suggested entries before
+linking the plan; the merge is one-shot at scaffold time.
+
 ## Troubleshooting
 
 ### "CLI init/plan/fill command not found"

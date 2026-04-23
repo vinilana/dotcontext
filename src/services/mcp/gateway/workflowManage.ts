@@ -6,12 +6,9 @@
 
 import * as path from 'path';
 import { WorkflowService } from '../../workflow';
-import { PHASE_NAMES_EN } from '../../../workflow/phases';
-import { createPlanLinker } from '../../../workflow/plans';
-import { ROLE_DISPLAY_NAMES } from '../../../workflow/roles';
 import { HarnessPolicyBlockedError } from '../../harness';
 
-import type { PrevcPhase, PrevcRole } from '../../../workflow/types';
+import type { PrevcRole } from '../../../workflow';
 import type { MCPToolResponse } from './response';
 import { createJsonResponse, createErrorResponse } from './response';
 
@@ -40,7 +37,7 @@ export interface WorkflowManageParams {
   expectedOutputs?: string[];
   acceptanceCriteria?: string[];
   requiredSensors?: string[];
-  requiredArtifacts?: string[];
+  requiredArtifacts?: Array<string | Record<string, unknown>>;
   sensors?: string[];
   data?: unknown;
   artifactIds?: string[];
@@ -116,7 +113,7 @@ export async function handleWorkflowManage(
           topic: sessionStatus.topic,
           participants: sessionStatus.participants.map((p) => ({
             role: p,
-            displayName: ROLE_DISPLAY_NAMES[p],
+            displayName: service.getRoleDisplayName(p),
           })),
         });
       }
@@ -159,7 +156,7 @@ export async function handleWorkflowManage(
           success: true,
           currentPhase: {
             code: summary.currentPhase,
-            name: PHASE_NAMES_EN[summary.currentPhase as PrevcPhase],
+            name: service.getPhaseDisplayName(summary.currentPhase),
           },
           canAdvance: gateResult.canAdvance,
           gates: gateResult.gates,
@@ -189,7 +186,7 @@ export async function handleWorkflowManage(
         }
 
         const workflowStatus = await service.getStatus();
-        const planLinker = createPlanLinker(repoPath);
+        const planLinker = service.getPlanLinkerForWorkflow();
         const plans = await planLinker.getLinkedPlans();
         const linkedPlanSlugs = [...plans.active, ...plans.completed].map((plan) => plan.slug);
         const canonicalPlanSlug = workflowStatus.project.plan
@@ -374,7 +371,7 @@ export async function handleWorkflowManage(
           expectedOutputs: params.expectedOutputs,
           acceptanceCriteria: params.acceptanceCriteria,
           requiredSensors: params.requiredSensors,
-          requiredArtifacts: params.requiredArtifacts,
+          requiredArtifacts: params.requiredArtifacts as import('../../harness').RequiredArtifactInput[] | undefined,
         });
 
         return createJsonResponse({
