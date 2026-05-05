@@ -226,32 +226,44 @@ export class PlanLinker {
     status: StatusType
   ): Promise<boolean> {
     const trackingFile = path.join(this.workflowPath, 'plan-tracking', `${planSlug}.json`);
+    const now = new Date().toISOString();
 
-    let tracking: Record<string, unknown> = {};
-    if (await fs.pathExists(trackingFile)) {
-      const content = await fs.readFile(trackingFile, 'utf-8');
-      try {
-        tracking = JSON.parse(content) || {};
-      } catch {
-        tracking = {};
-      }
+    let tracking = await this.loadPlanTracking(planSlug);
+    if (!tracking) {
+      tracking = {
+        planSlug,
+        progress: 0,
+        phases: {},
+        decisions: [],
+        lastUpdated: now,
+      };
     }
 
     // Update phase tracking
-    if (!tracking.phases) {
-      tracking.phases = {};
-    }
-    (tracking.phases as Record<string, unknown>)[phaseId] = {
+    const existingPhase = tracking.phases[phaseId];
+    tracking.phases[phaseId] = {
+      ...(existingPhase ?? {}),
+      phaseId,
       status,
-      updatedAt: new Date().toISOString(),
+      steps: existingPhase?.steps ?? [],
     };
+
+    if (status === 'in_progress' && !tracking.phases[phaseId].startedAt) {
+      tracking.phases[phaseId].startedAt = now;
+    }
+
+    if (status === 'completed') {
+      tracking.phases[phaseId].completedAt = now;
+    }
+
+    tracking.lastUpdated = now;
 
     // Calculate progress
     const plan = await this.getLinkedPlan(planSlug);
     if (plan) {
       const totalPhases = plan.phases.length;
       const completedPhases = plan.phases.filter(p =>
-        (tracking.phases as Record<string, { status: string }>)?.[p.id]?.status === 'completed'
+        tracking.phases[p.id]?.status === 'completed'
       ).length;
       tracking.progress = totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0;
     }
@@ -645,32 +657,37 @@ export class PlanLinker {
     try {
       const content = await fs.readFile(trackingFile, 'utf-8');
       const data = JSON.parse(content);
+      const now = new Date().toISOString();
 
-      // Migrate old format to new format if needed
-      if (!data.phases || typeof data.phases !== 'object') {
-        // Old format had phases as simple status objects
-        const migratedPhases: Record<string, PlanPhaseTracking> = {};
-        if (data.phases) {
-          for (const [phaseId, phaseData] of Object.entries(data.phases as Record<string, { status: string; updatedAt?: string }>)) {
-            migratedPhases[phaseId] = {
-              phaseId,
-              status: phaseData.status as StatusType,
-              startedAt: phaseData.updatedAt,
-              completedAt: phaseData.status === 'completed' ? phaseData.updatedAt : undefined,
-              steps: [],
-            };
-          }
+      const migratedPhases: Record<string, PlanPhaseTracking> = {};
+      if (data.phases && typeof data.phases === 'object') {
+        for (const [phaseId, rawPhase] of Object.entries(data.phases)) {
+          const phaseData = rawPhase as Partial<PlanPhaseTracking> & {
+            updatedAt?: string;
+          };
+          const status = phaseData.status ?? 'pending';
+
+          migratedPhases[phaseId] = {
+            ...phaseData,
+            phaseId: phaseData.phaseId ?? phaseId,
+            status,
+            startedAt: phaseData.startedAt ?? phaseData.updatedAt,
+            completedAt:
+              phaseData.completedAt ??
+              (status === 'completed' ? phaseData.updatedAt : undefined),
+            steps: Array.isArray(phaseData.steps) ? phaseData.steps : [],
+          };
         }
-        return {
-          planSlug,
-          progress: data.progress || 0,
-          phases: migratedPhases,
-          decisions: data.decisions || [],
-          lastUpdated: data.lastUpdated || new Date().toISOString(),
-        };
       }
 
-      return data as PlanExecutionTracking;
+      return {
+        ...data,
+        planSlug: data.planSlug ?? planSlug,
+        progress: typeof data.progress === 'number' ? data.progress : 0,
+        phases: migratedPhases,
+        decisions: Array.isArray(data.decisions) ? data.decisions : [],
+        lastUpdated: data.lastUpdated ?? now,
+      };
     } catch {
       return null;
     }
