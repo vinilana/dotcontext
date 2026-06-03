@@ -6,9 +6,9 @@
  */
 
 import { load as loadYaml } from 'js-yaml';
-import { PrevcPhase } from '../workflow/types';
+import { PrevcPhase } from '../harness/domain/workflow/types';
 import type { ScaffoldFrontmatter, ScaffoldFileType, ScaffoldStatus } from '../types/scaffoldFrontmatter';
-import type { RequiredArtifactInput, RequiredArtifactSpec } from '../services/harness/taskContractsService';
+import type { RequiredArtifactInput, RequiredArtifactSpec } from '../harness/application/contracts/taskContractsService';
 
 /**
  * Legacy v1 frontmatter (simple status tracking)

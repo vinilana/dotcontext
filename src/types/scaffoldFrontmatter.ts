@@ -7,7 +7,7 @@
  */
 
 import { z } from 'zod';
-import { PrevcPhase } from '../workflow/types';
+import { PrevcPhase } from '../harness/domain/workflow/types';
 
 /**
  * File types that can be scaffolded
