@@ -36,6 +36,7 @@ output/
 .release/
 
 # .context runtime state
+.context/cache/
 .context/plans/
 .context/workflow/**
 .context/harness/sessions/
