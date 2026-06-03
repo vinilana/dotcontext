@@ -331,9 +331,10 @@ A CLI e a interface do operador humano. Ela nao deveria concentrar regra de domi
 
 No repositorio, isso aparece em:
 
-- `src/index.ts`: definicao dos comandos
+- `src/bin/dotcontext.ts`: entrypoint executavel
 - `src/cli/index.ts`: boundary da superficie CLI
-- `src/services/cli`: servicos especificos de CLI
+- `src/cli/commands`: comandos da superficie CLI
+- `src/cli/services`: fluxos especificos da interface de operador
 
 Responsabilidades principais da CLI hoje:
 
@@ -360,8 +361,8 @@ O MCP e o adaptador para ferramentas de IA. Ele expoe o runtime atraves de tools
 No codigo, isso aparece em:
 
 - `src/mcp/index.ts`: boundary MCP
-- `src/services/mcp/mcpServer.ts`: servidor MCP
-- `src/services/mcp/gateway`: handlers das tools
+- `src/mcp/server`: servidor MCP
+- `src/mcp/gateway`: handlers das tools
 
 Em vez de despejar toda a logica na camada MCP, o projeto tenta manter o MCP como adaptador fino:
 
@@ -388,12 +389,16 @@ Se voce for evoluir o sistema, este mapa evita acoplamento errado:
 
 | Se voce quer mudar...                       | Preferir                                      |
 | ------------------------------------------- | --------------------------------------------- |
-| logica reutilizavel de execucao             | `src/services/harness`                        |
+| logica reutilizavel de execucao             | `src/harness/application`                     |
 | superficie de runtime exportada como pacote | `src/harness/index.ts`                        |
-| shape do protocolo MCP e handlers           | `src/services/mcp/gateway`                    |
+| modelo PREVC, gates e politicas puras       | `src/harness/domain`                          |
+| portas de entrada e saida do core           | `src/harness/ports`                           |
+| adapters concretos de FS/git/shell/semantic | `src/harness/adapters/out`                    |
+| shape do protocolo MCP e handlers           | `src/mcp/gateway`                             |
 | boundary MCP                                | `src/mcp/index.ts`                            |
-| comandos e UX de terminal                   | `src/index.ts`, `src/cli`, `src/services/cli` |
-| modelo PREVC, gates e orquestracao          | `src/workflow` e `src/services/workflow`      |
+| comandos e UX de terminal                   | `src/bin/dotcontext.ts`, `src/cli`            |
+| adapters de hosts com hooks                 | `src/integrations`                            |
+| utilitarios puros compartilhados            | `src/shared`                                  |
 
 
 Esse alinhamento preserva a intencao arquitetural do repositorio:
@@ -401,6 +406,8 @@ Esse alinhamento preserva a intencao arquitetural do repositorio:
 ```text
 cli -> harness <- mcp
 ```
+
+`src/services` nao deve ser tratado como camada arquitetural. O destino limpo do repositorio remove esse diretorio; qualquer compatibilidade com imports antigos deve ser temporaria e nao deve orientar codigo novo.
 
 ## 10. Fluxo Completo de Exemplo
 

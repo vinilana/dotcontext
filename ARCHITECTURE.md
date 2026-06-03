@@ -14,9 +14,11 @@ Dotcontext now treats harness engineering as a first-class runtime concern.
 flowchart LR
     User["Human / Operator"] --> CLI["dotcontext/cli"]
     AITool["AI Tool / MCP Client"] --> MCP["dotcontext/mcp"]
+    HookHost["Hook Host / Extension"] --> Hooks["dotcontext/harness hooks"]
 
     CLI --> H["dotcontext/harness"]
     MCP --> H
+    Hooks --> H
 
     H --> WF["Workflow Runtime"]
     H --> RS["Runtime State"]
@@ -51,6 +53,30 @@ That means:
 - transport concerns stay outside the core domain
 
 This keeps the harness reusable for future adapters such as HTTP, workers, or SDKs.
+
+## Harness Action Port
+
+The reusable harness runtime now exposes transport-neutral action ports:
+
+- `HarnessAdapterRuntime` is the adapter-facing facade for MCP-equivalent tools
+- `HarnessHookAdapter` is the generic hook-facing adapter for Claude Code hooks, Codex hooks, pi.dev extensions, or other hook hosts
+- `HarnessActionService` lives in `src/harness/application/actions`
+- `HarnessAgentActionService` lives in `src/harness/application/agents`
+- `HarnessSkillActionService` lives in `src/harness/application/skills`
+- `HarnessPlanActionService` lives in `src/harness/application/workflow` or `src/harness/application/actions`
+- `HarnessExploreActionService` lives in `src/harness/application/context`
+- `HarnessContextActionService` lives in `src/harness/application/context`
+- `HarnessSyncActionService` lives in `src/harness/application/exchange`
+- `HarnessWorkflowManageActionService` lives in `src/harness/application/workflow`
+- `HarnessWorkflowActionService` lives in `src/harness/application/workflow`
+- `HarnessActionInput`, `HarnessAgentActionInput`, `HarnessSkillActionInput`, `HarnessPlanActionInput`, `HarnessExploreActionInput`, `HarnessContextActionInput`, `HarnessSyncActionInput`, `HarnessWorkflowManageActionInput`, workflow init/status/advance inputs, and their result types describe adapter-neutral runtime actions
+- MCP delegates `harness`, `agent`, `skill`, `plan`, `explore`, `context`, `sync`, `workflow-init`, `workflow-status`, `workflow-advance`, and `workflow-manage` calls to these services and only wraps the result in an MCP response envelope
+
+Future adapters such as Claude Code hooks, Codex hooks, HTTP endpoints, or editor extensions should consume these action services instead of copying MCP gateway logic. Protocol adapters are responsible only for validation, authentication, and protocol-specific response envelopes.
+
+Adapters that want parity with the MCP tool set should prefer `HarnessAdapterRuntime.execute({ tool, params })`. It accepts MCP-equivalent tool names such as `context`, `workflow-advance`, or `harness`, and returns an adapter-neutral result kind (`json`, `text`, or `scaffold`) for the adapter to serialize into its own protocol.
+
+Hook-based integrations should use `HarnessHookAdapter.handle(event)`. The event envelope is intentionally small: `{ tool, params, requestId?, source?, metadata? }`. The hook adapter validates the envelope, calls `HarnessAdapterRuntime`, and returns a hook response with `ok`, `source`, `tool`, `requestId`, and either `result` or `error`. Generic source factories such as `createClaudeCodeHarnessHookAdapter`, `createCodexHarnessHookAdapter`, and `createPiDevHarnessHookAdapter` live in the harness layer; host extension factories such as `createClaudeCodeHookAdapter`, `createCodexHookAdapter`, and `createPiDevHookAdapter` live in `src/integrations`. They label the host source without duplicating MCP gateway logic or assuming a vendor-specific protocol shape.
 
 ## Runtime Responsibilities
 
@@ -102,7 +128,7 @@ The harness lifecycle is now explicit and durable.
 ```mermaid
 sequenceDiagram
     participant U as User / AI Tool
-    participant A as CLI or MCP Adapter
+    participant A as CLI, MCP, or Hook Adapter
     participant H as Harness Runtime
     participant S as State Store
 
@@ -146,30 +172,30 @@ flowchart TD
     Root --> CLI["src/cli"]
     Root --> Harness["src/harness"]
     Root --> MCP["src/mcp"]
-    Root --> Services["src/services"]
+    Root --> Integrations["src/integrations"]
+    Root --> Shared["src/shared"]
     Root --> Scripts["scripts"]
     Root --> Context[".context"]
 
-    CLI --> CLIBoundary["CLI boundary exports"]
-    Harness --> HarnessBoundary["Harness boundary exports"]
-    MCP --> MCPBoundary["MCP boundary exports"]
+    CLI --> CLIAdapters["adapters / commands / services / ui"]
+    Harness --> HarnessBoundary["application / domain / ports / adapters"]
+    MCP --> MCPBoundary["server / gateway / logging / resources"]
+    Integrations --> HostAdapters["claude-code / codex / pi-dev hooks"]
+    Shared --> SharedCore["fs / context / registry / system"]
 
-    Services --> HarnessServices["services/harness"]
-    Services --> WorkflowServices["services/workflow"]
-    Services --> MCPGateway["services/mcp/gateway"]
-    Services --> Shared["services/shared"]
-
-    HarnessServices --> Runtime["runtimeStateService"]
-    HarnessServices --> Sensors["sensorsService"]
-    HarnessServices --> Contracts["taskContractsService"]
-    HarnessServices --> Execution["executionService"]
-    HarnessServices --> Policy["policyService"]
-    HarnessServices --> Replay["replayService"]
-    HarnessServices --> Dataset["datasetService"]
+    HarnessBoundary --> Runtime["runtime state"]
+    HarnessBoundary --> Sensors["sensors"]
+    HarnessBoundary --> Contracts["task contracts"]
+    HarnessBoundary --> Execution["execution"]
+    HarnessBoundary --> Policy["policy"]
+    HarnessBoundary --> Replay["replay"]
+    HarnessBoundary --> Dataset["datasets"]
 
     Scripts --> Packaging["build-package-bundles / smoke / release"]
     Context --> Docs["docs / plans / agents / skills"]
 ```
+
+The canonical source paths are `src/cli`, `src/harness`, `src/mcp`, `src/integrations`, and `src/shared`. `src/services` is not a target architecture folder. During migration, old deep imports should be redirected through package exports, local path aliases, or short-lived release-branch shims, but the source tree should not keep `src/services` as a permanent compatibility layer.
 
 ## Packaging Model
 

@@ -14,9 +14,11 @@ Agents working in this repo should preserve that separation.
 - `harness` is the reusable execution runtime
 - `mcp` is the transport adapter for AI tools
 
-If a change affects reusable execution logic, prefer `src/services/harness`.
-If a change affects protocol shape or request handling, prefer `src/services/mcp/gateway`.
-If a change affects user-facing commands or installation flows, prefer `src/cli` and `src/services/cli`.
+If a change affects reusable execution logic, prefer `src/harness/application`.
+If a change affects reusable domain rules, prefer `src/harness/domain`.
+If a change affects protocol shape or request handling, prefer `src/mcp/gateway`.
+If a change affects user-facing commands or installation flows, prefer `src/cli`.
+Do not add new code under `src/services`; that directory is not part of the target architecture.
 
 ## Repository References
 
@@ -46,8 +48,8 @@ npm run smoke:packages
 
 If you touch `mcp:install`, keep these aligned:
 
-- `src/services/cli/mcpInstallService.ts`
-- `src/services/cli/mcpInstallService.test.ts`
+- `src/cli/services/mcpInstallService.ts`
+- `src/cli/services/mcpInstallService.test.ts`
 - `README.md`
 - `docs/GUIDE.md`
 - `CHANGELOG.md`
