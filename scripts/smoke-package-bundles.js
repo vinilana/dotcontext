@@ -84,6 +84,10 @@ function smokeBundle(bundle) {
   assert(fs.existsSync(typesPath), `${bundle.slug}: types entry missing`);
   assert(fs.existsSync(path.join(bundleRoot, 'README.md')), `${bundle.slug}: README missing`);
   assert(fs.existsSync(path.join(bundleRoot, 'LICENSE')), `${bundle.slug}: LICENSE missing`);
+  assert(
+    !fs.existsSync(path.join(bundleRoot, 'dist', 'services')),
+    `${bundle.slug}: dist/services must not be published`
+  );
 
   if (bundle.bin) {
     assert(manifest.bin && manifest.bin[bundle.bin], `${bundle.slug}: bin entry missing`);
