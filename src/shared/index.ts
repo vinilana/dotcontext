@@ -15,7 +15,7 @@ export {
   createEmptyResult,
   mergeResults,
   addError,
-} from './types';
+} from './system/types';
 
 // Glob Patterns
 export {
@@ -27,7 +27,7 @@ export {
   globMultiple,
   buildExtensionPattern,
   shouldIgnore,
-} from './globPatterns';
+} from './fs/globPatterns';
 
 // UI Helpers
 export {
@@ -37,7 +37,7 @@ export {
   displayPhaseIndicator,
   createBox,
   SpinnerStatus,
-} from './uiHelpers';
+} from './system/uiHelpers';
 
 // Path Helpers
 export {
@@ -57,7 +57,7 @@ export {
   getExtension,
   getBasename,
   joinPaths,
-} from './pathHelpers';
+} from './fs/pathHelpers';
 
 // Context Root Resolver
 export {
@@ -68,7 +68,7 @@ export {
   resolveContextRoot,
   getContextPath as getContextPathResolved,
   getProjectRoot,
-} from './contextRootResolver';
+} from './context/contextRootResolver';
 
 // Tool Registry
 export {
@@ -91,7 +91,7 @@ export {
   getRulesImportSources,
   getAgentsImportSources,
   getSkillsImportSources,
-} from './toolRegistry';
+} from './registry/toolRegistry';
 
 // Content Type Registry
 export {
@@ -105,7 +105,7 @@ export {
   registerContentType,
   getContextPath,
   getIndexFile,
-} from './contentTypeRegistry';
+} from './context/contentTypeRegistry';
 
 // Context Layout Registry
 export {
@@ -114,11 +114,11 @@ export {
   getUntrackedContextLayoutEntries,
   type ContextLayoutClassification,
   type ContextLayoutEntry,
-} from './contextLayout';
+} from './context/contextLayout';
 
 // Execution helpers
 export {
   minimalUI,
   mockTranslate,
   toolExecutionContext,
-} from './executionContext';
+} from './system/executionContext';

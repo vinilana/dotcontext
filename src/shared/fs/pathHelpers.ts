@@ -10,7 +10,7 @@ import * as fs from 'fs-extra';
 import {
   resolveContextRoot,
   type ContextResolutionResult,
-} from './contextRootResolver';
+} from '../context/contextRootResolver';
 
 /**
  * Standard context paths for a repository
