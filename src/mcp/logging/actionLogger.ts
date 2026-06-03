@@ -7,9 +7,9 @@
 
 import * as fs from 'fs-extra';
 
-import { HarnessRuntimeStateService } from '../harness/runtimeStateService';
-import { HarnessWorkflowStateService } from '../harness/workflowStateService';
-import { resolveContextRoot } from '../shared/contextRootResolver';
+import { HarnessRuntimeStateService } from '../../harness/adapters/out/runtimeState/runtimeStateService';
+import { HarnessWorkflowStateService } from '../../harness/adapters/out/workflowState/workflowStateService';
+import { resolveContextRoot } from '../../shared/context/contextRootResolver';
 
 type ActionStatus = 'success' | 'error';
 

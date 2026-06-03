@@ -12,7 +12,7 @@ export {
   AIContextMCPServer,
   startMCPServer,
   type MCPServerOptions,
-} from '../services/mcp/mcpServer';
+} from './server';
 
 export {
   handleExplore,
@@ -45,4 +45,4 @@ export {
   type WorkflowAdvanceParams,
   type WorkflowManageParams,
   type MCPToolResponse,
-} from '../services/mcp/gatewayTools';
+} from './gateway';

@@ -1,0 +1,1 @@
+export { logMcpAction } from './actionLogger';

@@ -13,19 +13,19 @@ import { z } from 'zod';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
-import { readFileTool } from '../harness/contextTools';
+import { readFileTool } from '../../harness/application/context/contextTools';
 import { PathValidator, SecurityError } from '../../utils/pathSecurity';
-import { SemanticContextBuilder, type ContextFormat } from '../semantic/contextBuilder';
-import { ContextCache } from '../semantic/contextCache';
+import { SemanticContextBuilder, type ContextFormat } from '../../harness/adapters/out/semantic/contextBuilder';
+import { ContextCache } from '../../harness/adapters/out/semantic/contextCache';
 import { VERSION } from '../../version';
-import { WorkflowService } from '../workflow';
-import { logMcpAction } from './actionLogger';
+import { WorkflowService } from '../../harness/application/workflow';
+import { logMcpAction } from '../logging/actionLogger';
 import {
   PREVC_ROLES,
   getScaleName,
   ProjectScale,
-} from '../../workflow';
-import { AGENT_TYPES } from '../../workflow';
+} from '../../harness/domain/workflow';
+import { AGENT_TYPES } from '../../harness/domain/workflow';
 
 import {
   handleExplore,
@@ -51,7 +51,7 @@ import {
   type WorkflowAdvanceParams,
   type WorkflowManageParams,
   type MCPToolResponse,
-} from './gatewayTools';
+} from '../gatewayTools';
 
 export interface MCPServerOptions {
   /** Default repository path for tools */
