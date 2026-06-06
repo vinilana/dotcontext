@@ -47,6 +47,9 @@ output/
 # AI Context state files
 context-log.json
 
+# transient docs research artifact
+.docs-dossier.md
+
 # Temporary files
 *.tmp
 *.temp

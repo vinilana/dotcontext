@@ -1,0 +1,57 @@
+---
+title: dotcontext
+description: o dotcontext é um harness para o seu harness — a camada de contexto que mantém seu trabalho fluindo independente da ferramenta de IA que você usa, com contexto compartilhado, workflow PREVC, sensores, políticas, contratos de tarefa, replay e superfícies MCP/CLI.
+template: splash
+hero:
+  tagline: Um harness para o seu harness — a camada de contexto que mantém seu trabalho fluindo, não importa para qual ferramenta de IA você troque. Contexto compartilhado, workflow, políticas, sensores, contratos e histórico reproduzível, via MCP e CLI.
+  image:
+    file: ../../../assets/logo.svg
+  actions:
+    - text: Começar
+      link: /pt-br/getting-started/installation/
+      icon: right-arrow
+    - text: Início rápido
+      link: /pt-br/getting-started/quickstart/
+      icon: rocket
+      variant: secondary
+    - text: GitHub
+      link: https://github.com/vinilana/dotcontext
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## O que é o dotcontext?
+
+O **dotcontext é um harness para o seu harness.** Fornecemos a camada de contexto necessária para manter o trabalho fluindo, não importa para qual ferramenta de IA você troque — contexto de projeto compartilhado, estrutura de workflow, políticas, sensores, contratos de tarefa, histórico de execução reproduzível e acesso via MCP, tudo em um único sistema. O objetivo não é só dar mais contexto ao modelo — é tornar a execução do agente **legível, restrita, reutilizável e auditável**.
+
+O repositório se organiza em torno de um runtime e três superfícies de pacote:
+
+```text
+cli -> harness <- mcp
+```
+
+<CardGrid stagger>
+  <Card title="Contexto compartilhado" icon="open-book">
+    Um diretório `.context/` para conhecimento durável do projeto — docs, agents, skills, plans — além do estado de runtime gerado.
+  </Card>
+  <Card title="Workflow PREVC" icon="random">
+    Plan → Review → Execute → Verify → Confirm, com roteamento adaptativo por escala — de typos a sistemas grandes.
+  </Card>
+  <Card title="Sensores & políticas" icon="approve-check">
+    Checagens de qualidade e regras de aprovação aplicadas pelo runtime, não escondidas em prompts.
+  </Card>
+  <Card title="Replay & auditoria" icon="seti:clock">
+    Sessões duráveis, traces, contratos de tarefa e datasets de falha que você pode reproduzir e inspecionar.
+  </Card>
+</CardGrid>
+
+## Comece por aqui
+
+<CardGrid>
+  <LinkCard title="Instalação" href="/pt-br/getting-started/installation/" description="Instale via MCP (recomendado, sem API key) ou pela CLI." />
+  <LinkCard title="Início rápido" href="/pt-br/getting-started/quickstart/" description="Faça o bootstrap do contexto, planeje uma tarefa e rode o workflow em minutos." />
+  <LinkCard title="Conceitos" href="/pt-br/concepts/context-convention/" description="A convenção .context, o runtime do harness e o PREVC." />
+  <LinkCard title="Referência" href="/pt-br/reference/mcp-tools/" description="Tools MCP, comandos CLI, o layout .context e configuração." />
+</CardGrid>

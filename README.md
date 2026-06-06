@@ -6,9 +6,9 @@
 
 > **Formerly `@ai-coders/context`.** The package was renamed to avoid confusion with Context7 and other generic "context" tools. The `.context/` directory convention is unchanged. See [Migration from @ai-coders/context](#migration-from-ai-coderscontext).
 
-**Dotcontext is a harness engineering runtime for AI-assisted software delivery.**
+**Dotcontext is a harness for your harness.** We provide the contextual layer you need to keep the work going no matter which tool you switch to.
 
-It gives coding agents a real operating environment instead of a loose prompt and scattered project conventions. Dotcontext combines shared project context, workflow structure, policies, sensors, task contracts, replayable execution history, and MCP access into one system.
+Instead of re-teaching every AI tool your project from scratch, dotcontext keeps a durable contextual layer in your repo — shared project context, workflow structure, policies, sensors, task contracts, replayable execution history, and MCP access — that travels with the project across whatever tool you use next.
 
 The point is not only to give a model more context. The point is to make agent execution legible, constrained, reusable, and auditable.
 
@@ -519,6 +519,10 @@ npm run smoke:packages
 The package build prepares local bundles in `.release/packages/cli`, `.release/packages/harness`, and `.release/packages/mcp`.
 
 ## Documentation
+
+📖 **Full documentation site** (bilingual EN / PT-BR), built with Astro + Starlight, lives in [`website/`](./website/). Run it locally with `cd website && npm install && npm run dev`, or build the static site with `npm run build`. It covers installation, a quickstart, all concepts (the `.context` convention, the harness runtime, PREVC, sensors, policies, task contracts, replay), guides, and a full MCP/CLI reference.
+
+Other references in this repo:
 
 - [User Guide](./docs/GUIDE.md) - current usage guide
 - [Architecture](./ARCHITECTURE.md) - harness architecture and package boundaries
