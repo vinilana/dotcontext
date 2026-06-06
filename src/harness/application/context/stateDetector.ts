@@ -7,13 +7,16 @@
  * - ready: .context exists with filled content
  * - outdated: .context is older than source code
  *
- * This supports local operator workflows and belongs to the CLI boundary.
+ * This is a pure filesystem project-state detector consumed by the reusable
+ * harness runtime (e.g. quick-sync orchestration). It depends only on the
+ * working tree and shared utils, so it lives in the harness rather than the
+ * CLI surface. The CLI barrel re-exports it for operator-facing consumers.
  */
 
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { glob } from 'glob';
-import { needsFill, getFilledStats } from '../../utils/frontMatter';
+import { needsFill, getFilledStats } from '../../../utils/frontMatter';
 
 export type ProjectState = 'new' | 'unfilled' | 'ready' | 'outdated';
 

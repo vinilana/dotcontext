@@ -19,9 +19,9 @@ describe('HarnessExecutionService', () => {
 
   it('enforces policy before running a sensor', async () => {
     const session = await service.createSession({ name: 'policy-sensor' });
-    await fs.ensureDir(path.join(tempDir, '.context', 'harness'));
+    await fs.ensureDir(path.join(tempDir, '.context', 'config'));
     await fs.writeJson(
-      path.join(tempDir, '.context', 'harness', 'policy.json'),
+      path.join(tempDir, '.context', 'config', 'policy.json'),
       {
         version: 1,
         defaultEffect: 'allow',

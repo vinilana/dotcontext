@@ -15,14 +15,14 @@ describe('PrevcStatusManager canonical persistence', () => {
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'prevc-status-'));
     contextPath = path.join(tempDir, '.context');
-    manager = new PrevcStatusManager(contextPath, new HarnessWorkflowStateService({ contextPath }));
+    manager = new PrevcStatusManager(new HarnessWorkflowStateService({ contextPath }));
   });
 
   afterEach(async () => {
     await fs.remove(tempDir);
   });
 
-  it('stores canonical PREVC state under .context/harness/workflows without creating status.yaml', async () => {
+  it('stores canonical PREVC state under .context/runtime/workflows', async () => {
     const created = await manager.create({
       name: 'canonical-alpha',
       scale: ProjectScale.SMALL,
@@ -45,42 +45,5 @@ describe('PrevcStatusManager canonical persistence', () => {
     const canonical = await fs.readJson(canonicalPath);
     expect(canonical.workflowType).toBe('prevc');
     expect(canonical.status.project.name).toBe('canonical-alpha');
-  });
-
-  it('migrates legacy status.yaml into canonical harness workflow state on load', async () => {
-    const projectionPath = path.join(contextPath, 'workflow', 'status.yaml');
-    await fs.ensureDir(path.dirname(projectionPath));
-    await fs.writeFile(projectionPath, [
-      'project:',
-      '  name: "legacy-alpha"',
-      '  scale: SMALL',
-      '  started: "2026-04-11T00:00:00.000Z"',
-      '  current_phase: P',
-      '',
-      'phases:',
-      '  P:',
-      '    status: in_progress',
-      '    started_at: "2026-04-11T00:00:00.000Z"',
-      '  R:',
-      '    status: pending',
-      '  E:',
-      '    status: pending',
-      '  V:',
-      '    status: pending',
-      '  C:',
-      '    status: pending',
-      '',
-    ].join('\n'), 'utf-8');
-
-    const loaded = await manager.load();
-    const canonicalPath = path.join(contextPath, 'runtime', 'workflows', 'prevc.json');
-
-    expect(loaded.project.name).toBe('legacy-alpha');
-    expect(await fs.pathExists(canonicalPath)).toBe(true);
-    expect(await fs.pathExists(projectionPath)).toBe(false);
-
-    const canonical = await fs.readJson(canonicalPath);
-    expect(canonical.status.project.name).toBe('legacy-alpha');
-    expect(canonical.status.project.current_phase).toBe('P');
   });
 });

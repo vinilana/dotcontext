@@ -23,4 +23,4 @@ export {
   type ProjectState,
   type StateDetectionResult,
   type StateDetectorOptions,
-} from './stateDetector';
+} from '../../harness/application/context/stateDetector';

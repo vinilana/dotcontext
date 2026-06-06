@@ -65,14 +65,6 @@ function buildExportPresets(): Record<string, ExportTarget[]> {
     presets[toolId] = targets;
   }
 
-  // Add cursor legacy .cursorrules file (in addition to directory)
-  if (presets.cursor) {
-    presets.cursor = [
-      { name: 'cursorrules', path: '.cursorrules', format: 'single', description: 'Cursor AI rules file' },
-      ...presets.cursor,
-    ];
-  }
-
   // Add universal AGENTS.md
   presets.agents = [
     { name: 'agents-md', path: 'AGENTS.md', format: 'single', description: 'Universal AGENTS.md file' },

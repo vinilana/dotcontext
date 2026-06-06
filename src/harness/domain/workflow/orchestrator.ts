@@ -62,7 +62,7 @@ export class PrevcOrchestrator {
   constructor(contextPath: string, workflowState: HarnessWorkflowStateService) {
     this.repoPath = path.dirname(contextPath);
     this.contextPath = contextPath;
-    this.statusManager = new PrevcStatusManager(contextPath, workflowState);
+    this.statusManager = new PrevcStatusManager(workflowState);
     this.gateChecker = new WorkflowGateChecker();
     // Pass statusManager to PlanLinker for breadcrumb trail logging
     this.planLinker = new PlanLinker(path.dirname(contextPath), this.statusManager);

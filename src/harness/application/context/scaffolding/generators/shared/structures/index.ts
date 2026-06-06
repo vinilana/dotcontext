@@ -1,8 +1,7 @@
 /**
  * Scaffold structures index
  *
- * This file serves as the main barrel export for all scaffold structures,
- * providing backward compatibility with the original scaffoldStructures.ts import path.
+ * This file serves as the main barrel export for all scaffold structures.
  */
 
 // Types

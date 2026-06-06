@@ -11,7 +11,7 @@ import type { CLIInterface } from '../../../../utils/cliUI';
 import type { TranslateFn } from '../../../../utils/i18n';
 import { SyncService } from '../sync';
 import { SkillExportService, ExportRulesService } from '../export';
-import { StateDetector } from '../../../../cli/services/state';
+import { StateDetector } from '../../context/stateDetector';
 import { createSkillRegistry } from '../../../domain/workflow/skills';
 
 export interface QuickSyncServiceDependencies {

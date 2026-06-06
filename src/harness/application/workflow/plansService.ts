@@ -16,7 +16,6 @@ import {
 import { PrevcStatusManager } from '../../domain/workflow/status/statusManager';
 import { GitService } from '../../../utils/gitService';
 import { resolveRuntimeLayoutFromRepo } from '../../../shared/fs/pathHelpers';
-import { migrateLegacyContextLayoutSync } from '../../../shared/fs/legacyLayoutMigration';
 import type { PrevcPhase } from '../../domain/workflow/types';
 
 export interface HarnessPlansServiceOptions {
@@ -28,9 +27,8 @@ export class HarnessPlansService {
 
   constructor(private readonly options: HarnessPlansServiceOptions) {
     const contextPath = path.join(this.repoPath, '.context');
-    migrateLegacyContextLayoutSync(contextPath);
     const workflowStateService = new HarnessWorkflowStateService({ contextPath });
-    const statusManager = new PrevcStatusManager(contextPath, workflowStateService);
+    const statusManager = new PrevcStatusManager(workflowStateService);
     this.linker = createPlanLinker(this.repoPath, statusManager, true);
   }
 

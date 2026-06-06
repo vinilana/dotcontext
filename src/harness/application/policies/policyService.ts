@@ -2,7 +2,6 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { StackDetector, type StackInfo } from '../context/intelligence/stack';
 import { resolveRuntimeLayoutFromRepo } from '../../../shared/fs/pathHelpers';
-import { migrateLegacyContextLayout } from '../../../shared/fs/legacyLayoutMigration';
 
 export type HarnessPolicyEffect = 'allow' | 'deny' | 'require_approval';
 export type HarnessPolicyRisk = 'low' | 'medium' | 'high' | 'critical';
@@ -295,7 +294,6 @@ export class HarnessPolicyService {
   }
 
   async loadPolicy(): Promise<HarnessPolicyDocument> {
-    await migrateLegacyContextLayout(path.join(this.repoPath, '.context'));
     if (!(await fs.pathExists(this.policyPath))) {
       return {
         version: 1,
@@ -313,7 +311,6 @@ export class HarnessPolicyService {
   }
 
   async savePolicy(policy: HarnessPolicyDocument): Promise<HarnessPolicyDocument> {
-    await migrateLegacyContextLayout(path.join(this.repoPath, '.context'));
     await fs.ensureDir(path.dirname(this.policyPath));
     const normalized: HarnessPolicyDocument = {
       version: 1,

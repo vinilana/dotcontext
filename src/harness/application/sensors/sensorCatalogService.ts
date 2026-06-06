@@ -9,10 +9,6 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { StackDetector, type StackInfo } from '../context/intelligence/stack/stackDetector';
 import { resolveRuntimeLayout } from '../../../shared/fs/pathHelpers';
-import {
-  migrateLegacyContextLayout,
-  migrateLegacyContextLayoutSync,
-} from '../../../shared/fs/legacyLayoutMigration';
 
 export type HarnessSensorCatalogSeverity = 'critical' | 'warning' | 'info';
 
@@ -85,7 +81,6 @@ export class HarnessSensorCatalogService {
   }
 
   async load(): Promise<HarnessSensorCatalogDocument | null> {
-    await migrateLegacyContextLayout(this.contextPath);
     if (!(await fs.pathExists(this.configPath))) {
       return null;
     }
@@ -94,7 +89,6 @@ export class HarnessSensorCatalogService {
   }
 
   loadSync(): HarnessSensorCatalogDocument | null {
-    migrateLegacyContextLayoutSync(this.contextPath);
     if (!fs.existsSync(this.configPath)) {
       return null;
     }

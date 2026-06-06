@@ -6,7 +6,6 @@ const INTEGRATIONS_ROOT = path.join(SRC_ROOT, 'integrations');
 const HARNESS_DOMAIN_ROOT = path.join(SRC_ROOT, 'harness', 'domain');
 const HARNESS_APPLICATION_ROOT = path.join(SRC_ROOT, 'harness', 'application');
 const HARNESS_ADAPTERS_ROOT = path.join(SRC_ROOT, 'harness', 'adapters');
-const MIGRATION_SHIM = path.join(SRC_ROOT, 'shared', 'fs', 'legacyLayoutMigration');
 const FORBIDDEN_INTEGRATION_ROOTS = [
   path.join(SRC_ROOT, 'cli'),
   path.join(SRC_ROOT, 'mcp'),
@@ -137,8 +136,8 @@ function isForbiddenIntegrationImport(reference: ImportReference): boolean {
  *
  * Relative specifiers are already resolved by `getImportReferences`. Bare
  * specifiers are resolved against the `src` baseUrl (matching tsconfig), which
- * is how a domain file could otherwise reach `shared/fs/legacyLayoutMigration`
- * or `harness/application/...` without a leading `./`.
+ * is how a domain file could otherwise reach `harness/application/...` without
+ * a leading `./`.
  */
 function resolveReferencePath(reference: ImportReference): string | undefined {
   if (reference.resolvedPath) {
@@ -150,10 +149,6 @@ function resolveReferencePath(reference: ImportReference): string | undefined {
   return path.resolve(SRC_ROOT, reference.specifier);
 }
 
-/** True when the (extension-stripped) resolved path equals the migration shim. */
-function isMigrationShim(resolved: string): boolean {
-  return resolved.replace(/\.(ts|js)$/, '') === MIGRATION_SHIM;
-}
 
 function isHarnessIntegrationImport(reference: ImportReference): boolean {
   if (
@@ -217,6 +212,28 @@ describe('architecture boundaries', () => {
     expect(violations).toEqual([]);
   });
 
+  it('keeps the harness runtime independent from cli and mcp surfaces', () => {
+    // The asymmetric boundary `cli -> harness <- mcp` requires that harness
+    // depend on neither adapter. cli/mcp are adapters over the harness; the
+    // harness must stay reusable for future adapters (HTTP, workers, SDKs).
+    const files = HARNESS_ROOTS.flatMap((root) => walk(root));
+    expect(files.length).toBeGreaterThan(0);
+
+    const violations = files
+      .flatMap(getImportReferences)
+      .filter(isForbiddenIntegrationImport);
+
+    if (violations.length > 0) {
+      throw new Error(
+        'Harness must not import cli or mcp surfaces ' +
+          '(cli -> harness <- mcp is one-directional).\n\n' +
+          formatViolations(violations)
+      );
+    }
+
+    expect(violations).toEqual([]);
+  });
+
   it('prevents harness core modules from importing host integrations', () => {
     const files = HARNESS_ROOTS.flatMap((root) => walk(root));
     expect(files.length).toBeGreaterThan(0);
@@ -228,28 +245,6 @@ describe('architecture boundaries', () => {
     if (violations.length > 0) {
       throw new Error(
         `Harness modules must not import host integrations.\n\n${formatViolations(violations)}`
-      );
-    }
-
-    expect(violations).toEqual([]);
-  });
-
-  it('domain layer must not import the legacy-layout migration shim', () => {
-    // The migration shim performs filesystem mutation (I/O). The domain layer
-    // must never trigger it — migration is an application/adapter concern.
-    // Importing the PURE path helper (src/shared/fs/pathHelpers) is allowed.
-    const files = walk(HARNESS_DOMAIN_ROOT);
-    expect(files.length).toBeGreaterThan(0);
-
-    const violations = files.flatMap(getImportReferences).filter((reference) => {
-      const resolved = resolveReferencePath(reference);
-      return resolved ? isMigrationShim(resolved) : false;
-    });
-
-    if (violations.length > 0) {
-      throw new Error(
-        'src/harness/domain must not import the migration shim ' +
-          `(src/shared/fs/legacyLayoutMigration).\n\n${formatViolations(violations)}`
       );
     }
 

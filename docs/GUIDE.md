@@ -2,7 +2,7 @@
 
 `dotcontext` ships separate CLI and MCP package surfaces for shared AI context, PREVC workflow tracking, and context import/export across coding tools.
 
-This guide reflects the current product shape in `0.9.x`:
+This guide reflects the current product shape in `1.0.x`:
 
 - Context creation and AI-generated fills happen through MCP-connected AI tools.
 - The standalone CLI is still useful for sync/import operations, MCP setup, and hidden `admin` utilities.
@@ -182,7 +182,8 @@ The exact files vary by project type, but the working structure is centered on `
 ├── agents/      # Agent playbooks
 ├── skills/      # On-demand expertise guides
 ├── plans/       # Plan templates and execution tracking
-└── workflow/    # PREVC workflow state
+├── config/      # Authored policy.json and sensors.json (version-controlled)
+└── runtime/     # Generated workflow/session state (gitignored)
 ```
 
 The generated docs are project-aware. You should expect the content to differ between CLI tools, libraries, backends, frontends, and monorepos.

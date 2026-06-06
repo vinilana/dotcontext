@@ -203,7 +203,6 @@ export function getScaleName(scale: ProjectScale): string {
 
 /**
  * Get scale from string name
- * Maps 'enterprise' to LARGE for backward compatibility
  */
 export function getScaleFromName(name: string): ProjectScale | null {
   const nameMap: Record<string, ProjectScale> = {
@@ -211,7 +210,6 @@ export function getScaleFromName(name: string): ProjectScale | null {
     small: ProjectScale.SMALL,
     medium: ProjectScale.MEDIUM,
     large: ProjectScale.LARGE,
-    enterprise: ProjectScale.LARGE, // Legacy migration
   };
   return nameMap[name.toLowerCase()] ?? null;
 }

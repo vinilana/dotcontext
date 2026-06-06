@@ -24,7 +24,6 @@ import {
   type ContextLayoutEntry,
 } from '../../../shared';
 import { resolveRuntimeLayout } from '../../../shared/fs/pathHelpers';
-import { migrateLegacyContextLayout } from '../../../shared/fs/legacyLayoutMigration';
 import { HarnessWorkflowStateService } from '../../adapters/out/workflowState/workflowStateService';
 
 export interface HarnessContextServiceOptions {
@@ -110,7 +109,6 @@ export class HarnessContextService {
   async bootstrapStatus(repoPath?: string): Promise<HarnessBootstrapStatusResult> {
     const resolvedRepoPath = path.resolve(repoPath || this.repoPath);
     const outputDir = path.join(resolvedRepoPath, '.context');
-    await migrateLegacyContextLayout(outputDir);
     const scaffoldStatus = await this.check(resolvedRepoPath) as Record<string, unknown>;
     const workflowStateService = new HarnessWorkflowStateService({ contextPath: outputDir });
 

@@ -1,8 +1,8 @@
 /**
  * PREVC Status Manager
  *
- * Coordinates canonical PREVC workflow state using a persistence service,
- * pure transition helpers, and a legacy YAML migrator.
+ * Coordinates canonical PREVC workflow state using a persistence service and
+ * pure transition helpers.
  *
  * No in-memory cache is maintained: canonical state lives in a single small
  * JSON file under `.context/runtime/workflows/`, reads are cheap, and an
@@ -48,35 +48,23 @@ import {
   updatePhase as updatePhaseOnStatus,
   updateRole as updateRoleOnStatus,
 } from './statusTransitions';
-import { LegacyWorkflowStatusMigrator } from '../legacy/legacyWorkflowStatusMigrator';
 import { getDefaultSettings } from '../gates';
 
 interface StatusReadResult {
   status: PrevcStatus;
-  fromLegacy: boolean;
   changed: boolean;
-  hasLegacyProjection: boolean;
 }
 
 export class PrevcStatusManager {
-  private readonly legacyMigrator: LegacyWorkflowStatusMigrator;
-
   constructor(
-    contextPath: string,
     private readonly workflowState: HarnessWorkflowStateService
-  ) {
-    this.legacyMigrator = new LegacyWorkflowStatusMigrator(contextPath);
-  }
+  ) {}
 
   async exists(): Promise<boolean> {
-    return (await this.workflowState.exists()) || (await this.legacyMigrator.exists());
+    return this.workflowState.exists();
   }
 
-  private finalizeRead(
-    raw: PrevcStatus | null,
-    fromLegacy: boolean,
-    hasLegacyProjection: boolean
-  ): StatusReadResult {
+  private finalizeRead(raw: PrevcStatus | null): StatusReadResult {
     if (!raw) {
       throw new Error('Workflow status not found. Run "workflow init" first.');
     }
@@ -84,46 +72,33 @@ export class PrevcStatusManager {
     const normalized = normalizeLoadedStatus(raw);
     return {
       status: normalized.status,
-      fromLegacy,
       changed: normalized.changed,
-      hasLegacyProjection,
     };
   }
 
   private async readStatus(): Promise<StatusReadResult> {
-    const hasCanonicalState = await this.workflowState.exists();
-    const hasLegacyProjection = await this.legacyMigrator.exists();
-
-    const raw = hasCanonicalState
+    const raw = (await this.workflowState.exists())
       ? await this.workflowState.load()
-      : hasLegacyProjection
-        ? await this.legacyMigrator.load()
-        : null;
+      : null;
 
-    return this.finalizeRead(raw, !hasCanonicalState && hasLegacyProjection, hasLegacyProjection);
+    return this.finalizeRead(raw);
   }
 
   private readStatusSync(): StatusReadResult {
-    const hasCanonicalState = this.workflowState.existsSync();
-    const hasLegacyProjection = this.legacyMigrator.existsSync();
-
-    const raw = hasCanonicalState
+    const raw = this.workflowState.existsSync()
       ? this.workflowState.loadSync()
-      : hasLegacyProjection
-        ? this.legacyMigrator.loadSync()
-        : null;
+      : null;
 
-    return this.finalizeRead(raw, !hasCanonicalState && hasLegacyProjection, hasLegacyProjection);
+    return this.finalizeRead(raw);
   }
 
   private async persistStatus(status: PrevcStatus): Promise<void> {
     await this.workflowState.save(status);
-    await this.legacyMigrator.remove();
   }
 
   async load(): Promise<PrevcStatus> {
     const read = await this.readStatus();
-    if (read.changed || read.fromLegacy || read.hasLegacyProjection) {
+    if (read.changed) {
       await this.persistStatus(read.status);
     }
     return read.status;
@@ -140,12 +115,10 @@ export class PrevcStatusManager {
 
   async remove(): Promise<void> {
     await this.workflowState.remove();
-    await this.legacyMigrator.remove();
   }
 
   async archive(name: string): Promise<void> {
     await this.workflowState.archive(name);
-    await this.legacyMigrator.archive(name);
   }
 
   async create(options: {

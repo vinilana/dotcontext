@@ -14,7 +14,6 @@ import { ROLE_DISPLAY_NAMES } from '../../domain/workflow/roles';
 import { getScaleName, getScaleFromName } from '../../domain/workflow/scaling';
 import { PrevcOrchestrator, type WorkflowSummary } from '../../domain/workflow/orchestrator';
 import { resolveRuntimeLayout } from '../../../shared/fs/pathHelpers';
-import { migrateLegacyContextLayoutSync } from '../../../shared/fs/legacyLayoutMigration';
 import {
   PrevcStatus,
   PrevcPhase,
@@ -110,7 +109,6 @@ export class WorkflowService {
     this.contextPath = path.basename(resolvedPath) === '.context'
       ? resolvedPath
       : path.join(resolvedPath, '.context');
-    migrateLegacyContextLayoutSync(this.contextPath);
     this.harness = new HarnessSessionFacade({
       repoPath: this.repoPath,
       contextPath: this.contextPath,

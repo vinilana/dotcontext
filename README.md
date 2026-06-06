@@ -452,22 +452,22 @@ npx -y @dotcontext/cli@latest admin report
 
 ## Sync and Tool Surface Support
 
-Dotcontext can export/import rules, agents, and skills across current and legacy tool surfaces.
+Dotcontext can export/import rules, agents, and skills across these current tool surfaces. As of 1.0.0, legacy flat-file and old-layout surfaces (e.g. `.cursorrules`, `.windsurfrules`, `.clinerules`, `.continuerules`, `.github/copilot/*`, `.codex/instructions.md`, the Antigravity `.agent/*` layout, older `.claude` memory files) are no longer imported or exported.
 
-| Tool | Primary surface | Legacy / compatibility surface |
-| --- | --- | --- |
-| Cursor | `.cursor/rules/*.mdc`, `.cursor/agents` | `.cursorrules`, `.cursor/rules/*.md` |
-| Claude Code | `CLAUDE.md`, `.claude/agents`, `.claude/skills` | older memory files under `.claude/` |
-| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/skills` | `.github/copilot/*`, `.github/.copilot/*` |
-| Windsurf | `.windsurf/rules`, `.windsurf/agents`, `.windsurf/skills` | `.windsurfrules`, older `.windsurf/` rule files |
-| Gemini CLI | `GEMINI.md`, `.gemini/skills`, `.gemini/settings.json` | older `.gemini/` config layouts |
-| Codex CLI | `AGENTS.md`, `.codex/skills`, `.codex/config.toml` | `.codex/instructions.md` |
-| Google Antigravity | `.agents/rules`, `.agents/agents`, `.agents/workflows` | `.agent/` layouts |
-| Trae AI | `.trae/rules`, `.trae/agents` | older `.trae/` rule files |
-| Cline | `.cline/rules`, `.cline/agents` | `.clinerules` |
-| Continue.dev | `.continue/rules`, `.continue/agents` | `.continuerules`, `.continue/config.json` |
-| Aider | `CONVENTIONS.md` | `.aider.conf.yml`, `.aider/conventions.md` |
-| Zed | `.zed/rules` | `.zed/settings.json` |
+| Tool | Primary surface |
+| --- | --- |
+| Cursor | `.cursor/rules/*.mdc`, `.cursor/agents` |
+| Claude Code | `CLAUDE.md`, `.claude/agents`, `.claude/skills` |
+| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/skills` |
+| Windsurf | `.windsurf/rules`, `.windsurf/agents`, `.windsurf/skills` |
+| Gemini CLI | `GEMINI.md`, `.gemini/skills` |
+| Codex CLI | `AGENTS.md`, `.codex/skills`, `.codex/config.toml` |
+| Google Antigravity | `.agents/rules`, `.agents/agents`, `.agents/workflows` |
+| Trae AI | `.trae/rules`, `.trae/agents` |
+| Cline | `.cline/rules`, `.cline/agents` |
+| Continue.dev | `.continue/rules`, `.continue/agents` |
+| Aider | `CONVENTIONS.md` |
+| Zed | `.zed/rules` |
 
 ## Built-In Agents and Skills
 

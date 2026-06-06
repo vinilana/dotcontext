@@ -6,7 +6,7 @@ import { SemanticContextBuilder } from '../../adapters/out/semantic/contextBuild
 import { DEFAULT_EXCLUDE_PATTERNS } from '../../adapters/out/semantic/types';
 import { FileMapper } from '../../../utils/fileMapper';
 import { needsFill } from '../../../utils/frontMatter';
-import { getScaffoldStructure, serializeStructureForAI } from './scaffolding/generators/shared/scaffoldStructures';
+import { getScaffoldStructure, serializeStructureForAI } from './scaffolding/generators/shared/structures';
 import { DocumentationGenerator } from './scaffolding/generators/documentation/documentationGenerator';
 import { SemanticSnapshotService } from '../../adapters/out/semantic';
 import { AgentGenerator } from './scaffolding/generators/agents/agentGenerator';

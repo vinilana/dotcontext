@@ -5,7 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-06-06
+
+This is the first stable release. It removes **all legacy backwards-compatibility
+code**. Projects, tool configs, and on-disk state must already be on the current
+formats — there is no automatic migration from pre-1.0 layouts.
+
+### Removed — BREAKING CHANGES
+
+- **Legacy `.context` layout auto-migration removed.** Pre-1.0 checkouts using
+  `.context/harness/` or `.context/workflow/` are **no longer migrated on access**.
+  The runtime reads only the canonical `.context/config/` (authored config) and
+  `.context/runtime/` (generated state) layout. Migrate old folders manually before
+  upgrading. (Removed `src/shared/fs/legacyLayoutMigration.ts` and all call sites.)
+- **Legacy workflow `status.yaml` migrator removed.** `.context/workflow/status.yaml`
+  is no longer read or migrated into canonical `runtime/workflows/prevc.json`.
+  (Removed `src/harness/domain/workflow/legacy/`.)
+- **Legacy harness-session binding fallback removed.** The old
+  `.context/workflow/harness-session.json` binding is no longer read, rewritten,
+  or archived. Bindings live only in `runtime/workflows/prevc.json`.
+- **Legacy tool-surface import/export targets removed.** Imports and exports now
+  cover only current-format surfaces. Dropped: `.cursorrules` and `.cursor/rules/*.md`;
+  older `.claude/*.memory` and `.claude/settings.json`; `.github/copilot/*` and
+  `.github/.copilot/*`; `.windsurfrules`; `.clinerules`; `.continuerules` and
+  `.continue/config.json`; `.codex/instructions.md`; the Antigravity `.agent/*`
+  layout (use `.agents/*`).
+- **Legacy Cursor `.cursorrules` export preset removed.** Exporting to Cursor writes
+  `.cursor/rules` (`.mdc`) only — the flat `.cursorrules` file is no longer emitted.
+- **Deprecated re-export shims removed:** `src/mcp/mcpServer.ts`,
+  `src/mcp/mcpInstallService.ts`, `src/mcp/actionLogger.ts`, `src/mcp/gatewayTools.ts`,
+  `src/cli/services/stateDetector.ts`, `src/cli/services/state/`, and
+  `…/scaffolding/generators/shared/scaffoldStructures.ts`. Import from the canonical
+  modules instead (`src/mcp/server`, `src/mcp/logging`, `src/mcp/gateway`,
+  `src/harness/application/context/stateDetector`, `…/generators/shared/structures`).
+- **Legacy `enterprise` project scale removed.** Use `large`;
+  `getScaleFromName('enterprise')` no longer maps to `LARGE`.
+- **Deprecated role helpers removed:** `SPECIALIST_TO_ROLE`, `getRoleForSpecialist`,
+  and `getSpecialistsForRole` (`src/harness/domain/workflow/roles.ts`). Use the
+  agent-based orchestration model (`ROLE_TO_AGENTS`).
+- **`PrevcStatusManager` constructor signature changed** from
+  `new PrevcStatusManager(contextPath, workflowState)` to
+  `new PrevcStatusManager(workflowState)` — the legacy `contextPath` argument
+  (only used to locate the old `status.yaml`) is gone.
+- **Stopped gitignoring legacy runtime paths.** `.context/harness/**` and
+  `.context/workflow/**` are no longer added to the generated `.gitignore`.
 
 ### Changed
 
@@ -17,10 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `runtime/contracts/` — task and handoff contracts (was `harness/contracts`)
     - `runtime/evaluations/{replays,datasets}/` — replay and failure-dataset output (was `harness/replays`, `harness/datasets`)
   - All paths now resolve through a single source of truth (`resolveRuntimeLayout` in `src/shared/fs/pathHelpers.ts`) instead of hand-built `'harness'`/`'workflow'` path segments.
-  - Durable artifacts (config + workflow state) are migrated automatically on first access via `migrateLegacyContextLayout`; ephemeral state regenerates. Legacy `.context/harness/` and `.context/workflow/` remain gitignored for un-migrated checkouts. The `src/harness` code module is unchanged — only the on-disk data folder moved.
-  - Task and handoff contracts are migrated too (they are durable: `prevc.json` bindings reference task contracts by id, so contracts must travel with the workflow state).
-  - Migration is best-effort: failures never block normal operation (they log a warning and retry on a later access), and a divergence — both legacy and new locations holding data — leaves the new location untouched (it wins) with a one-time warning.
-  - A layering test now forbids `src/harness/domain` code from importing the migration shim (`src/shared/fs/legacyLayoutMigration`) or the application/adapters layers, keeping the domain decoupled from migration concerns.
+  - The `src/harness` code module is unchanged — only the on-disk data folder moved. **1.0.0 does not migrate pre-1.0 layouts** (see Removed, above); move `.context/harness/` and `.context/workflow/` to `.context/config/` and `.context/runtime/` manually if upgrading an old checkout.
+  - A layering test forbids `src/harness/domain` code from importing the application/adapters layers, and a boundary test forbids `src/harness` from importing the `cli`/`mcp` surfaces, keeping the runtime decoupled and reusable.
 
 ### Added
 

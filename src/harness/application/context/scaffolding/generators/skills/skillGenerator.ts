@@ -25,7 +25,7 @@ import {
 import {
   getScaffoldStructure,
   serializeStructureAsMarkdown,
-} from '../shared/scaffoldStructures';
+} from '../shared/structures';
 
 export interface SkillGeneratorOptions {
   /** Repository path */

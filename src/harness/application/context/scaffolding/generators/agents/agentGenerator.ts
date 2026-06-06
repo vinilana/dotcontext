@@ -12,7 +12,7 @@ import {
   serializeFrontmatter,
 } from '../../../../../../types/scaffoldFrontmatter';
 import { PrevcPhase } from '../../../../../domain/workflow/types';
-import { getScaffoldStructure, serializeStructureAsMarkdown } from '../shared/scaffoldStructures';
+import { getScaffoldStructure, serializeStructureAsMarkdown } from '../shared/structures';
 import { AutoFillService, AutoFillContext } from '../../../intelligence/autoFill';
 import { StackDetector, StackInfo } from '../../../intelligence/stack';
 

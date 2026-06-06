@@ -15,7 +15,7 @@ import {
   serializeFrontmatter,
   DocScaffoldFrontmatter,
 } from '../../../../../../types/scaffoldFrontmatter';
-import { getScaffoldStructure, ScaffoldStructure, serializeStructureAsMarkdown } from '../shared/scaffoldStructures';
+import { getScaffoldStructure, ScaffoldStructure, serializeStructureAsMarkdown } from '../shared/structures';
 import { AutoFillService, AutoFillContext } from '../../../intelligence/autoFill';
 
 /**

@@ -74,7 +74,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     paths: {
       rulesExport: 'CLAUDE.md',
       rulesFormat: 'single',
-      rulesImport: ['**/.claude/memories/**/*.md', '**/.claude/**/*.memory', '**/.claude/settings.json'],
+      rulesImport: ['**/.claude/memories/**/*.md'],
       rulesImportPaths: ['.claude/memories', path.join(os.homedir(), '.claude', 'memories')],
       agentsExport: '.claude/agents',
       agentsImport: ['**/.claude/agents/**/*.md'],
@@ -95,13 +95,12 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       rulesExport: '.cursor/rules',
       rulesFormat: 'directory',
       rulesFileExtension: '.mdc',
-      rulesImport: ['**/.cursorrules', '**/.cursor/.cursorrules', '**/.cursor/rules/**/*.md', '**/.cursor/rules/**/*.mdc'],
-      rulesImportPaths: ['.cursorrules', '.cursor/.cursorrules', '.cursor/rules'],
+      rulesImport: ['**/.cursor/rules/**/*.mdc'],
+      rulesImportPaths: ['.cursor/rules'],
       agentsExport: '.cursor/agents',
       agentsImport: ['**/.cursor/agents/**/*.md'],
     },
     description: 'Cursor AI rules and agents',
-    specialFiles: ['.cursorrules'],
   },
 
   // GitHub Copilot
@@ -113,8 +112,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     paths: {
       rulesExport: '.github/copilot-instructions.md',
       rulesFormat: 'single',
-      rulesImport: ['**/.github/copilot-instructions.md', '**/.github/instructions/**/*.instructions.md', '**/.github/copilot/**/*', '**/.github/.copilot/**/*'],
-      rulesImportPaths: ['.github/copilot-instructions.md', '.github/instructions', '.github/copilot'],
+      rulesImport: ['**/.github/copilot-instructions.md', '**/.github/instructions/**/*.instructions.md'],
+      rulesImportPaths: ['.github/copilot-instructions.md', '.github/instructions'],
       agentsExport: '.github/agents',
       agentsFilenameSuffix: '.agent',
       agentsImport: ['**/.github/agents/**/*.md', '**/.github/agents/**/*.agent.md'],
@@ -133,15 +132,14 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     paths: {
       rulesExport: '.windsurf/rules',
       rulesFormat: 'directory',
-      rulesImport: ['**/.windsurfrules', '**/.windsurf/rules/**/*.md', '**/.windsurf/.windsurfrules'],
-      rulesImportPaths: ['.windsurfrules', '.windsurf/rules', '.windsurf/.windsurfrules'],
+      rulesImport: ['**/.windsurf/rules/**/*.md'],
+      rulesImportPaths: ['.windsurf/rules'],
       agentsExport: '.windsurf/agents',
       agentsImport: ['**/.windsurf/agents/**/*.md'],
       skillsExport: '.windsurf/skills',
       skillsImport: ['**/.windsurf/skills/*/SKILL.md'],
     },
     description: 'Windsurf rules directory',
-    specialFiles: ['.windsurfrules'],
   },
 
   // Cline
@@ -153,13 +151,12 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     paths: {
       rulesExport: '.cline/rules',
       rulesFormat: 'directory',
-      rulesImport: ['**/.clinerules', '**/.cline/rules/**/*.md', '**/.cline/.clinerules'],
-      rulesImportPaths: ['.clinerules', '.cline/rules', '.cline/.clinerules'],
+      rulesImport: ['**/.cline/rules/**/*.md'],
+      rulesImportPaths: ['.cline/rules'],
       agentsExport: '.cline/agents',
       agentsImport: ['**/.cline/agents/**/*.md'],
     },
     description: 'Cline VS Code extension',
-    specialFiles: ['.clinerules'],
   },
 
   // Continue.dev
@@ -171,13 +168,12 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     paths: {
       rulesExport: '.continue/rules',
       rulesFormat: 'directory',
-      rulesImport: ['**/.continuerules', '**/.continue/config.json', '**/.continue/rules/**/*.md'],
-      rulesImportPaths: ['.continuerules', '.continue/config.json', '.continue/rules'],
+      rulesImport: ['**/.continue/rules/**/*.md'],
+      rulesImportPaths: ['.continue/rules'],
       agentsExport: '.continue/agents',
       agentsImport: ['**/.continue/agents/**/*.md'],
     },
     description: 'Continue.dev agents directory',
-    specialFiles: ['.continuerules'],
   },
 
   // Google Antigravity
@@ -189,12 +185,12 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     paths: {
       rulesExport: '.agents/rules',
       rulesFormat: 'directory',
-      rulesImport: ['**/.agents/rules/**/*.md', '**/.agent/rules/**/*.md', '**/GEMINI.md'],
-      rulesImportPaths: ['.agents/rules', '.agent/rules', path.join(os.homedir(), '.gemini', 'GEMINI.md')],
+      rulesImport: ['**/.agents/rules/**/*.md', '**/GEMINI.md'],
+      rulesImportPaths: ['.agents/rules', path.join(os.homedir(), '.gemini', 'GEMINI.md')],
       agentsExport: '.agents/agents',
-      agentsImport: ['**/.agents/agents/**/*.md', '**/.agent/agents/**/*.md'],
+      agentsImport: ['**/.agents/agents/**/*.md'],
       skillsExport: '.agents/workflows',
-      skillsImport: ['**/.agents/workflows/*/SKILL.md', '**/.agents/workflows/**/*.md', '**/.agent/workflows/*/SKILL.md', '**/.agent/workflows/**/*.md'],
+      skillsImport: ['**/.agents/workflows/*/SKILL.md', '**/.agents/workflows/**/*.md'],
     },
     description: 'Google Antigravity rules directory',
   },
@@ -242,8 +238,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     paths: {
       rulesExport: 'AGENTS.md',
       rulesFormat: 'single',
-      rulesImport: ['**/AGENTS.md', '**/.codex/instructions.md', '**/.codex/config.toml', '**/.codex/**/*.md'],
-      rulesImportPaths: ['AGENTS.md', '.codex/instructions.md', '.codex/config.toml'],
+      rulesImport: ['**/AGENTS.md', '**/.codex/config.toml', '**/.codex/**/*.md'],
+      rulesImportPaths: ['AGENTS.md', '.codex/config.toml'],
       skillsExport: '.codex/skills',
       skillsImport: ['**/.codex/skills/*/SKILL.md', '**/.codex/skills/**/*.md'],
     },

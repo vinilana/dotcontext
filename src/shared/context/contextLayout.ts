@@ -80,20 +80,6 @@ export const CONTEXT_LAYOUT_REGISTRY: ContextLayoutEntry[] = [
     description: 'All generated harness runtime state: sessions (records, traces, artifacts), workflow state and plan tracking, task contracts, and evaluations (replays, datasets).',
   },
   {
-    id: 'legacy-runtime-harness',
-    path: '.context/harness/**',
-    classification: 'runtime',
-    trackedInGit: false,
-    description: 'Legacy harness runtime location (pre config/runtime split); kept ignored for checkouts that have not migrated yet.',
-  },
-  {
-    id: 'legacy-runtime-workflow',
-    path: '.context/workflow/**',
-    classification: 'runtime',
-    trackedInGit: false,
-    description: 'Legacy workflow runtime location (pre config/runtime split); kept ignored for checkouts that have not migrated yet.',
-  },
-  {
     id: 'archives',
     path: '.context/**/archive/**',
     classification: 'runtime',

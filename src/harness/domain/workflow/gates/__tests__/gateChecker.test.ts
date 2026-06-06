@@ -77,13 +77,6 @@ describe('WorkflowGateChecker', () => {
       expect(settings.require_plan).toBe(true);
       expect(settings.require_approval).toBe(true);
     });
-
-    it('should map legacy ENTERPRISE string to LARGE scale', () => {
-      const settings = getDefaultSettings('ENTERPRISE');
-      expect(settings.autonomous_mode).toBe(false);
-      expect(settings.require_plan).toBe(true);
-      expect(settings.require_approval).toBe(true);
-    });
   });
 
   describe('checkGates', () => {

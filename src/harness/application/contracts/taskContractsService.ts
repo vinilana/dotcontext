@@ -11,7 +11,6 @@ import { randomUUID } from 'crypto';
 import { minimatch } from 'minimatch';
 import { glob as globFn } from 'glob';
 import { resolveRuntimeLayoutFromRepo, type RuntimeLayout } from '../../../shared/fs/pathHelpers';
-import { migrateLegacyContextLayout } from '../../../shared/fs/legacyLayoutMigration';
 import type {
   HarnessArtifactRecord,
   HarnessRuntimeStatePort,
@@ -224,7 +223,6 @@ export class HarnessTaskContractsService {
   }
 
   private async ensureLayout(): Promise<void> {
-    await migrateLegacyContextLayout(path.join(path.resolve(this.options.repoPath), '.context'));
     await Promise.all([
       fs.ensureDir(this.tasksPath),
       fs.ensureDir(this.handoffsPath),

@@ -51,7 +51,7 @@ import {
   type WorkflowAdvanceParams,
   type WorkflowManageParams,
   type MCPToolResponse,
-} from '../gatewayTools';
+} from '../gateway';
 
 export interface MCPServerOptions {
   /** Default repository path for tools */

@@ -39,28 +39,6 @@ export const ROLE_TO_SPECIALISTS: Record<PrevcRole, string[]> = Object.fromEntri
 ) as Record<PrevcRole, string[]>;
 
 /**
- * Mapping from existing agent types to PREVC roles
- * @deprecated Use agent-based tracking instead of role-based.
- * This mapping is kept for backward compatibility.
- */
-export const SPECIALIST_TO_ROLE: Record<string, PrevcRole> = {
-  'frontend-specialist': 'designer',
-  'architect-specialist': 'architect',
-  'feature-developer': 'developer',
-  'bug-fixer': 'developer',
-  'backend-specialist': 'developer',
-  'mobile-specialist': 'developer',
-  'test-writer': 'qa',
-  'security-auditor': 'qa',
-  'performance-optimizer': 'qa',
-  'code-reviewer': 'reviewer',
-  'documentation-writer': 'documenter',
-  'refactoring-specialist': 'solo-dev',
-  'database-specialist': 'developer',
-  'devops-specialist': 'developer',
-};
-
-/**
  * Role display names (English)
  */
 export const ROLE_DISPLAY_NAMES: Record<PrevcRole, string> = {
@@ -100,18 +78,3 @@ export function isValidRole(role: string): role is PrevcRole {
   return PREVC_ROLES.includes(role as PrevcRole);
 }
 
-/**
- * Get the PREVC role for an existing agent type
- * @deprecated Use agent-based tracking instead of role-based.
- */
-export function getRoleForSpecialist(specialist: string): PrevcRole | null {
-  return SPECIALIST_TO_ROLE[specialist] || null;
-}
-
-/**
- * Get all specialists for a PREVC role
- * @deprecated Use ROLE_TO_AGENTS from orchestration/agentOrchestrator instead.
- */
-export function getSpecialistsForRole(role: PrevcRole): string[] {
-  return ROLE_TO_SPECIALISTS[role] || [];
-}

@@ -6,7 +6,6 @@ import type {
   CollaborationSessionStore,
 } from '../../domain/workflow/collaboration';
 import { resolveRuntimeLayout } from '../../../shared/fs/pathHelpers';
-import { migrateLegacyContextLayoutSync } from '../../../shared/fs/legacyLayoutMigration';
 
 export const CURRENT_COLLABORATION_DOCUMENT_VERSION = 2;
 
@@ -105,12 +104,7 @@ export class FileCollaborationStore implements CollaborationSessionStore {
     };
   }
 
-  private ensureMigrated(): void {
-    migrateLegacyContextLayoutSync(this.contextPath);
-  }
-
   loadSessions(): CollaborationSessionRecord[] {
-    this.ensureMigrated();
     try {
       if (!fs.pathExistsSync(this.filePath)) {
         return [];
@@ -134,7 +128,6 @@ export class FileCollaborationStore implements CollaborationSessionStore {
   }
 
   saveSessions(sessions: CollaborationSessionRecord[]): void {
-    this.ensureMigrated();
     try {
       fs.ensureDirSync(path.dirname(this.filePath));
       const now = Date.now();
