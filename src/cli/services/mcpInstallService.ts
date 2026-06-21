@@ -309,7 +309,7 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
 
   // Gemini CLI
   {
-    toolId: 'gemini-cli',
+    toolId: 'gemini',
     globalConfigPath: '.gemini/settings.json',
     localConfigPath: '.gemini/settings.json',
     generateConfig: (existing, server) => {
@@ -490,11 +490,37 @@ const MCP_CONFIG_TEMPLATES: MCPConfigTemplate[] = [
       return !!servers?.['dotcontext'];
     },
   },
+
+  // Pi
+  {
+    toolId: 'pi',
+    globalConfigPath: '.config/mcp/mcp.json',
+    localConfigPath: '.mcp.json',
+    generateConfig: (existing, server) => {
+      const config = (existing as Record<string, unknown>) || {};
+      return {
+        ...config,
+        mcpServers: {
+          ...(config.mcpServers as Record<string, unknown> || {}),
+          'dotcontext': server,
+        },
+      };
+    },
+    isConfigured: (config) => {
+      const c = config as Record<string, unknown>;
+      const servers = c?.mcpServers as Record<string, unknown>;
+      return !!servers?.['dotcontext'];
+    },
+  },
 ];
 
 // ============================================================================
 // Service Implementation
 // ============================================================================
+
+function resolveMcpToolId(toolId: string): string {
+  return getToolById(toolId)?.id ?? toolId;
+}
 
 export class MCPInstallService {
   constructor(private deps: MCPInstallServiceDependencies) {}
@@ -516,17 +542,23 @@ export class MCPInstallService {
   /**
    * Detect which supported tools are installed on the system
    */
-  async detectInstalledTools(): Promise<string[]> {
+  async detectInstalledTools(homeDir: string = os.homedir()): Promise<string[]> {
     const installed: string[] = [];
-    const homeDir = os.homedir();
 
     for (const template of MCP_CONFIG_TEMPLATES) {
       const tool = getToolById(template.toolId);
       if (!tool) continue;
 
-      // Check if tool directory exists in home
-      const toolDir = path.join(homeDir, tool.directoryPrefix);
-      if (await fs.pathExists(toolDir)) {
+      const pathsToCheck = tool.detectPaths ?? [tool.directoryPrefix];
+      let found = false;
+      for (const detectPath of pathsToCheck) {
+        if (await fs.pathExists(path.join(homeDir, detectPath))) {
+          found = true;
+          break;
+        }
+      }
+
+      if (found) {
         installed.push(template.toolId);
       }
     }
@@ -557,14 +589,15 @@ export class MCPInstallService {
           toolsToInstall = this.getSupportedToolIds();
         }
       } else {
-        const template = MCP_CONFIG_TEMPLATES.find(t => t.toolId === tool);
+        const normalizedTool = resolveMcpToolId(tool);
+        const template = MCP_CONFIG_TEMPLATES.find(t => t.toolId === normalizedTool);
         if (!template) {
           this.deps.ui.displayError(
             this.deps.t('errors.mcp.unsupportedTool', { tool, supported: this.getSupportedToolIds().join(', ') })
           );
           return result;
         }
-        toolsToInstall = [tool];
+        toolsToInstall = [normalizedTool];
       }
     } else {
       // No tool specified - install for all detected

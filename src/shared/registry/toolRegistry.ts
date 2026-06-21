@@ -43,6 +43,8 @@ export interface ToolPaths {
   skillsImport?: string[];
 }
 
+export type IntegrationSurface = 'sync' | 'mcp' | 'hooks';
+
 export interface ToolDefinition {
   /** Unique identifier (e.g., 'claude', 'cursor') */
   id: string;
@@ -58,7 +60,16 @@ export interface ToolDefinition {
   description: string;
   /** Special file patterns for detection (e.g., '.cursorrules', 'CLAUDE.md') */
   specialFiles?: string[];
+  /** Additional paths to check when detecting installation (relative to home) */
+  detectPaths?: string[];
+  /** Supported integration surfaces for sync/MCP/hooks coverage */
+  integrationSurfaces?: IntegrationSurface[];
 }
+
+/** One-release aliases for renamed tool IDs */
+const TOOL_ID_ALIASES: Record<string, string> = {
+  'gemini-cli': 'gemini',
+};
 
 // ============================================================================
 // Tool Registry
@@ -83,6 +94,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     },
     description: 'Claude Code main rules file',
     specialFiles: ['CLAUDE.md'],
+    integrationSurfaces: ['sync', 'mcp', 'hooks'],
   },
 
   // Cursor AI
@@ -101,6 +113,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       agentsImport: ['**/.cursor/agents/**/*.md'],
     },
     description: 'Cursor AI rules and agents',
+    integrationSurfaces: ['sync', 'mcp'],
   },
 
   // GitHub Copilot
@@ -121,6 +134,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       skillsImport: ['**/.github/skills/*/SKILL.md'],
     },
     description: 'GitHub Copilot instructions',
+    integrationSurfaces: ['sync'],
   },
 
   // Windsurf (Codeium)
@@ -140,6 +154,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       skillsImport: ['**/.windsurf/skills/*/SKILL.md'],
     },
     description: 'Windsurf rules directory',
+    detectPaths: ['.windsurf', '.codeium/windsurf'],
+    integrationSurfaces: ['sync', 'mcp'],
   },
 
   // Cline
@@ -157,6 +173,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       agentsImport: ['**/.cline/agents/**/*.md'],
     },
     description: 'Cline VS Code extension',
+    integrationSurfaces: ['sync'],
   },
 
   // Continue.dev
@@ -174,6 +191,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       agentsImport: ['**/.continue/agents/**/*.md'],
     },
     description: 'Continue.dev agents directory',
+    integrationSurfaces: ['sync', 'mcp'],
   },
 
   // Google Antigravity
@@ -193,6 +211,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       skillsImport: ['**/.agents/workflows/*/SKILL.md', '**/.agents/workflows/**/*.md'],
     },
     description: 'Google Antigravity rules directory',
+    integrationSurfaces: ['sync'],
   },
 
   // Trae AI
@@ -210,6 +229,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       agentsImport: ['**/.trae/agents/**/*.md'],
     },
     description: 'Trae AI rules directory',
+    integrationSurfaces: ['sync', 'mcp'],
   },
 
   // Gemini CLI
@@ -226,7 +246,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       skillsExport: '.gemini/skills',
       skillsImport: ['**/.gemini/skills/*/SKILL.md', '**/.gemini/skills/**/*.md'],
     },
-    description: 'Gemini CLI project instructions',
+    description: 'Gemini CLI project instructions and MCP configuration',
+    integrationSurfaces: ['sync', 'mcp'],
   },
 
   // Codex CLI
@@ -244,6 +265,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       skillsImport: ['**/.codex/skills/*/SKILL.md', '**/.codex/skills/**/*.md'],
     },
     description: 'Codex project instructions',
+    integrationSurfaces: ['sync', 'mcp', 'hooks'],
   },
 
   // Agent Skills (Cross-Client) - agentskills.io interoperability standard
@@ -273,6 +295,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     },
     description: 'Aider coding conventions',
     specialFiles: ['CONVENTIONS.md'],
+    integrationSurfaces: ['sync'],
   },
 
   // Zed Editor
@@ -288,6 +311,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       rulesImportPaths: ['.zed/settings.json', '.zed/rules'],
     },
     description: 'Zed editor AI settings',
+    integrationSurfaces: ['sync', 'mcp'],
   },
 
   // Claude Desktop
@@ -298,6 +322,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
     description: 'Claude Desktop MCP configuration',
+    integrationSurfaces: ['mcp'],
   },
 
   // VS Code (GitHub Copilot)
@@ -308,6 +333,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
     description: 'VS Code GitHub Copilot MCP configuration',
+    integrationSurfaces: ['mcp'],
   },
 
   // Roo Code
@@ -318,16 +344,17 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
     description: 'Roo Code MCP configuration',
+    integrationSurfaces: ['mcp'],
   },
 
-  // Warp Terminal
+  // Warp Terminal — registry placeholder; MCP install deferred to v1.1
   {
     id: 'warp',
     displayName: 'Warp Terminal',
     directoryPrefix: '.warp',
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
-    description: 'Warp Terminal MCP configuration',
+    description: 'Warp Terminal (MCP install not yet supported)',
   },
 
   // Amazon Q Developer CLI
@@ -338,16 +365,19 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
     description: 'Amazon Q Developer CLI MCP configuration',
+    detectPaths: ['.amazonq', '.aws/amazonq'],
+    integrationSurfaces: ['mcp'],
   },
 
-  // Gemini CLI
+  // Pi
   {
-    id: 'gemini-cli',
-    displayName: 'Gemini CLI',
-    directoryPrefix: '.gemini',
+    id: 'pi',
+    displayName: 'Pi',
+    directoryPrefix: '.pi',
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
-    description: 'Gemini CLI MCP configuration',
+    description: 'Pi MCP and extension integration',
+    integrationSurfaces: ['mcp', 'hooks'],
   },
 
   // Kiro
@@ -358,6 +388,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
     description: 'Kiro MCP configuration',
+    integrationSurfaces: ['mcp'],
   },
 
   // JetBrains IDEs
@@ -368,6 +399,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
     description: 'JetBrains IDEs MCP configuration',
+    integrationSurfaces: ['mcp'],
   },
 
   // Kilo Code
@@ -378,6 +410,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
     description: 'Kilo Code MCP configuration',
+    integrationSurfaces: ['mcp'],
   },
 
   // GitHub Copilot CLI
@@ -388,6 +421,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     capabilities: { rules: false, agents: false, skills: false },
     paths: {},
     description: 'GitHub Copilot CLI MCP configuration',
+    integrationSurfaces: ['mcp'],
   },
 ];
 
@@ -399,7 +433,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
  * Get a tool by its ID
  */
 export function getToolById(id: string): ToolDefinition | undefined {
-  return TOOL_REGISTRY.find(t => t.id === id);
+  const resolvedId = TOOL_ID_ALIASES[id] ?? id;
+  return TOOL_REGISTRY.find(t => t.id === resolvedId);
 }
 
 /**

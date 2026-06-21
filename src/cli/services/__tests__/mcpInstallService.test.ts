@@ -156,12 +156,19 @@ describe('MCPInstallService', () => {
       expect(ids).toContain('continue');
       expect(ids).toContain('trae');
       expect(ids).toContain('copilot-cli');
+      expect(ids).toContain('pi');
+      expect(ids).toContain('gemini');
     });
 
     it('should not include removed tool IDs', () => {
       const ids = service.getSupportedToolIds();
       expect(ids).not.toContain('warp');
       expect(ids).not.toContain('cline');
+      expect(ids).not.toContain('gemini-cli');
+    });
+
+    it('should include exactly 17 supported tools', () => {
+      expect(service.getSupportedToolIds()).toHaveLength(17);
     });
   });
 
@@ -173,6 +180,50 @@ describe('MCPInstallService', () => {
       for (const id of detected) {
         expect(validIds).toContain(id);
       }
+    });
+
+    it('should detect Windsurf via ~/.codeium/windsurf', async () => {
+      const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcp-detect-windsurf-'));
+
+      await fs.ensureDir(path.join(homeDir, '.codeium', 'windsurf'));
+
+      const detected = await service.detectInstalledTools(homeDir);
+      expect(detected).toContain('windsurf');
+
+      await fs.remove(homeDir);
+    });
+
+    it('should detect Windsurf via ~/.windsurf', async () => {
+      const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcp-detect-windsurf-alt-'));
+
+      await fs.ensureDir(path.join(homeDir, '.windsurf'));
+
+      const detected = await service.detectInstalledTools(homeDir);
+      expect(detected).toContain('windsurf');
+
+      await fs.remove(homeDir);
+    });
+
+    it('should detect Amazon Q via ~/.aws/amazonq', async () => {
+      const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcp-detect-amazonq-'));
+
+      await fs.ensureDir(path.join(homeDir, '.aws', 'amazonq'));
+
+      const detected = await service.detectInstalledTools(homeDir);
+      expect(detected).toContain('amazonq');
+
+      await fs.remove(homeDir);
+    });
+
+    it('should detect Amazon Q via ~/.amazonq', async () => {
+      const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcp-detect-amazonq-alt-'));
+
+      await fs.ensureDir(path.join(homeDir, '.amazonq'));
+
+      const detected = await service.detectInstalledTools(homeDir);
+      expect(detected).toContain('amazonq');
+
+      await fs.remove(homeDir);
     });
   });
 
@@ -431,7 +482,7 @@ describe('MCPInstallService', () => {
 
     it('should install MCP configuration for Gemini CLI', async () => {
       const result = await service.run({
-        tool: 'gemini-cli',
+        tool: 'gemini',
         global: false,
         repoPath: tempDir,
       });
@@ -442,6 +493,18 @@ describe('MCPInstallService', () => {
 
       const config = await fs.readJson(configPath);
       expect(config.mcpServers['dotcontext']).toBeDefined();
+    });
+
+    it('should accept gemini-cli alias for Gemini MCP install', async () => {
+      const result = await service.run({
+        tool: 'gemini-cli',
+        global: false,
+        repoPath: tempDir,
+        dryRun: true,
+      });
+
+      expect(result.installations.length).toBe(1);
+      expect(result.installations[0].tool).toBe('gemini');
     });
 
     it('should install MCP configuration for Codex CLI using TOML', async () => {
@@ -609,6 +672,23 @@ describe('MCPInstallService', () => {
       const config = await fs.readJson(configPath);
       expect(config.mcpServers['dotcontext']).toBeDefined();
       expect(config.mcpServers['dotcontext'].command).toBe('npx');
+    });
+
+    it('should install MCP configuration for Pi', async () => {
+      const result = await service.run({
+        tool: 'pi',
+        global: false,
+        repoPath: tempDir,
+      });
+
+      expect(result.filesCreated).toBe(1);
+      const configPath = path.join(tempDir, '.mcp.json');
+      expect(await fs.pathExists(configPath)).toBe(true);
+
+      const config = await fs.readJson(configPath);
+      expect(config.mcpServers['dotcontext']).toBeDefined();
+      expect(config.mcpServers['dotcontext'].command).toBe('npx');
+      expect(config.mcpServers['dotcontext'].args).toEqual(['-y', '@dotcontext/mcp@latest']);
     });
   });
 
