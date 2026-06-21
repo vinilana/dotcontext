@@ -26,7 +26,7 @@ Do not add new code under `src/services`; that directory is not part of the targ
 ## Repository References
 
 - `README.md` explains what dotcontext is and why it exists
-- [dotcontext.dev](https://dotcontext.dev) (source in `website/`) explains how to use it
+- [dotcontext.dev](https://dotcontext.dev) (source in `docs/`) explains how to use it
 - `ARCHITECTURE.md` explains how the harness works
 - `CONTRIBUTING.md` explains contributor workflow
 - `CHANGELOG.md` tracks release-facing changes
@@ -54,7 +54,7 @@ If you touch `mcp:install`, keep these aligned:
 - `src/cli/services/mcpInstallService.ts`
 - `src/cli/services/mcpInstallService.test.ts`
 - `README.md`
-- `website/src/content/docs/` (published at [dotcontext.dev](https://dotcontext.dev))
+- `docs/src/content/docs/` (published at [dotcontext.dev](https://dotcontext.dev))
 - `CHANGELOG.md`
 
 Documentation must reflect the actual config written by the installer.
@@ -68,7 +68,7 @@ If you touch `hook install`, keep these aligned:
 - `src/cli/services/__tests__/hookInstallService.test.ts`
 - `src/integrations/claude-code/`, `src/integrations/codex/`, `src/integrations/pi-dev/`
 - `README.md`
-- `website/src/content/docs/` (installation and hooks guides)
+- `docs/src/content/docs/` (installation and hooks guides)
 - `CHANGELOG.md`
 
 Documentation must reflect the actual config written by the hook installer and the Pi extension install path.

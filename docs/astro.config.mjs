@@ -26,7 +26,7 @@ export default defineConfig({
         'pt-br': { label: 'Português (BR)', lang: 'pt-BR' },
       },
       editLink: {
-        baseUrl: 'https://github.com/vinilana/dotcontext/edit/main/website/',
+        baseUrl: 'https://github.com/vinilana/dotcontext/edit/main/docs/',
       },
       sidebar: [
         {

@@ -568,11 +568,11 @@ The package build prepares local bundles in `.release/packages/cli`, `.release/p
 
 ## Documentation
 
-📖 **Full documentation site** (bilingual EN / PT-BR), built with Astro + Starlight, lives in [`website/`](./website/). Run it locally with `cd website && npm install && npm run dev`, or build the static site with `npm run build`. It covers installation, a quickstart, all concepts (the `.context` convention, the harness runtime, PREVC, sensors, policies, task contracts, replay), guides, and a full MCP/CLI reference.
+📖 **Full documentation site** (bilingual EN / PT-BR), built with Astro + Starlight, lives in [`docs/`](./docs/). Run it locally with `cd docs && npm install && npm run dev`, or build the static site with `npm run build`. It covers installation, a quickstart, all concepts (the `.context` convention, the harness runtime, PREVC, sensors, policies, task contracts, replay), guides, and a full MCP/CLI reference.
 
 Other references in this repo:
 
-- [Documentation site](https://dotcontext.dev) — user guide, concepts, and MCP/CLI reference ([`website/`](./website/) source)
+- [Documentation site](https://dotcontext.dev) — user guide, concepts, and MCP/CLI reference ([`docs/`](./docs/) source)
 - [Architecture](./ARCHITECTURE.md) - harness architecture and package boundaries
 - [Contributing](./CONTRIBUTING.md) - contributor workflow
 - [Changelog](./CHANGELOG.md) - release-facing changes

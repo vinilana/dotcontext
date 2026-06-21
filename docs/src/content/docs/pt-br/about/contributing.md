@@ -112,12 +112,12 @@ No mínimo, revise estes arquivos do repositório quando sua mudança os afetar:
 | Arquivo | Cobre |
 | --- | --- |
 | `README.md` | Descrição do produto e orientação de instalação. |
-| `website/src/content/docs/` | Fluxos de uso (publicados em [dotcontext.dev](https://dotcontext.dev)). |
+| `docs/src/content/docs/` | Fluxos de uso (publicados em [dotcontext.dev](https://dotcontext.dev)). |
 | `ARCHITECTURE.md` | Diagramas de runtime e de fronteira. |
 | `CONTRIBUTING.md` | Processo de contribuição. |
 | `CHANGELOG.md` | Notas de release. |
 
-Se sua mudança é visível para o usuário, quase certamente ela também precisa de uma atualização correspondente neste site de documentação — e lembre-se de que as páginas são bilíngues: toda página em inglês sob `src/content/docs/en/` tem um espelho em português brasileiro sob `src/content/docs/pt-br/` com a mesma estrutura.
+Se sua mudança é visível para o usuário, quase certamente ela também precisa de uma atualização correspondente neste site de documentação — e lembre-se de que as páginas são bilíngues: toda página em inglês sob `docs/src/content/docs/en/` tem um espelho em português brasileiro sob `docs/src/content/docs/pt-br/` com a mesma estrutura.
 
 ## Por onde começar no repositório
 

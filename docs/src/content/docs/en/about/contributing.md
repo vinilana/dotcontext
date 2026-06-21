@@ -112,12 +112,12 @@ At minimum, review these files in the repo when your change affects them:
 | File | Covers |
 | --- | --- |
 | `README.md` | Product description and install guidance. |
-| `website/src/content/docs/` | Usage flows (published at [dotcontext.dev](https://dotcontext.dev)). |
+| `docs/src/content/docs/` | Usage flows (published at [dotcontext.dev](https://dotcontext.dev)). |
 | `ARCHITECTURE.md` | Runtime and boundary diagrams. |
 | `CONTRIBUTING.md` | Contributor process. |
 | `CHANGELOG.md` | Release notes. |
 
-If your change is user-visible, it almost certainly needs a matching update on this documentation site too — and remember that pages are bilingual: every English page under `src/content/docs/en/` has a Brazilian-Portuguese mirror under `src/content/docs/pt-br/` with the same structure.
+If your change is user-visible, it almost certainly needs a matching update on this documentation site too — and remember that pages are bilingual: every English page under `docs/src/content/docs/en/` has a Brazilian-Portuguese mirror under `docs/src/content/docs/pt-br/` with the same structure.
 
 ## Where to start in the repo
 

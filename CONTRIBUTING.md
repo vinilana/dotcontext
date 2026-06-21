@@ -48,7 +48,7 @@ npm run smoke:packages
 The public docs that matter most are:
 
 - `README.md` for product positioning and install guidance
-- [dotcontext.dev](https://dotcontext.dev) (`website/`) for usage guidance
+- [dotcontext.dev](https://dotcontext.dev) (`docs/`) for usage guidance
 - `ARCHITECTURE.md` for runtime and boundary explanations
 - `CHANGELOG.md` for release notes
 
@@ -65,7 +65,7 @@ If you update one of these areas, check the adjacent docs for drift.
 If you change `mcp:install`, update all of the following together:
 
 - `README.md`
-- `website/src/content/docs/` (installation, guides, reference)
+- `docs/src/content/docs/` (installation, guides, reference)
 - `CHANGELOG.md`
 - `src/cli/services/mcpInstallService.ts`
 - `src/cli/services/__tests__/mcpInstallService.test.ts`
@@ -77,7 +77,7 @@ The installer is the source of truth for supported clients and config formats. D
 If you change `hook install`, `hook dispatch`, or `hook uninstall`, update all of the following together:
 
 - `README.md`
-- `website/src/content/docs/` (installation, guides, reference)
+- `docs/src/content/docs/` (installation, guides, reference)
 - `CHANGELOG.md`
 - `src/cli/services/hookInstallService.ts`
 - `src/cli/services/hookDispatchService.ts`

@@ -5,7 +5,7 @@ Documentation site for **dotcontext**, built with [Astro](https://astro.build) +
 ## Develop
 
 ```bash
-cd website
+cd docs
 npm install
 npm run dev      # http://localhost:4321
 ```

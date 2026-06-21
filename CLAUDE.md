@@ -14,7 +14,7 @@ cli -> harness <- mcp
 Start here:
 
 - `README.md` for product description and install guidance
-- [dotcontext.dev](https://dotcontext.dev) (`website/`) for usage guidance
+- [dotcontext.dev](https://dotcontext.dev) (`docs/`) for usage guidance
 - `ARCHITECTURE.md` for runtime and boundary diagrams
 - `CHANGELOG.md` for release notes
 
@@ -62,7 +62,7 @@ When changing any of the following, keep docs in sync:
 At minimum, review:
 
 - `README.md`
-- `website/src/content/docs/` (published at [dotcontext.dev](https://dotcontext.dev))
+- `docs/src/content/docs/` (published at [dotcontext.dev](https://dotcontext.dev))
 - `ARCHITECTURE.md`
 - `CONTRIBUTING.md`
 - `CHANGELOG.md`
