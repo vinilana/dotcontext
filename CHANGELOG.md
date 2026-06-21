@@ -5,10 +5,124 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0]
+
+This is a structural refactor of dotcontext ahead of **1.0.0**. It replaces the monolithic `src/services` / `src/workflow` layout with a **hexagonal harness core** and **thin adapters** for CLI, MCP, and host hooks.
+
+### New: Claude Code hooks, Codex CLI hooks, and Pi.dev
+
+Dotcontext is no longer MCP-only. **1.0.0 introduces first-class support for three major agent hosts** — the same harness runtime, wired into each tool's native lifecycle:
+
+| Host | How it connects | What you get |
+|------|-----------------|--------------|
+| **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** | Shell hooks via `settings.json` | Context bootstrap on session start, durable traces after Write/Edit/Bash, PREVC workflow reminders on stop |
+| **[Codex CLI](https://github.com/openai/codex)** | Shell hooks via `hooks.json` or inline TOML | Same harness actions as Claude Code; JSON or TOML install formats |
+| **[Pi.dev](https://pi.dev)** | In-process npm extension (`@dotcontext/pi`) | Lifecycle hooks without shell dispatch — bootstrap, tracing, and workflow guidance inside Pi |
+
+**One runtime, three surfaces.** Hooks and Pi call the same harness actions as MCP (`context check`, `harness appendTrace`, `workflow-guide`). No duplicated PREVC logic per host.
+
+Quick start:
+
+```bash
+# Install hooks (interactive — detects installed hosts)
+npx -y @dotcontext/cli@latest hook install
+
+# Or target a host explicitly
+npx -y @dotcontext/cli@latest hook install claude-code
+npx -y @dotcontext/cli@latest hook install codex --local
+npx -y @dotcontext/cli@latest hook install pi --local
+
+# MCP for Pi (optional, alongside the extension)
+npx -y @dotcontext/mcp install pi
+```
+
+Install docs: [Using with Hooks](https://dotcontext.dev/guides/using-with-hooks/) · [Using with Pi](https://dotcontext.dev/guides/using-with-pi/)
+
+The runtime now follows one rule:
+
+```text
+cli ──► harness ◄── mcp
+         ▲
+         └── integrations (Claude Code · Codex CLI · Pi)
+```
+
+**Harness** owns workflow, execution state, context scaffolding, sensors, and domain rules.  
+**Adapters** own transport, installation, and host-specific rendering — they call into the harness; they do not duplicate PREVC logic.
+
+### Why
+
+On `main`, runtime code lived under `src/services` with workflow, harness, MCP gateway, and semantic tooling mixed together. That made it hard to:
+
+- reuse the runtime outside MCP/CLI
+- test domain rules without pulling in transport code
+- add new host surfaces (hooks, Pi) without copying workflow behavior
+
+This refactor consolidates reusable logic under `src/harness`, moves operator and protocol code to `src/cli` / `src/mcp` / `src/integrations`, and enforces the split with architecture boundary tests.
+
+### Removed — BREAKING CHANGES
+
+- **Legacy `.context` layout auto-migration removed.** Pre-1.0 checkouts using
+  `.context/harness/` or `.context/workflow/` are **no longer migrated on access**.
+  The runtime reads only the canonical `.context/config/` (authored config) and
+  `.context/runtime/` (generated state) layout. Migrate old folders manually before
+  upgrading. (Removed `src/shared/fs/legacyLayoutMigration.ts` and all call sites.)
+- **Legacy workflow `status.yaml` migrator removed.** `.context/workflow/status.yaml`
+  is no longer read or migrated into canonical `runtime/workflows/prevc.json`.
+  (Removed `src/harness/domain/workflow/legacy/`.)
+- **Legacy harness-session binding fallback removed.** The old
+  `.context/workflow/harness-session.json` binding is no longer read, rewritten,
+  or archived. Bindings live only in `runtime/workflows/prevc.json`.
+- **Legacy tool-surface import/export targets removed.** Imports and exports now
+  cover only current-format surfaces. Dropped: `.cursorrules` and `.cursor/rules/*.md`;
+  older `.claude/*.memory` and `.claude/settings.json`; `.github/copilot/*` and
+  `.github/.copilot/*`; `.windsurfrules`; `.clinerules`; `.continuerules` and
+  `.continue/config.json`; `.codex/instructions.md`; the Antigravity `.agent/*`
+  layout (use `.agents/*`).
+- **Legacy Cursor `.cursorrules` export preset removed.** Exporting to Cursor writes
+  `.cursor/rules` (`.mdc`) only — the flat `.cursorrules` file is no longer emitted.
+- **Deprecated re-export shims removed:** `src/mcp/mcpServer.ts`,
+  `src/mcp/mcpInstallService.ts`, `src/mcp/actionLogger.ts`, `src/mcp/gatewayTools.ts`,
+  `src/cli/services/stateDetector.ts`, `src/cli/services/state/`, and
+  `…/scaffolding/generators/shared/scaffoldStructures.ts`. Import from the canonical
+  modules instead (`src/mcp/server`, `src/mcp/logging`, `src/mcp/gateway`,
+  `src/harness/application/context/stateDetector`, `…/generators/shared/structures`).
+- **Legacy `enterprise` project scale removed.** Use `large`;
+  `getScaleFromName('enterprise')` no longer maps to `LARGE`.
+- **Deprecated role helpers removed:** `SPECIALIST_TO_ROLE`, `getRoleForSpecialist`,
+  and `getSpecialistsForRole` (`src/harness/domain/workflow/roles.ts`). Use the
+  agent-based orchestration model (`ROLE_TO_AGENTS`).
+- **`PrevcStatusManager` constructor signature changed** from
+  `new PrevcStatusManager(contextPath, workflowState)` to
+  `new PrevcStatusManager(workflowState)` — the legacy `contextPath` argument
+  (only used to locate the old `status.yaml`) is gone.
+- **Stopped gitignoring legacy runtime paths.** `.context/harness/**` and
+  `.context/workflow/**` are no longer added to the generated `.gitignore`.
+
+### Changed
+
+- **MCP install: Gemini** — merged `gemini-cli` into a single `gemini` registry id; `gemini-cli` remains a one-release alias for install commands.
+- **MCP detection paths** — Windsurf and Amazon Q detection now checks alternate config directories.
+- **Documentation** — updated architecture, installation, and contributor docs for integrations, hooks, and Pi; MCP client count is now 17.
+- **Reorganized the on-disk `.context` data layout** into authored config vs generated runtime state. The single `.context/harness/` folder (which mixed editable config with machine-generated state) and the separate `.context/workflow/` folder are replaced by:
+  - `.context/config/` — authored, version-controlled config: `policy.json`, `sensors.json` (moved from `.context/harness/`)
+  - `.context/runtime/` — all generated state, gitignored as one block:
+    - `runtime/sessions/<id>/` — one folder per session co-locating `session.json`, `trace.jsonl`, and `artifacts/` (previously flat under `harness/sessions`, `harness/traces`, `harness/artifacts`)
+    - `runtime/workflows/` — PREVC state (`prevc.json`), plan tracking (`plans.json`, `plan-tracking/`), and `collaboration-sessions.json` (previously split across `harness/workflows` and `workflow/`)
+    - `runtime/contracts/` — task and handoff contracts (was `harness/contracts`)
+    - `runtime/evaluations/{replays,datasets}/` — replay and failure-dataset output (was `harness/replays`, `harness/datasets`)
+  - All paths now resolve through a single source of truth (`resolveRuntimeLayout` in `src/shared/fs/pathHelpers.ts`) instead of hand-built `'harness'`/`'workflow'` path segments.
+  - The `src/harness` code module is unchanged — only the on-disk data folder moved. **This release does not migrate pre-1.0 layouts** (see Removed, above); move `.context/harness/` and `.context/workflow/` to `.context/config/` and `.context/runtime/` manually if upgrading an old checkout.
+  - A layering test forbids `src/harness/domain` code from importing the application/adapters layers, and a boundary test forbids `src/harness` from importing the `cli`/`mcp` surfaces, keeping the runtime decoupled and reusable.
 
 ### Added
 
+- **Hook install CLI** — `dotcontext hook install`, `hook dispatch`, and `hook uninstall` for Claude Code, Codex CLI, and Pi, with `--local`, `--global`, `--dry-run`, and Codex-specific `--format json|toml`.
+- **Host hook runtime** — typed event mappers and response adapters for Claude Code, Codex CLI, and Pi (`session_start`, `PostToolUse`, `Stop` / `agent_end`), wired through a shared harness hook adapter.
+- **Adapter-neutral workflow guidance** — `workflow-guide` now exposes PREVC next steps, relevant skills, and portable gate decision hints through the harness, MCP, hooks/Pi renderers, and `dotcontext admin workflow guide`.
+- **`@dotcontext/integrations` package** — publishable host hook adapters and mappers (`./claude-code`, `./codex`, `./pi-dev` subpaths).
+- **`@dotcontext/pi` package** — Pi npm extension for in-process lifecycle hooks (bootstrap, tracing, workflow reminders).
+- **MCP install: Pi** — `npx @dotcontext/mcp install pi` writes `.mcp.json` (local) or `~/.config/mcp/mcp.json` (global).
+- **Built-in skill catalog** — single source of truth for built-in skill slugs, PREVC phase mapping, and generated `dotcontext-workflow-{p,r,e,v,c}` meta skills.
 - **Built-in `tests-passing` sensor** (`src/services/harness/sensors/testsPassing.ts`)
   - Default `kind: 'jest'` runs `npm test -- --runInBand --json`, parses jest's JSON output, and reports `{ numPassedTests, numFailedTests, numTotalTestSuites, failures: [{ name, message }] }`; passes iff exit 0 *and* `numFailedTests === 0`
   - `kind: 'exit-code'` mode for non-jest runners passes iff the configured `testCommand` argv exits 0
@@ -24,18 +138,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Detection rules: `locales/*.json` or `i18n/*.json` → `i18n-coverage` in E; real `scripts.test` in `package.json` → `tests-passing` in V; `tsconfig.json` → `typecheck-clean` in V; `.eslintrc*` / `eslint.config.*` / `eslintConfig` in `package.json` → `lint` in V
   - `mergeSuggestionsIntoPhases` only fills `required_sensors`/`required_artifacts` for phases that did not already declare them — never overwrites an explicit author choice; existing scaffolds keep working unchanged
   - Wired into `PlanGenerator` via `renderPlanTemplate` so `context({ action: "scaffoldPlan", ... })` emits the suggestions in the YAML frontmatter
-  - Documented under "Built-in Sensors" and "Plan scaffolding auto-detects requirements" in `docs/GUIDE.md`
+  - Documented on the documentation site under Sensors and Authoring plans guides
 - **`RequiredArtifactSpec.fromFilesystem: true`** for `glob` and `file-count` kinds
   - When set, `evaluateTaskCompletion` also scans the project working tree (relative to `repoPath`) and unions filesystem hits with recorded session artifacts, eliminating the false-blocked case where a file exists in the repo but `recordArtifact` was never called
   - Hard-coded ignore list (`node_modules`, `.git`, `dist`), 5s scan timeout, refusal to escape `repoPath`; I/O failures and timeouts surface as `blockingFinding` entries (`filesystem scan failed for <pattern>: ...`) instead of crashing
   - Recorded artifacts and filesystem hits deduplicated by path so a file never counts twice
-  - Documented under "Structured artifact requirements -> fromFilesystem: true" in `docs/GUIDE.md`
+  - Documented on the documentation site (Authoring plans guide)
 - **Built-in `i18n-coverage` sensor** (`src/services/harness/sensors/i18nCoverage.ts`)
   - Compares translation keys between a configurable base locale (`baseLocale`, default `'en'`) and every other `<locale>.json` in `localesDir` (default `'locales'`); supports flat (`format: 'json'`) and nested (`format: 'json-nested'`) key extraction
   - Persists structured output `{ coverage: { locale: ratio }, missingKeys: { locale: string[] } }` on the `sensor.run` trace; passes only when every non-base locale has zero missing keys
   - Registered by default in every harness session via `HarnessSessionFacade.registerDefaultSensors`; only executes when a plan declares `required_sensors: [i18n-coverage]`
   - Clear, non-crashing failure modes for missing `localesDir`, malformed JSON (with file name), and missing base locale
-  - Documented under "Built-in Sensors -> i18n-coverage" in `docs/GUIDE.md`
+  - Documented on the documentation site (Sensors guide)
 
 - **Structured artifact requirements (`RequiredArtifactSpec`)**
   - `HarnessTaskContract.requiredArtifacts` accepts `(string | RequiredArtifactSpec)[]`; strings remain backwards-compatible (interpreted as `{ kind: 'name', name }`)
@@ -44,7 +158,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Plan frontmatter `required_artifacts` accepts the same shapes (zod discriminated union); specs propagate through `DerivedPlanTaskContractBuilder` without stringification
   - MCP `defineTask`/`createTask` schemas widened to accept structured specs alongside strings
   - Filesystem-glob (`fromFilesystem: true`) is intentionally out of scope; matching is restricted to recorded session artifacts
-  - Documented under "Structured artifact requirements" in `docs/GUIDE.md`
+  - Documented on the documentation site (Authoring plans guide)
 - **`checkGates` validates `nextPhase` against `PREVC_PHASE_ORDER` and `status.phases`**
   - Throws when `nextPhase` is not a valid PREVC phase, or is missing from `status.phases` (in addition to the existing `skipped` guard)
 
@@ -53,7 +167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `DerivedPlanTaskContractBuilder` now honors declared requirements and falls back to conservative defaults when absent (`E` -> `['tests']`, `V` -> `['tests', 'lint']`; P/R/C have no default)
   - `plan({ action: "link", ... })` hard-fails when a plan's Execution phase has no `required_sensors`, preventing silent "execution verified" claims at the source
   - New builder tests under `src/services/workflow/derivedPlanTaskContractBuilder.test.ts` and an e2e rejection test under `src/services/workflow/__tests__/falseCompletion.e2e.test.ts`
-  - Documented under "Declaring Execution Requirements in Plans" in `docs/GUIDE.md`
+  - Documented on the documentation site (Authoring plans guide)
 
 - **`execution_evidence` phase gate wires `evaluateTaskCompletion` into `workflow-advance`**
   - `GateCheckResult.gates` now includes `execution_evidence` with `missingSensors`, `missingArtifacts`, and `blockingFindings`

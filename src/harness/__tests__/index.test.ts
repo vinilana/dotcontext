@@ -1,0 +1,65 @@
+import {
+  WorkflowService,
+  HarnessAdapterRuntime,
+  HARNESS_HOOK_SOURCES,
+  HARNESS_ADAPTER_TOOL_NAMES,
+  HarnessHookAdapter,
+  createHarnessHookAdapter,
+  HarnessActionService,
+  HarnessAgentActionService,
+  HarnessSkillActionService,
+  HarnessPlanActionService,
+  HarnessExploreActionService,
+  HarnessContextActionService,
+  HarnessSyncActionService,
+  HarnessWorkflowManageActionService,
+  HarnessWorkflowActionService,
+  HarnessAgentsService,
+  HarnessPlansService,
+  HarnessContextService,
+  HarnessSkillsService,
+  HarnessRuntimeStateService,
+  HarnessSensorsService,
+  HarnessTaskContractsService,
+  HarnessExecutionService,
+  HarnessReplayService,
+  HarnessDatasetService,
+  HarnessPolicyService,
+  getScaleName,
+  PHASE_NAMES_PT,
+  ROLE_DISPLAY_NAMES,
+} from '..';
+
+describe('Harness boundary exports', () => {
+  it('exposes runtime and orchestration services', () => {
+    expect(WorkflowService).toBeDefined();
+    expect(HarnessAdapterRuntime).toBeDefined();
+    expect(HARNESS_HOOK_SOURCES).toContain('claude-code');
+    expect(HARNESS_ADAPTER_TOOL_NAMES).toContain('workflow-advance');
+    expect(HarnessHookAdapter).toBeDefined();
+    expect(createHarnessHookAdapter).toBeDefined();
+    expect(HarnessActionService).toBeDefined();
+    expect(HarnessAgentActionService).toBeDefined();
+    expect(HarnessSkillActionService).toBeDefined();
+    expect(HarnessPlanActionService).toBeDefined();
+    expect(HarnessExploreActionService).toBeDefined();
+    expect(HarnessContextActionService).toBeDefined();
+    expect(HarnessSyncActionService).toBeDefined();
+    expect(HarnessWorkflowManageActionService).toBeDefined();
+    expect(HarnessWorkflowActionService).toBeDefined();
+    expect(HarnessAgentsService).toBeDefined();
+    expect(HarnessPlansService).toBeDefined();
+    expect(HarnessContextService).toBeDefined();
+    expect(HarnessSkillsService).toBeDefined();
+    expect(HarnessRuntimeStateService).toBeDefined();
+    expect(HarnessSensorsService).toBeDefined();
+    expect(HarnessTaskContractsService).toBeDefined();
+    expect(HarnessExecutionService).toBeDefined();
+    expect(HarnessReplayService).toBeDefined();
+    expect(HarnessDatasetService).toBeDefined();
+    expect(HarnessPolicyService).toBeDefined();
+    expect(getScaleName).toBeDefined();
+    expect(PHASE_NAMES_PT).toBeDefined();
+    expect(ROLE_DISPLAY_NAMES).toBeDefined();
+  });
+});

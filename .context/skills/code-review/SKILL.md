@@ -133,4 +133,4 @@ Guidelines for reviewing code changes in the `@dotcontext/cli` project.
 1. Verify phase transitions follow PREVC order (P -> R -> E -> V -> C)
 2. Check scale-dependent phase inclusion (QUICK: E+V only, SMALL: P+E+V, MEDIUM: P+R+E+V, LARGE: all)
 3. Ensure gate checks are enforced unless `autonomous` or `force` is true
-4. Verify workflow status file is written to `.context/workflow/`
+4. Verify workflow status file is written to `.context/runtime/workflows/`

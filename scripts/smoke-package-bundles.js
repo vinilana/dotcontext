@@ -49,6 +49,24 @@ const bundles = [
     ],
     bin: 'dotcontext-mcp',
   },
+  {
+    slug: 'integrations',
+    packageName: '@dotcontext/integrations',
+    main: 'dist/integrations/index.js',
+    types: 'dist/integrations/index.d.ts',
+    expectedExports: [
+      'createClaudeCodeHookAdapter',
+      'createCodexHookAdapter',
+      'createPiDevHookAdapter',
+    ],
+  },
+  {
+    slug: 'pi',
+    packageName: '@dotcontext/pi',
+    extensionEntry: 'extension/index.ts',
+    piExtensions: ['./extension/index.ts'],
+    expectedDependencies: ['@dotcontext/harness', '@dotcontext/integrations'],
+  },
 ];
 
 function assert(condition, message) {
@@ -75,15 +93,44 @@ function smokeBundle(bundle) {
   const bundleRoot = path.join(bundlesRoot, bundle.slug);
   const manifestPath = path.join(bundleRoot, 'package.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const mainPath = path.join(bundleRoot, bundle.main);
-  const typesPath = path.join(bundleRoot, bundle.types);
 
   assert(manifest.name === bundle.packageName, `${bundle.slug}: package name mismatch`);
   assert(manifest.version === rootPackage.version, `${bundle.slug}: version mismatch`);
-  assert(fs.existsSync(mainPath), `${bundle.slug}: main entry missing`);
-  assert(fs.existsSync(typesPath), `${bundle.slug}: types entry missing`);
   assert(fs.existsSync(path.join(bundleRoot, 'README.md')), `${bundle.slug}: README missing`);
   assert(fs.existsSync(path.join(bundleRoot, 'LICENSE')), `${bundle.slug}: LICENSE missing`);
+
+  if (bundle.extensionEntry) {
+    assert(
+      fs.existsSync(path.join(bundleRoot, bundle.extensionEntry)),
+      `${bundle.slug}: extension entry missing`
+    );
+    assert(
+      manifest.pi
+        && JSON.stringify(manifest.pi.extensions) === JSON.stringify(bundle.piExtensions),
+      `${bundle.slug}: pi manifest mismatch`
+    );
+    for (const dependency of bundle.expectedDependencies || []) {
+      assert(
+        manifest.dependencies && manifest.dependencies[dependency],
+        `${bundle.slug}: missing dependency ${dependency}`
+      );
+    }
+
+    return {
+      bundle: bundle.slug,
+      exports: bundle.expectedDependencies?.length || 0,
+    };
+  }
+
+  const mainPath = path.join(bundleRoot, bundle.main);
+  const typesPath = path.join(bundleRoot, bundle.types);
+
+  assert(fs.existsSync(mainPath), `${bundle.slug}: main entry missing`);
+  assert(fs.existsSync(typesPath), `${bundle.slug}: types entry missing`);
+  assert(
+    !fs.existsSync(path.join(bundleRoot, 'dist', 'services')),
+    `${bundle.slug}: dist/services must not be published`
+  );
 
   if (bundle.bin) {
     assert(manifest.bin && manifest.bin[bundle.bin], `${bundle.slug}: bin entry missing`);

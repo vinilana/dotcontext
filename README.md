@@ -4,13 +4,13 @@
 [![CI](https://github.com/vinilana/dotcontext/actions/workflows/ci.yml/badge.svg)](https://github.com/vinilana/dotcontext/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Formerly `@ai-coders/context`.** Renamed to avoid confusion with Context7 and other "context" tools in the AI space. The `.context/` directory standard is unchanged. See [Migration Guide](#migration-from-ai-coderscontext).
+> **Formerly `@ai-coders/context`.** The package was renamed to avoid confusion with Context7 and other generic "context" tools. The `.context/` directory convention is unchanged. See [Migration from @ai-coders/context](#migration-from-ai-coderscontext).
 
-**Dotcontext is a harness engineering runtime for AI-assisted software delivery.**
+**Dotcontext is a harness for your harness.** We provide the contextual layer you need to keep the work going no matter which tool you switch to.
 
-It gives coding agents a real operating environment instead of a loose prompt and a pile of conventions. Dotcontext combines shared project context, workflow structure, policies, sensors, task contracts, replayable execution history, and MCP access into one system.
+Instead of re-teaching every AI tool your project from scratch, dotcontext keeps a durable contextual layer in your repo — shared project context, workflow structure, policies, sensors, task contracts, replayable execution history, and MCP access — that travels with the project across whatever tool you use next.
 
-The point is not just to "give the model more context". The point is to make agent execution legible, constrained, reusable, and auditable.
+The point is not only to give a model more context. The point is to make agent execution legible, constrained, reusable, and auditable.
 
 ## What Dotcontext Is
 
@@ -18,193 +18,185 @@ Dotcontext is three things at once:
 
 - a `.context/` convention for durable project knowledge
 - a harness runtime that governs how agents execute work
-- a CLI and MCP surface that expose that runtime to humans and AI tools
+- CLI and MCP surfaces that expose the same runtime to humans and AI tools
 
-PREVC remains the default execution model for structured work: **Planning, Review, Execution, Validation, and Confirmation**.
+The repository is organized around one runtime and five package surfaces:
+
+```text
+cli -> harness <- mcp
+              <- integrations (host hooks / extensions)
+```
+
+| Surface | Package | Role |
+| --- | --- | --- |
+| CLI | `@dotcontext/cli` | Operator-facing sync, import/export, MCP setup, hook install, reports, and admin workflows |
+| Harness | `@dotcontext/harness` | Reusable runtime, domain rules, sessions, policies, sensors, contracts, replay, and workflow state |
+| MCP | `@dotcontext/mcp` | MCP transport adapter and installer for AI tools |
+| Integrations | `@dotcontext/integrations` | Host hook adapters and event mappers for Claude Code, Codex CLI, and Pi |
+| Pi extension | `@dotcontext/pi` | Pi npm extension for in-process lifecycle hooks |
+
+For the full system view, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Why Dotcontext Exists
 
 Most agent workflows break down for the same reasons:
 
 - project knowledge is scattered across tool-specific formats
-- execution rules live in prompts instead of in runtime controls
+- execution rules live in prompts instead of runtime controls
 - agents can change code without producing evidence
 - there is no durable record of why an agent did what it did
-- teams cannot reuse the same operating model across Claude, Cursor, Codex, Copilot, and others
+- teams cannot reuse the same operating model across Claude, Cursor, Codex, Copilot, Windsurf, Gemini, and other tools
 
-Dotcontext exists to solve that layer, not just the prompt layer.
-
-## Architecture
-
-Dotcontext is now organized around an explicit harness runtime:
-
-```text
-cli -> harness <- mcp
-```
-
-- `@dotcontext/cli` is the operator-facing surface
-- `dotcontext/harness` is the reusable runtime and domain layer
-- `dotcontext/mcp` is the MCP transport adapter
-
-The main architecture reference, with Mermaid diagrams for runtime flow, boundaries, and packaging, lives in [ARCHITECTURE.md](./ARCHITECTURE.md).
-
-## Problems It Solves
-
-### 1. Context Fragmentation
-
-Every AI coding tool now has a primary surface plus older compatibility paths that still show up in the wild. Dotcontext keeps track of both so teams can write against the current surface without losing legacy imports.
-
-| Tool | Primary surface | Legacy / compatibility surface |
-| --- | --- | --- |
-| Cursor | `.cursor/rules/*.mdc`, `AGENTS.md`-scoped instructions | `.cursorrules`, `.cursor/rules/*.md` |
-| Claude Code | `CLAUDE.md`, `.claude/agents`, `.claude/skills` | older memory-style files under `.claude/` |
-| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/skills` | `.github/copilot/*` and `.github/.copilot/*` |
-| Windsurf | `AGENTS.md`, `.windsurf/rules`, `.windsurf/skills` | `.windsurfrules`, older `.windsurf/` rule files |
-| Gemini | `GEMINI.md`, `.gemini/commands`, `.gemini/settings.json`, `.gemini/skills` | older `.gemini/` config layouts |
-| Codex | `AGENTS.md`, `.codex/skills`, `.codex/config.toml` | `.codex/instructions.md` |
-| Google Antigravity | `.agents/rules`, `.agents/workflows` | older `.agent/` layouts |
-| Trae AI | `.trae/rules`, `.trae/agents` | older `.trae/` rule files |
-
-Using multiple tools means duplicating rules, playbooks, and documentation across incompatible formats.
-
-### 2. Weak Runtime Control
-
-Most agent setups still rely on:
-
-- a long agent file
-- a few MCP tools
-- best-effort conventions
-
-That is not enough for production-grade behavior. You need runtime controls such as policies, sensors, contracts, and backpressure.
-
-### 3. No Durable Execution Model
-
-Without sessions, traces, artifacts, and replay:
-
-- agents cannot hand off work cleanly
-- failures are hard to cluster and learn from
-- workflow gates are hard to enforce
-- evaluation becomes anecdotal instead of operational
-
-## What Dotcontext Does
-
-Dotcontext consolidates those concerns into one operating model.
-
-### Shared Context
-
-One `.context/` directory. Works everywhere.
-
-```
-.context/
-├── docs/           # Your documentation (architecture, patterns, decisions)
-├── agents/         # Agent playbooks (code-reviewer, feature-developer, etc.)
-├── plans/          # Work plans linked to PREVC workflow
-└── skills/         # On-demand expertise (commit-message, pr-review, etc.)
-```
-
-Export to any tool.
-**Write once. Use anywhere. No boilerplate.**
-
-### Harness Runtime
-
-The runtime adds execution controls on top of the shared context:
-
-- durable sessions, traces, artifacts, and checkpoints
-- sensors and backpressure
-- task contracts and handoffs
-- policy enforcement
-- replay and failure dataset generation
-
-### Plan-Driven Contracts
-
-Structured plans now carry canonical phase metadata in frontmatter, including `phases[].steps[].deliverables`.
-
-- `plan link` bootstraps the active PREVC phase into a harness task contract when a workflow is already running
-- `workflow-advance` completes the previous active contract and derives the next one from the linked plan
-- the harness remains the source of truth for contract persistence and completion checks
-
-### Multi-Surface Access
-
-The same runtime is exposed through:
-
-- `@dotcontext/cli` for operator workflows
-- `dotcontext/mcp` for AI tools
-- `dotcontext/harness` as the reusable domain/runtime boundary
-
-## How The Harness Works
-
-At runtime, both the CLI and the MCP server delegate to the same harness services. The harness is responsible for:
-
-- durable sessions, traces, artifacts, and checkpoints
-- sensors and backpressure
-- task contracts and handoffs
-- policy enforcement
-- replay generation
-- failure dataset clustering
-
-```mermaid
-flowchart LR
-    CLI["CLI"] --> H["Harness Runtime"]
-    MCP["MCP Server"] --> H
-
-    H --> S["Sessions + State"]
-    H --> Q["Sensors + Backpressure"]
-    H --> T["Task Contracts + Handoffs"]
-    H --> P["Policy Engine"]
-    H --> R["Replay + Datasets"]
-```
-
-For the full system view, see [ARCHITECTURE.md](./ARCHITECTURE.md).
-
-> **Using GitHub Copilot, Cursor, Claude, or another AI tool?**
-> Just run `npx @dotcontext/mcp install` — no API key needed!
->
-> **Usando GitHub Copilot, Cursor, Claude ou outra ferramenta de IA?**
-> Execute `npx @dotcontext/mcp install` — sem necessidade de API key!
-
-> **Note / Nota**
-> Standalone CLI generation is no longer supported. Use MCP-enabled AI tools to create, fill, or refresh context.
-> A geração na CLI standalone não é mais suportada. Use ferramentas com MCP para criar, preencher ou atualizar o contexto.
+Dotcontext solves that layer by combining context, workflow, contracts, sensors, policies, traces, replay, and MCP access behind one harness.
 
 ## Getting Started / Como Começar
 
-### Path 1: MCP (Recommended / Recomendado) — no API key
+### Path 1: MCP, recommended, no API key
 
-#### English
+Use this path when you want an AI coding tool to initialize context, create plans, fill docs, and operate the PREVC workflow.
 
-1. Run `npx @dotcontext/mcp install`
-2. Prompt your AI agent: `init the context`
-3. Then: `plan [YOUR TASK] using dotcontext`
-4. After planned: `start the workflow`
+```bash
+npx @dotcontext/mcp install
+```
 
-**No API key needed.** Your AI tool provides the LLM.
+Optionally wire lifecycle hooks for Claude Code, Codex CLI, or Pi (bootstrap, tracing, workflow reminders):
 
-#### Português
+```bash
+npx -y @dotcontext/cli@latest hook install
+```
 
-1. Execute `npx @dotcontext/mcp install`
-2. Diga ao seu agente de IA: `init the context`
-3. Depois: `plan [SUA TAREFA] using dotcontext`
-4. Após o planejamento: `start the workflow`
+Then prompt your AI tool:
 
-**Sem necessidade de API key.** Sua ferramenta de IA fornece o LLM.
+```text
+init the context
+plan [YOUR TASK] using dotcontext
+start the workflow
+```
 
-### Path 2: Standalone CLI — sync, imports, and admin tools
+No Dotcontext API key is required. Your AI tool provides the model.
 
-#### English
+Em português:
 
-1. Run `npx -y @dotcontext/cli@latest`
-2. Use the interactive CLI for sync, reverse sync, hidden admin tools, and MCP setup
-3. When you need context creation or AI-generated content, use your MCP-connected AI tool
+```text
+init the context
+plan [SUA TAREFA] using dotcontext
+start the workflow
+```
 
-#### Português
+### Path 2: CLI for sync and admin tools
 
-1. Execute `npx -y @dotcontext/cli@latest`
-2. Use a CLI interativa para sincronização, reverse sync, ferramentas administrativas ocultas e configuração MCP
-3. Quando precisar criar contexto ou gerar conteúdo com IA, use sua ferramenta conectada via MCP
+Use the CLI for local operator tasks such as sync, reverse sync, imports, reports, hidden admin utilities, and compatibility MCP setup.
+
+```bash
+npx -y @dotcontext/cli@latest
+```
+
+Context creation, AI-generated fills, and plan scaffolding are MCP-first. The standalone CLI does not provide the old direct `init`, `fill`, `plan`, `update`, or `analyze` command flow.
+
+## Core Concepts
+
+### Shared Context
+
+One `.context/` directory stores durable project knowledge and workflow state.
+
+```text
+.context/
+├── docs/        # Durable project documentation (versioned with the repo)
+├── agents/      # Agent playbooks
+├── skills/      # On-demand expertise guides
+├── plans/       # Structured PREVC plans and execution tracking
+├── config/      # Authored config: policy.json and sensors.json (version-controlled)
+└── runtime/     # Generated state (gitignored):
+    ├── sessions/      # one folder per session: session.json, trace.jsonl, artifacts/
+    ├── workflows/     # PREVC state (prevc.json), plan tracking, collaboration records
+    ├── contracts/     # task and handoff contracts
+    └── evaluations/   # replays and failure datasets
+```
+
+### Harness Runtime
+
+The runtime is the reusable execution layer used by both CLI and MCP:
+
+- durable sessions, traces, artifacts, and checkpoints
+- sensors and backpressure
+- task contracts and handoffs
+- policy enforcement
+- PREVC workflow state
+- replay and failure dataset generation
+
+### PREVC Workflow
+
+PREVC remains the default execution model for structured work.
+
+| Phase | Name | Purpose |
+| --- | --- | --- |
+| `P` | Planning | Define requirements, scope, and plan before implementation |
+| `R` | Review | Validate approach, architecture, risks, and approvals |
+| `E` | Execution | Implement against the approved plan |
+| `V` | Validation | Run tests, sensors, QA, and review against acceptance criteria |
+| `C` | Confirmation | Final docs, changelog, deployment, and handoff |
+
+Scale-adaptive routing can shorten the workflow:
+
+| Scale | Phases | Use Case |
+| --- | --- | --- |
+| `QUICK` | E -> V | Bug fixes, typos, small tweaks |
+| `SMALL` | P -> E -> V | Simple features |
+| `MEDIUM` | P -> R -> E -> V | Regular features with design decisions |
+| `LARGE` | P -> R -> E -> V -> C | Complex systems, compliance, or broad changes |
+
+### Plan-Driven Contracts
+
+Structured plans carry canonical phase metadata in frontmatter:
+
+- `phases[].summary`
+- `phases[].deliverables`
+- `phases[].steps[].description`
+- `phases[].steps[].assignee`
+- `phases[].steps[].deliverables`
+- `phases[].required_sensors`
+- `phases[].required_artifacts`
+
+`plan({ action: "link" })` bootstraps the active PREVC phase into a harness task contract when a workflow is running. `workflow-advance` completes the previous active contract and derives the next one from the linked plan.
+
+Execution-phase plans must declare `required_sensors`. This prevents a plan from silently claiming execution is verified without evidence.
+
+### Executable Evidence
+
+The `execution_evidence` gate checks the active task contract before E -> V:
+
+- required sensors must have passed
+- required artifacts must be recorded or found through allowed filesystem scans
+- blocking findings stop phase advancement
+
+`autonomous_mode` bypasses only policy gates such as plan approval. It does not bypass execution evidence. Use `force: true` on `workflow-advance` only when you intentionally accept that responsibility.
+
+### Sensors
+
+`context({ action: "init" })` bootstraps `.context/config/sensors.json` so each project can customize its quality checks.
+
+Built-in sensors registered by the harness:
+
+| Sensor | What it checks |
+| --- | --- |
+| `i18n-coverage` | Non-base locale files have the same keyset as the base locale |
+| `tests-passing` | Test suite passes, with Jest JSON parsing by default and exit-code mode for other runners |
+| `typecheck-clean` | `tsc --noEmit`, or a configured command, exits cleanly |
+
+Plan scaffolding can auto-suggest phase requirements based on the repository:
+
+| Detected feature | Suggested sensor |
+| --- | --- |
+| `locales/*.json` or `i18n/*.json` | `i18n-coverage` |
+| real `scripts.test` in `package.json` | `tests-passing` |
+| `tsconfig.json` | `typecheck-clean` |
+| ESLint config | `lint` |
+
+For the full sensor and artifact model, including structured artifact requirements and `fromFilesystem: true`, see the [Sensors & policies guide](https://dotcontext.dev/guides/customizing-sensors-and-policies/) and [Authoring plans](https://dotcontext.dev/guides/authoring-plans/) on the documentation site.
 
 ## MCP Server Setup
 
-This package includes an MCP (Model Context Protocol) server that provides AI coding assistants with powerful tools to analyze and document your codebase.
+The MCP package gives AI coding assistants the Dotcontext runtime through MCP tools.
 
 ### Recommended Installation
 
@@ -214,17 +206,18 @@ Use the installer. It is the source of truth for supported tools and config form
 npx @dotcontext/mcp install
 ```
 
-If you already have the MCP package installed globally, `dotcontext-mcp install` works too. The legacy `dotcontext mcp:install` CLI flow still works as a compatibility path.
+If you already have the MCP package installed globally, `dotcontext-mcp install` works too. The legacy `dotcontext mcp:install` CLI flow remains available as a compatibility path.
 
 The installer:
-- Detects installed AI tools on your system
-- Opens the interactive tool picker when you run `install` in a terminal without a tool id
-- Configures the `dotcontext` MCP server in each tool
-- Supports global (home directory) and local (project directory) installation
-- Falls back to `all` detected tools in non-interactive runs without a tool id
-- Merges with existing MCP configurations without overwriting unrelated servers
-- Includes `--dry-run` and `--verbose` modes
-- Writes the config shape required by each supported client
+
+- detects installed AI tools on your system
+- opens an interactive tool picker when run in a terminal without a tool id
+- configures the `dotcontext` MCP server in each selected tool
+- supports global home-directory and local project-directory installation
+- falls back to all detected tools in non-interactive runs without a tool id
+- merges with existing MCP configs without overwriting unrelated servers
+- supports `--dry-run` and `--verbose`
+- writes the config shape required by each supported client
 
 Examples:
 
@@ -256,7 +249,7 @@ npx @dotcontext/mcp install claude --dry-run --verbose
 | `vscode` | VS Code (GitHub Copilot) | `servers` JSON |
 | `roo` | Roo Code | `mcpServers` JSON |
 | `amazonq` | Amazon Q Developer CLI | `mcpServers` JSON |
-| `gemini-cli` | Gemini CLI | `mcpServers` JSON |
+| `gemini` | Gemini CLI | `mcpServers` JSON |
 | `codex` | Codex CLI | TOML `[mcp_servers.dotcontext]` |
 | `kiro` | Kiro | `mcpServers` JSON |
 | `zed` | Zed Editor | `context_servers` JSON |
@@ -264,12 +257,13 @@ npx @dotcontext/mcp install claude --dry-run --verbose
 | `trae` | Trae AI | `mcpServers` JSON |
 | `kilo` | Kilo Code | `mcp` JSON |
 | `copilot-cli` | GitHub Copilot CLI | `mcpServers` JSON |
+| `pi` | Pi | `mcpServers` JSON (`.mcp.json` or `~/.config/mcp/mcp.json`) |
+
+The installer supports **17 AI clients** total. The legacy tool id `gemini-cli` is accepted as an alias for `gemini`.
 
 ### Manual Configuration
 
-Use manual configuration only when you cannot use `@dotcontext/mcp install`. The exact file format depends on the client.
-
-Dotcontext writes this command into client configs:
+Use manual configuration only when you cannot use `@dotcontext/mcp install`. Dotcontext writes this command into client configs:
 
 ```text
 command: npx
@@ -278,14 +272,15 @@ args: ["-y", "@dotcontext/mcp@latest"]
 
 #### Standard `mcpServers` JSON
 
-Used by tools such as Claude Code, Windsurf, Claude Desktop, Roo Code, Amazon Q Developer CLI, Gemini CLI, Trae AI, and GitHub Copilot CLI.
+Used by Claude Code, Windsurf, Claude Desktop, Roo Code, Amazon Q Developer CLI, Gemini CLI, Trae AI, Kiro, and GitHub Copilot CLI.
 
 ```json
 {
   "mcpServers": {
     "dotcontext": {
       "command": "npx",
-      "args": ["-y", "@dotcontext/mcp@latest"]
+      "args": ["-y", "@dotcontext/mcp@latest"],
+      "env": {}
     }
   }
 }
@@ -293,23 +288,20 @@ Used by tools such as Claude Code, Windsurf, Claude Desktop, Roo Code, Amazon Q 
 
 #### Cursor
 
-Cursor expects `type: "stdio"`:
-
 ```json
 {
   "mcpServers": {
     "dotcontext": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@dotcontext/mcp@latest"]
+      "args": ["-y", "@dotcontext/mcp@latest"],
+      "env": {}
     }
   }
 }
 ```
 
 #### Continue.dev
-
-Continue uses a standalone per-server file:
 
 ```json
 {
@@ -321,23 +313,20 @@ Continue uses a standalone per-server file:
 
 #### VS Code (GitHub Copilot)
 
-VS Code uses `servers` instead of `mcpServers`:
-
 ```json
 {
   "servers": {
     "dotcontext": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@dotcontext/mcp@latest"]
+      "args": ["-y", "@dotcontext/mcp@latest"],
+      "env": {}
     }
   }
 }
 ```
 
 #### Zed
-
-Zed uses `context_servers`:
 
 ```json
 {
@@ -352,8 +341,6 @@ Zed uses `context_servers`:
 ```
 
 #### JetBrains IDEs
-
-JetBrains uses a `servers` array:
 
 ```json
 {
@@ -370,8 +357,6 @@ JetBrains uses a `servers` array:
 
 #### Kilo Code
 
-Kilo uses `mcp.dotcontext` with a command array:
-
 ```json
 {
   "mcp": {
@@ -386,17 +371,52 @@ Kilo uses `mcp.dotcontext` with a command array:
 
 #### Codex CLI
 
-Codex uses TOML:
-
 ```toml
 [mcp_servers.dotcontext]
 command = "npx"
 args = ["-y", "@dotcontext/mcp@latest"]
 ```
 
-### Local Development
+### Hook Install (Claude Code, Codex CLI, Pi)
 
-For local development, point directly to the dedicated MCP binary after `npm run build`:
+Lifecycle hooks bootstrap context, append durable traces after file edits, and surface workflow reminders at session end — with lower token cost than loading the full MCP surface on every turn.
+
+```bash
+npx -y @dotcontext/cli@latest hook install
+```
+
+Examples:
+
+```bash
+npx -y @dotcontext/cli@latest hook install claude-code --dry-run
+npx -y @dotcontext/cli@latest hook install codex --local
+npx -y @dotcontext/cli@latest hook install codex --local --format toml
+npx -y @dotcontext/cli@latest hook install pi --local
+```
+
+| Host | Config | Dispatch |
+| --- | --- | --- |
+| `claude-code` | `.claude/settings.json` | `npx -y @dotcontext/cli@latest hook dispatch --source claude-code` |
+| `codex` | `.codex/hooks.json` or inline in `.codex/config.toml` | `npx -y @dotcontext/cli@latest hook dispatch --source codex` |
+| `pi` | `pi install npm:@dotcontext/pi` | In-process TypeScript extension |
+
+For Pi, combine the extension (hooks) with MCP for the full tool surface:
+
+```bash
+pi install npm:@dotcontext/pi
+npx @dotcontext/mcp install pi --local
+pi install npm:pi-mcp-adapter
+```
+
+After Codex hook install, run `/hooks` in Codex and trust project hooks when prompted.
+
+### Local Development MCP Config
+
+For local development, build first and point directly to the dedicated MCP binary:
+
+```bash
+npm run build
+```
 
 ```json
 {
@@ -409,208 +429,110 @@ For local development, point directly to the dedicated MCP binary after `npm run
 }
 ```
 
-## Youtube video
-[![Watch the video](https://img.youtube.com/vi/p9uV3CeLaKY/0.jpg)](https://www.youtube.com/watch?v=p9uV3CeLaKY)
+## MCP Tools
 
-## Connect with Us
+The MCP adapter currently exposes 12 tools: 7 action-based gateways plus 5 dedicated workflow entry points.
 
-Built by [AI Coders Academy](http://aicoders.academy/) — Learn AI-assisted development and become a more productive developer.
+### Action Gateways
 
-- [AI Coders Academy](http://aicoders.academy/) — Courses and resources for AI-powered coding
-- [YouTube Channel](https://www.youtube.com/@aicodersacademy) — Tutorials, demos, and best practices
-- [Connect with Vini](https://www.linkedin.com/in/viniciuslanadepaula/) — Creator of @dotcontext/cli
+| Tool | Purpose | Actions |
+| --- | --- | --- |
+| `explore` | File and code exploration | `read`, `list`, `analyze`, `search`, `getStructure` |
+| `context` | Context scaffolding and semantic context | `check`, `bootstrapStatus`, `init`, `fill`, `fillSingle`, `listToFill`, `getMap`, `buildSemantic`, `scaffoldPlan`, `searchQA`, `generateQA`, `getFlow`, `detectPatterns` |
+| `sync` | Import/export synchronization with AI tools | `exportRules`, `exportDocs`, `exportAgents`, `exportContext`, `exportSkills`, `reverseSync`, `importDocs`, `importAgents`, `importSkills` |
+| `plan` | Plan linking, tracking, decisions, steps, markdown sync, and phase commits | `link`, `getLinked`, `getDetails`, `getForPhase`, `updatePhase`, `recordDecision`, `updateStep`, `getStatus`, `syncMarkdown`, `commitPhase` |
+| `agent` | Agent orchestration and discovery | `discover`, `getInfo`, `orchestrate`, `getSequence`, `getDocs`, `getPhaseDocs`, `listTypes` |
+| `skill` | Skill management | `list`, `getContent`, `getForPhase`, `scaffold`, `export`, `fill` |
+| `harness` | Explicit runtime operations | sessions, traces, artifacts, checkpoints, tasks, handoffs, sensors, policies, replay, datasets |
 
+`context init` also bootstraps `.context/config/sensors.json`. While that catalog is still in bootstrap form, `context listToFill` and `context fill` can return it so the AI can customize project-specific quality sensors.
 
-## Why PREVC?
+`searchQA` ranks generated `.context/docs/qa/*.md` helper docs by keyword match. It is a lightweight shortcut, not embedding-based semantic retrieval, and `generateQA` is opt-in.
 
-### English
+### Dedicated Workflow Tools
 
-LLMs produce better results when they follow a structured process instead of generating code blindly. PREVC ensures:
+| Tool | Description |
+| --- | --- |
+| `workflow-init` | Initialize a PREVC workflow with scale detection, gates, and harness session binding |
+| `workflow-status` | Read current workflow status, phases, linked plans, and active harness task contract |
+| `workflow-guide` | Read adapter-neutral next steps, relevant skills, and portable gate decision hints |
+| `workflow-advance` | Advance to the next PREVC phase with gate checking and task-contract rotation |
+| `workflow-manage` | Manage handoffs, collaboration, workflow docs, gates, approvals, artifacts, checkpoints, manual contracts, and sensor runs |
 
-- **Specifications before code** — AI understands what to build before building it
-- **Context awareness** — Each phase has the right documentation and agent
-- **Human checkpoints** — Review and validate at each step, not just at the end
-- **Reproducible quality** — Same process, consistent results across projects
-
-### Português
-
-LLMs produzem melhores resultados quando seguem um processo estruturado em vez de gerar código cegamente. PREVC garante:
-
-- **Especificações antes do código** — IA entende o que construir antes de construir
-- **Consciência de contexto** — Cada fase tem a documentação e o agente corretos
-- **Checkpoints humanos** — Revise e valide em cada etapa, não apenas no final
-- **Qualidade reproduzível** — Mesmo processo, resultados consistentes entre projetos
-
-## What it does / O que faz
-
-### English
-
-1. **Creates documentation** — Structured docs from your codebase (architecture, data flow, decisions)
-2. **Generates agent playbooks** — 14 specialized AI agents (code-reviewer, bug-fixer, architect, etc.)
-3. **Smart scaffold filtering** — Automatically detects project type and generates only relevant content
-4. **Useful out-of-the-box** — Scaffolds include practical template content, not empty placeholders
-5. **Manages workflows** — PREVC process with scale detection, gates, and execution history
-6. **Provides skills** — On-demand expertise (commit messages, PR reviews, security audits)
-7. **Syncs everywhere** — Export to Cursor, Claude, Copilot, Windsurf, Cline, Codex, Antigravity, Trae, and more
-8. **Tracks execution** — Step-level tracking with git integration for workflow phases
-9. **Keeps it updated** — Detects code changes and suggests documentation updates
-
-### Português
-
-1. **Cria documentação** — Docs estruturados do seu codebase (arquitetura, fluxo de dados, decisões)
-2. **Gera playbooks de agentes** — 14 agentes de IA especializados (code-reviewer, bug-fixer, architect, etc.)
-3. **Filtragem inteligente de scaffold** — Detecta automaticamente o tipo de projeto e gera apenas conteúdo relevante
-4. **Útil de imediato** — Scaffolds incluem conteúdo prático, não placeholders vazios
-5. **Gerencia workflows** — Processo PREVC com detecção de escala, gates e histórico de execução
-6. **Fornece skills** — Expertise sob demanda (mensagens de commit, revisões de PR, auditorias de segurança)
-7. **Sincroniza em todos os lugares** — Exporte para Cursor, Claude, Copilot, Windsurf, Cline, Codex, Antigravity, Trae e mais
-8. **Rastreia execução** — Rastreamento por etapa com integração git para fases de workflow
-9. **Mantém atualizado** — Detecta mudanças no código e sugere atualizações de documentação
-
-PT-BR Tutorial
-https://www.youtube.com/watch?v=5BPrfZAModk
-
-## PREVC Workflow System
-
-A universal 5-phase process designed to improve LLM output quality through structured, spec-driven development:
-
-| Phase | Name | Purpose |
-|-------|------|---------|
-| **P** | Planning | Define what to build. Gather requirements, write specs, identify scope. No code yet. |
-| **R** | Review | Validate the approach. Architecture decisions, technical design, risk assessment. |
-| **E** | Execution | Build it. Implementation follows the approved specs and design. |
-| **V** | Validation | Verify it works. Tests, QA, code review against original specs. |
-| **C** | Confirmation | Ship it. Documentation, deployment, stakeholder handoff. |
-
-### The Problem with Autopilot AI
-
-Most AI coding workflows look like this:
-```
-User: "Add authentication"
-AI: *generates 500 lines of code*
-User: "That's not what I wanted..."
-```
-
-PREVC fixes this:
-```
-P: What type of auth? OAuth, JWT, session? What providers?
-R: Here's the architecture. Dependencies: X, Y. Risks: Z. Approve?
-E: Implementing approved design...
-V: All 15 tests pass. Security audit complete.
-C: Deployed. Docs updated. Ready for review.
-```
-
-## Documentation
-
-- [User Guide](./docs/GUIDE.md) — Complete usage guide
-
-
-### Smart Project Detection
-
-The system automatically detects your project type and generates only relevant scaffolds:
-
-| Project Type | Detected By | Docs | Agents |
-|--------------|-------------|------|--------|
-| **CLI** | `bin` field, commander/yargs | Core docs | Core agents |
-| **Web Frontend** | React, Vue, Angular, Svelte | + architecture, security | + frontend, devops |
-| **Web Backend** | Express, NestJS, FastAPI | + architecture, data-flow, security | + backend, database, devops |
-| **Full Stack** | Both frontend + backend | All docs | All agents |
-| **Mobile** | React Native, Flutter | + architecture, security | + mobile, devops |
-| **Library** | `main`/`exports` without `bin` | Core docs | Core agents |
-| **Monorepo** | Lerna, Nx, Turborepo | All docs | All agents |
-
-**Core scaffolds** (always included):
-- Docs: project-overview, development-workflow, testing-strategy, tooling
-- Agents: code-reviewer, bug-fixer, feature-developer, refactoring-specialist, test-writer, documentation-writer, performance-optimizer
-
-### Scale-Adaptive Routing
-
-The system automatically detects project scale and adjusts the workflow:
-
-| Scale | Phases | Use Case |
-|-------|--------|----------|
-| QUICK | E → V | Bug fixes, small tweaks |
-| SMALL | P → E → V | Simple features |
-| MEDIUM | P → R → E → V | Regular features |
-| LARGE | P → R → E → V → C | Complex systems, compliance |
+For AI-agent use, provide `repoPath` on the first context-heavy MCP call so dotcontext can cache the working repository.
 
 ## CLI Reference
 
 ### Requirements
 
-- Node.js 20+
+- Node.js `>=20`
 
-**Context creation, AI generation, and refresh are MCP-only.** Use `npx @dotcontext/mcp install` and let your AI tool use its own LLM.
+### Commands
 
-### Available MCP Tools
+| Command | Purpose |
+| --- | --- |
+| `npx -y @dotcontext/cli@latest` | Launch the interactive CLI, including quick sync |
+| `npx @dotcontext/mcp install` | Install MCP configuration for supported AI tools |
+| `npx -y @dotcontext/cli@latest hook install [host]` | Install lifecycle hooks for Claude Code, Codex CLI, or Pi |
+| `npx -y @dotcontext/cli@latest hook uninstall [host]` | Remove dotcontext hook entries |
+| `npx -y @dotcontext/mcp@latest` | Start the MCP server manually |
+| `npx -y @dotcontext/cli@latest sync` | Export agent playbooks to AI tools |
+| `npx -y @dotcontext/cli@latest export-rules` | Export `.context/docs` rules to AI tools |
+| `npx -y @dotcontext/cli@latest import-rules` | Import rules into `.context/docs` |
+| `npx -y @dotcontext/cli@latest import-agents` | Import agents into `.context/agents` |
+| `npx -y @dotcontext/cli@latest reverse-sync` | Import rules, agents, and skills into `.context/` |
+| `npx -y @dotcontext/cli@latest admin workflow ...` | Manage PREVC workflow state from the hidden admin surface |
+| `npx -y @dotcontext/cli@latest admin skill list` | List available skills |
+| `npx -y @dotcontext/cli@latest admin skill export` | Export skills to AI tool directories |
+| `npx -y @dotcontext/cli@latest admin report` | Generate workflow progress reports |
 
-Once configured, your AI assistant will have access to 9 gateway tools with action-based dispatching:
-
-#### Gateway Tools (Primary Interface)
-
-| Gateway | Description | Actions |
-|---------|-------------|---------|
-| **explore** | File and code exploration | `read`, `list`, `analyze`, `search`, `getStructure` |
-| **context** | Context scaffolding, semantic context, and optional Q&A/flow helpers | `check`, `bootstrapStatus`, `init`, `fill`, `fillSingle`, `listToFill`, `getMap`, `buildSemantic`, `scaffoldPlan`, `searchQA`, `generateQA`, `getFlow`, `detectPatterns` |
-| **plan** | Plan management, structured step tracking, and workflow-linked bootstrap of the active task contract | `link`, `getLinked`, `getDetails`, `getForPhase`, `updatePhase`, `recordDecision`, `updateStep`, `getStatus`, `syncMarkdown`, `commitPhase` |
-| **agent** | Agent orchestration and discovery | `discover`, `getInfo`, `orchestrate`, `getSequence`, `getDocs`, `getPhaseDocs`, `listTypes` |
-| **skill** | Skill management for on-demand expertise | `list`, `getContent`, `getForPhase`, `scaffold`, `export`, `fill` |
-| **sync** | Import/export synchronization with AI tools | `exportRules`, `exportDocs`, `exportAgents`, `exportContext`, `exportSkills`, `reverseSync`, `importDocs`, `importAgents`, `importSkills` |
-
-`context init` also bootstraps `.context/harness/sensors.json`. While that catalog is still in bootstrap form, `context listToFill`/`fill` can return it so the AI can customize project-specific quality sensors.
-
-`searchQA` ranks generated `.context/docs/qa/*.md` helper docs by keyword match. It is a lightweight shortcut, not embedding-based semantic retrieval, and `generateQA` is opt-in.
-
-#### Dedicated Workflow Tools
-
-| Tool | Description |
-|------|-------------|
-| **workflow-init** | Initialize a PREVC workflow with scale detection, gates, and autonomous mode |
-| **workflow-status** | Get current workflow status, phases, execution history, and the active harness task contract |
-| **workflow-advance** | Advance to the next PREVC phase with gate checking and automatic task-contract rotation |
-| **workflow-manage** | Manage handoffs, collaboration, documents, gates, approvals, and manual contract overrides |
-
-#### Key Features in v0.7.0
-
-- **Gateway Pattern**: Simplified, action-based tools reduce cognitive load
-- **Plan Execution Tracking**: Step-level tracking with canonical `phases[].steps[].deliverables`, plus `updateStep`, `getStatus`, and `syncMarkdown` actions
-- **Git Integration**: `commitPhase` action for creating commits on phase completion
-- **Q&A & Pattern Detection**: Automatic Q&A generation and functional pattern analysis
-- **Execution History**: Comprehensive logging of all workflow actions to `.context/workflow/actions.jsonl`
-- **Workflow Gates**: Phase transition gates based on project scale with approval requirements
-- **Task Contract Rotation**: `plan link` bootstraps the current phase contract and `workflow-advance` rotates it automatically
-- **Export/Import Tools**: Granular control over docs, agents, and skills sync with merge strategies
-
-### Skills (On-Demand Expertise)
-
-Skills are task-specific procedures that AI agents activate when needed:
-
-| Skill | Description | Phases |
-|-------|-------------|--------|
-| `commit-message` | Generate conventional commits | E, C |
-| `pr-review` | Review PRs against standards | R, V |
-| `code-review` | Code quality review | R, V |
-| `test-generation` | Generate test cases | E, V |
-| `documentation` | Generate/update docs | P, C |
-| `refactoring` | Safe refactoring steps | E |
-| `bug-investigation` | Bug investigation flow | E, V |
-| `feature-breakdown` | Break features into tasks | P |
-| `api-design` | Design RESTful APIs | P, R |
-| `security-audit` | Security review checklist | R, V |
+Examples:
 
 ```bash
-npx -y @dotcontext/cli@latest admin skill list   # List available skills
-npx -y @dotcontext/cli@latest admin skill export # Export to AI tools
+npx -y @dotcontext/cli@latest sync --preset claude
+npx -y @dotcontext/cli@latest export-rules --preset cursor
+npx -y @dotcontext/cli@latest reverse-sync --dry-run
+npx -y @dotcontext/cli@latest admin workflow init "feature-name"
+npx -y @dotcontext/cli@latest admin workflow status
+npx -y @dotcontext/cli@latest admin workflow advance
+npx -y @dotcontext/cli@latest admin report
 ```
 
-Use MCP tools from your AI assistant to scaffold, fill, or refresh skills and other context files.
+## Sync and Tool Surface Support
 
-### Agent Types
+Dotcontext can export/import rules, agents, and skills across these current tool surfaces. As of 1.0.0, legacy flat-file and old-layout surfaces (e.g. `.cursorrules`, `.windsurfrules`, `.clinerules`, `.continuerules`, `.github/copilot/*`, `.codex/instructions.md`, the Antigravity `.agent/*` layout, older `.claude` memory files) are no longer imported or exported.
 
-The orchestration system maps tasks to specialized agents:
+| Tool | Primary surface | Sync | MCP | Hooks |
+| --- | --- | --- | --- | --- |
+| Cursor | `.cursor/rules/*.mdc`, `.cursor/agents` | ✓ | ✓ | — |
+| Claude Code | `CLAUDE.md`, `.claude/agents`, `.claude/skills` | ✓ | ✓ | ✓ |
+| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/skills` | ✓ | ✓ (`vscode`, `copilot-cli`) | — |
+| Windsurf | `.windsurf/rules`, `.windsurf/agents`, `.windsurf/skills` | ✓ | ✓ | — |
+| Gemini CLI | `GEMINI.md`, `.gemini/skills` | ✓ | ✓ | — |
+| Codex CLI | `AGENTS.md`, `.codex/skills`, `.codex/config.toml` | ✓ | ✓ | ✓ |
+| Pi | MCP + extension | — | ✓ | ✓ (`@dotcontext/pi`) |
+| Google Antigravity | `.agents/rules`, `.agents/agents`, `.agents/workflows` | ✓ | — | — |
+| Trae AI | `.trae/rules`, `.trae/agents` | ✓ | ✓ | — |
+| Cline | `.cline/rules`, `.cline/agents` | ✓ | — | — |
+| Continue.dev | `.continue/rules`, `.continue/agents` | ✓ | ✓ | — |
+| Aider | `CONVENTIONS.md` | ✓ | — | — |
+| Zed | `.zed/rules` | ✓ | ✓ | — |
+
+## Roadmap
+
+Lifecycle hooks ship today for Claude Code, Codex CLI, and Pi. The harness runtime and `hook dispatch` model are host-agnostic; upcoming work extends `hook install` to more agents:
+
+- **Cursor hooks** — bootstrap, durable traces, and PREVC workflow reminders (MCP and sync already supported)
+- **Google Antigravity hooks** — harness-backed lifecycle integration for Antigravity hosts
+- **OpenCode hooks** — session bootstrap, tracing, and workflow guidance for OpenCode CLI
+- **Additional hosts** — Windsurf, GitHub Copilot, and other MCP clients as stable hook surfaces emerge
+
+## Built-In Agents and Skills
+
+Dotcontext includes 14 built-in agent playbook types:
 
 | Agent | Focus |
-|-------|-------|
+| --- | --- |
 | `architect-specialist` | System architecture and patterns |
 | `feature-developer` | New feature implementation |
 | `bug-fixer` | Bug identification and fixes |
@@ -626,51 +548,94 @@ The orchestration system maps tasks to specialized agents:
 | `mobile-specialist` | Mobile applications |
 | `refactoring-specialist` | Code structure improvements |
 
+Built-in skills include commit messages, PR review, code review, test generation, documentation, refactoring, bug investigation, feature breakdown, API design, and security audit flows.
+
+```bash
+npx -y @dotcontext/cli@latest admin skill list
+npx -y @dotcontext/cli@latest admin skill export
+```
+
+Use MCP `skill` actions when you want skill scaffolding or AI-assisted fill behavior.
+
+## Development
+
+Install dependencies and validate the codebase:
+
+```bash
+npm install
+npm run build
+npm test -- --runInBand
+```
+
+For package/release surface changes:
+
+```bash
+npm run build:packages
+npm run smoke:packages
+```
+
+The package build prepares local bundles in `.release/packages/cli`, `.release/packages/harness`, `.release/packages/mcp`, `.release/packages/integrations`, and `.release/packages/pi`.
+
+## Documentation
+
+📖 **Full documentation site** (bilingual EN / PT-BR), built with Astro + Starlight, lives in [`docs/`](./docs/). Run it locally with `cd docs && npm install && npm run dev`, or build the static site with `npm run build`. It covers installation, a quickstart, all concepts (the `.context` convention, the harness runtime, PREVC, sensors, policies, task contracts, replay), guides, and a full MCP/CLI reference.
+
+Other references in this repo:
+
+- [Documentation site](https://dotcontext.dev) — user guide, concepts, and MCP/CLI reference ([`docs/`](./docs/) source)
+- [Architecture](./ARCHITECTURE.md) - harness architecture and package boundaries
+- [Contributing](./CONTRIBUTING.md) - contributor workflow
+- [Changelog](./CHANGELOG.md) - release-facing changes
+
+## Videos and Community
+
+PT-BR tutorial:
+
+https://www.youtube.com/watch?v=5BPrfZAModk
+
+Overview video:
+
+[![Watch the video](https://img.youtube.com/vi/p9uV3CeLaKY/0.jpg)](https://www.youtube.com/watch?v=p9uV3CeLaKY)
+
+Built by [AI Coders Academy](http://aicoders.academy/).
+
+- [AI Coders Academy](http://aicoders.academy/) - Courses and resources for AI-powered coding
+- [YouTube Channel](https://www.youtube.com/@aicodersacademy) - Tutorials, demos, and best practices
+- [Connect with Vini](https://www.linkedin.com/in/viniciuslanadepaula/) - Creator of Dotcontext
 
 ## Migration from @ai-coders/context
-
-### Why the rename?
-
-The previous name `@ai-coders/context` caused frequent confusion with **Context7** and other tools that use "context" in their name. In the AI/LLM tooling space, "context" is too generic. The new name **dotcontext** is unique, searchable, and directly references the `.context/` directory convention at the core of this tool.
 
 ### What changed
 
 | Before | After |
-|--------|-------|
+| --- | --- |
 | `npm install @ai-coders/context` | `npm install @dotcontext/cli` |
 | `npx @ai-coders/context` | `npx -y @dotcontext/cli@latest` |
 | CLI command: `ai-context` | CLI command: `dotcontext` |
 | MCP server name: `"ai-context"` | MCP server name: `"dotcontext"` |
 | Env var: `AI_CONTEXT_LANG` | Env var: `DOTCONTEXT_LANG` |
 
-### What did NOT change
+### Migration steps
 
-- The `.context/` directory structure and all its contents
-- The PREVC workflow system
-- All MCP tool names and actions
-- All scaffold formats and frontmatter conventions
-- The MIT license
+1. Update global installs, if applicable:
 
-### Step-by-step migration
-
-1. **Update your global install** (if applicable):
    ```bash
    npm uninstall -g @ai-coders/context
    npm install -g @dotcontext/cli
    ```
 
-2. **Update MCP configurations** -- re-run the installer:
+2. Re-run the MCP installer:
+
    ```bash
    npx @dotcontext/mcp install
    ```
-   Or manually replace `"ai-context"` with `"dotcontext"` and `"@ai-coders/context"` with `"@dotcontext/mcp"` in your MCP JSON configs.
 
-3. **Update shell aliases** -- replace `ai-context` with `dotcontext` in your `.bashrc`, `.zshrc`, or equivalent.
+3. Replace old shell aliases from `ai-context` to `dotcontext`.
 
-4. **Update environment variables** -- rename `AI_CONTEXT_LANG` to `DOTCONTEXT_LANG` if you set it.
+4. Rename `AI_CONTEXT_LANG` to `DOTCONTEXT_LANG` if you set it.
 
-5. **No changes to `.context/` needed** -- the directory, files, and frontmatter are all unchanged.
+5. Keep your `.context/` directory. The directory convention remains the same.
 
 ## License
 
-MIT © Vinícius Lana
+MIT (c) Vinícius Lana

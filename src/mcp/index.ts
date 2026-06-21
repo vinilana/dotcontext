@@ -12,7 +12,7 @@ export {
   AIContextMCPServer,
   startMCPServer,
   type MCPServerOptions,
-} from '../services/mcp/mcpServer';
+} from './server';
 
 export {
   handleExplore,
@@ -24,6 +24,7 @@ export {
   handleHarness,
   handleWorkflowInit,
   handleWorkflowStatus,
+  handleWorkflowGuide,
   handleWorkflowAdvance,
   handleWorkflowManage,
   type ExploreAction,
@@ -42,7 +43,8 @@ export {
   type HarnessParams,
   type WorkflowInitParams,
   type WorkflowStatusParams,
+  type WorkflowGuideParams,
   type WorkflowAdvanceParams,
   type WorkflowManageParams,
   type MCPToolResponse,
-} from '../services/mcp/gatewayTools';
+} from './gateway';

@@ -1,0 +1,57 @@
+---
+title: dotcontext
+description: dotcontext is a harness for your harness — the contextual layer that keeps your work going no matter which AI tool you use, with shared context, PREVC workflow, sensors, policies, task contracts, replay, and MCP/CLI surfaces.
+template: splash
+hero:
+  tagline: A harness for your harness — the contextual layer that keeps your work going no matter which AI tool you switch to. Shared context, workflow, policies, sensors, contracts, and replayable history, across MCP and CLI.
+  image:
+    file: ../../../assets/logo.svg
+  actions:
+    - text: Get started
+      link: /getting-started/installation/
+      icon: right-arrow
+    - text: Quickstart
+      link: /getting-started/quickstart/
+      icon: rocket
+      variant: secondary
+    - text: GitHub
+      link: https://github.com/vinilana/dotcontext
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## What is dotcontext?
+
+**dotcontext is a harness for your harness.** We provide the necessary contextual layer to keep the work going no matter which AI tool you switch to — shared project context, workflow structure, policies, sensors, task contracts, replayable execution history, and MCP access, all in one system. The goal is not only to give a model more context — it's to make agent execution **legible, constrained, reusable, and auditable**.
+
+The repository is organized around one runtime and three package surfaces:
+
+```text
+cli -> harness <- mcp
+```
+
+<CardGrid stagger>
+  <Card title="Shared context" icon="open-book">
+    One `.context/` directory for durable project knowledge — docs, agents, skills, plans — plus generated runtime state.
+  </Card>
+  <Card title="PREVC workflow" icon="random">
+    Plan → Review → Execute → Verify → Confirm, with scale-adaptive routing for everything from typos to large systems.
+  </Card>
+  <Card title="Sensors & policies" icon="approve-check">
+    Quality checks and approval rules enforced by the runtime, not buried in prompts.
+  </Card>
+  <Card title="Replay & audit" icon="seti:clock">
+    Durable sessions, traces, task contracts, and failure datasets you can replay and inspect.
+  </Card>
+</CardGrid>
+
+## Start here
+
+<CardGrid>
+  <LinkCard title="Installation" href="/getting-started/installation/" description="Install via MCP (recommended, no API key) or the CLI." />
+  <LinkCard title="Quickstart" href="/getting-started/quickstart/" description="Bootstrap context, plan a task, and run the workflow in minutes." />
+  <LinkCard title="Core concepts" href="/concepts/context-convention/" description="The .context convention, the harness runtime, and PREVC." />
+  <LinkCard title="Reference" href="/reference/mcp-tools/" description="MCP tools, CLI commands, the .context layout, and configuration." />
+</CardGrid>

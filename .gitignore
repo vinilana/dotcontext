@@ -36,19 +36,19 @@ output/
 .release/
 
 # .context runtime state
+.context/cache/
 .context/plans/
-.context/workflow/**
-.context/harness/sessions/
-.context/harness/traces/
-.context/harness/artifacts/
-.context/harness/contracts/
-.context/harness/workflows/
-.context/harness/replays/
-.context/harness/datasets/
+.context/runtime/
+# legacy runtime locations (pre config/runtime split) — kept ignored for un-migrated checkouts
+.context/harness/
+.context/workflow/
 .context/**/archive/
 
 # AI Context state files
 context-log.json
+
+# transient docs research artifact
+.docs-dossier.md
 
 # Temporary files
 *.tmp

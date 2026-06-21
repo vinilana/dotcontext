@@ -17,15 +17,32 @@ export {
   type MCPInstallToolChoice,
   type MCPInstallToolPrompt,
   type ResolveMcpInstallToolSelectionOptions,
+  HookInstallService,
+  buildHookInstallHostChoices,
+  resolveHookInstallHostSelection,
+  type HookInstallServiceDependencies,
+  type HookInstallOptions,
+  type HookUninstallOptions,
+  type HookInstallResult,
+  type HookInstallation,
+  type HookHost,
+  type HookInstallToolChoice,
+  type HookInstallToolPrompt,
+  type ResolveHookInstallHostSelectionOptions,
+  HookDispatchService,
+  runHookDispatch,
+  type HookDispatchOptions,
+  type HookDispatchResult,
+  type HookDispatchSource,
   StateDetector,
   type ProjectState,
   type StateDetectionResult,
   type StateDetectorOptions,
-} from '../services/cli';
+} from './services';
 
-export { SyncService } from '../services/sync/syncService';
-export { ImportRulesService, ImportAgentsService } from '../services/import';
-export { ExportRulesService } from '../services/export';
-export { ReportService } from '../services/report';
-export { QuickSyncService, type QuickSyncOptions } from '../services/quickSync';
-export { ReverseQuickSyncService, type MergeStrategy } from '../services/reverseSync';
+export { SyncService } from '../harness/application/exchange/sync/syncService';
+export { ImportRulesService, ImportAgentsService } from '../harness/application/exchange/import';
+export { ExportRulesService } from '../harness/application/exchange/export';
+export { ReportService } from './services/report';
+export { QuickSyncService, type QuickSyncOptions } from '../harness/application/exchange/quickSync';
+export { ReverseQuickSyncService, type MergeStrategy } from '../harness/application/exchange/reverseSync';

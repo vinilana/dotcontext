@@ -14,9 +14,11 @@ Dotcontext now treats harness engineering as a first-class runtime concern.
 flowchart LR
     User["Human / Operator"] --> CLI["dotcontext/cli"]
     AITool["AI Tool / MCP Client"] --> MCP["dotcontext/mcp"]
+    HookHost["Hook Host / Extension"] --> Hooks["dotcontext/harness hooks"]
 
     CLI --> H["dotcontext/harness"]
     MCP --> H
+    Hooks --> H
 
     H --> WF["Workflow Runtime"]
     H --> RS["Runtime State"]
@@ -26,13 +28,13 @@ flowchart LR
     H --> RP["Replay Service"]
     H --> DS["Failure Dataset Builder"]
 
-    RS --> Store[".context/harness/*"]
+    RS --> Store[".context/runtime/*"]
     WF --> Store
     QC --> Store
     TC --> Store
     RP --> Store
     DS --> Store
-    PO --> Policy[".context/harness/policy.json"]
+    PO --> Policy[".context/config/policy.json"]
 ```
 
 ## Consolidated Boundaries
@@ -56,7 +58,7 @@ This keeps the harness reusable for future adapters such as HTTP, workers, or SD
 
 ### 1. Runtime State
 
-The harness persists durable execution state under `.context/harness`.
+The harness persists durable execution state under `.context/runtime` and authored config (policy, sensors) under `.context/config`.
 
 - sessions
 - traces
@@ -102,7 +104,7 @@ The harness lifecycle is now explicit and durable.
 ```mermaid
 sequenceDiagram
     participant U as User / AI Tool
-    participant A as CLI or MCP Adapter
+    participant A as CLI, MCP, or Hook Adapter
     participant H as Harness Runtime
     participant S as State Store
 
@@ -146,30 +148,30 @@ flowchart TD
     Root --> CLI["src/cli"]
     Root --> Harness["src/harness"]
     Root --> MCP["src/mcp"]
-    Root --> Services["src/services"]
+    Root --> Integrations["src/integrations"]
+    Root --> Shared["src/shared"]
     Root --> Scripts["scripts"]
     Root --> Context[".context"]
 
-    CLI --> CLIBoundary["CLI boundary exports"]
-    Harness --> HarnessBoundary["Harness boundary exports"]
-    MCP --> MCPBoundary["MCP boundary exports"]
+    CLI --> CLIAdapters["adapters / commands / services / ui"]
+    Harness --> HarnessBoundary["application / domain / ports / adapters"]
+    MCP --> MCPBoundary["server / gateway / logging / resources"]
+    Integrations --> HostAdapters["claude-code / codex / pi-dev hooks"]
+    Shared --> SharedCore["fs / context / registry / system"]
 
-    Services --> HarnessServices["services/harness"]
-    Services --> WorkflowServices["services/workflow"]
-    Services --> MCPGateway["services/mcp/gateway"]
-    Services --> Shared["services/shared"]
-
-    HarnessServices --> Runtime["runtimeStateService"]
-    HarnessServices --> Sensors["sensorsService"]
-    HarnessServices --> Contracts["taskContractsService"]
-    HarnessServices --> Execution["executionService"]
-    HarnessServices --> Policy["policyService"]
-    HarnessServices --> Replay["replayService"]
-    HarnessServices --> Dataset["datasetService"]
+    HarnessBoundary --> Runtime["runtime state"]
+    HarnessBoundary --> Sensors["sensors"]
+    HarnessBoundary --> Contracts["task contracts"]
+    HarnessBoundary --> Execution["execution"]
+    HarnessBoundary --> Policy["policy"]
+    HarnessBoundary --> Replay["replay"]
+    HarnessBoundary --> Dataset["datasets"]
 
     Scripts --> Packaging["build-package-bundles / smoke / release"]
     Context --> Docs["docs / plans / agents / skills"]
 ```
+
+The canonical source paths are `src/cli`, `src/harness`, `src/mcp`, `src/integrations`, and `src/shared`. `src/services` is not a target architecture folder. During migration, old deep imports should be redirected through package exports, local path aliases, or short-lived release-branch shims, but the source tree should not keep `src/services` as a permanent compatibility layer.
 
 ## Packaging Model
 

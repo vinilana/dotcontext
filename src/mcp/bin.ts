@@ -7,7 +7,7 @@
  * `install` configures supported AI tools to use this package as the MCP server.
  */
 
-import { startMCPServer } from './index';
+import { startMCPServer } from './';
 import { registerProcessShutdown } from '../utils/processShutdown';
 import { createTranslator, detectLocale } from '../utils/i18n';
 import { themedSelect } from '../utils/themedPrompt';
