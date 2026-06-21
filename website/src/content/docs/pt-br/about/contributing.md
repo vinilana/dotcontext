@@ -112,7 +112,7 @@ No mínimo, revise estes arquivos do repositório quando sua mudança os afetar:
 | Arquivo | Cobre |
 | --- | --- |
 | `README.md` | Descrição do produto e orientação de instalação. |
-| `docs/GUIDE.md` | Fluxos de uso. |
+| `website/src/content/docs/` | Fluxos de uso (publicados em [dotcontext.dev](https://dotcontext.dev)). |
 | `ARCHITECTURE.md` | Diagramas de runtime e de fronteira. |
 | `CONTRIBUTING.md` | Processo de contribuição. |
 | `CHANGELOG.md` | Notas de release. |
@@ -128,14 +128,12 @@ O código é organizado em torno do formato `cli -> harness <- mcp`. Mantenha o 
 | `src/cli` | Exports voltados ao operador e serviços orientados à CLI. |
 | `src/harness` | Exports do runtime reutilizável (regras de domínio, sessions, sensors, policies, contracts, replay). |
 | `src/mcp` | A fronteira de transporte do MCP. |
-| `src/services/harness` | Lógica do harness agnóstica a transporte. |
-| `src/services/mcp/gateway` | Handlers e schemas do MCP. |
-| `src/services/workflow` | Integração do workflow PREVC. |
+| `src/integrations` | Adaptadores de hooks de host e helpers de instalação (Claude Code, Codex, Pi). |
 | `src/shared/fs/pathHelpers.ts` | Resolução centralizada de caminhos — a única fonte da verdade para os caminhos `.context/`. |
 | `scripts/build-package-bundles.js` | Bundling dos pacotes. |
 | `scripts/smoke-package-bundles.js` | Smoke tests dos pacotes. |
 
-Uma boa primeira leitura é o `ARCHITECTURE.md` para os diagramas de fronteira, depois o `README.md` para o enquadramento do produto, e então o `docs/GUIDE.md` para os fluxos de uso que você está prestes a alterar.
+Uma boa primeira leitura é o `ARCHITECTURE.md` para os diagramas de fronteira, depois o `README.md` para o enquadramento do produto, e então o [site de documentação](/pt-br/getting-started/quickstart/) para os fluxos de uso que você está prestes a alterar.
 
 ## Branches e commits
 

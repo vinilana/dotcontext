@@ -20,17 +20,20 @@ Dotcontext is three things at once:
 - a harness runtime that governs how agents execute work
 - CLI and MCP surfaces that expose the same runtime to humans and AI tools
 
-The repository is organized around one runtime and three package surfaces:
+The repository is organized around one runtime and five package surfaces:
 
 ```text
 cli -> harness <- mcp
+              <- integrations (host hooks / extensions)
 ```
 
 | Surface | Package | Role |
 | --- | --- | --- |
-| CLI | `@dotcontext/cli` | Operator-facing sync, import/export, MCP setup, reports, and admin workflows |
+| CLI | `@dotcontext/cli` | Operator-facing sync, import/export, MCP setup, hook install, reports, and admin workflows |
 | Harness | `@dotcontext/harness` | Reusable runtime, domain rules, sessions, policies, sensors, contracts, replay, and workflow state |
 | MCP | `@dotcontext/mcp` | MCP transport adapter and installer for AI tools |
+| Integrations | `@dotcontext/integrations` | Host hook adapters and event mappers for Claude Code, Codex CLI, and Pi |
+| Pi extension | `@dotcontext/pi` | Pi npm extension for in-process lifecycle hooks |
 
 For the full system view, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -54,6 +57,12 @@ Use this path when you want an AI coding tool to initialize context, create plan
 
 ```bash
 npx @dotcontext/mcp install
+```
+
+Optionally wire lifecycle hooks for Claude Code, Codex CLI, or Pi (bootstrap, tracing, workflow reminders):
+
+```bash
+npx -y @dotcontext/cli@latest hook install
 ```
 
 Then prompt your AI tool:
@@ -92,7 +101,7 @@ One `.context/` directory stores durable project knowledge and workflow state.
 
 ```text
 .context/
-├── docs/        # Project documentation and generated semantic notes
+├── docs/        # Durable project documentation (versioned with the repo)
 ├── agents/      # Agent playbooks
 ├── skills/      # On-demand expertise guides
 ├── plans/       # Structured PREVC plans and execution tracking
@@ -183,7 +192,7 @@ Plan scaffolding can auto-suggest phase requirements based on the repository:
 | `tsconfig.json` | `typecheck-clean` |
 | ESLint config | `lint` |
 
-For the full sensor and artifact model, including structured artifact requirements and `fromFilesystem: true`, see [docs/GUIDE.md](./docs/GUIDE.md).
+For the full sensor and artifact model, including structured artifact requirements and `fromFilesystem: true`, see the [Sensors & policies guide](https://dotcontext.dev/guides/customizing-sensors-and-policies/) and [Authoring plans](https://dotcontext.dev/guides/authoring-plans/) on the documentation site.
 
 ## MCP Server Setup
 
@@ -240,7 +249,7 @@ npx @dotcontext/mcp install claude --dry-run --verbose
 | `vscode` | VS Code (GitHub Copilot) | `servers` JSON |
 | `roo` | Roo Code | `mcpServers` JSON |
 | `amazonq` | Amazon Q Developer CLI | `mcpServers` JSON |
-| `gemini-cli` | Gemini CLI | `mcpServers` JSON |
+| `gemini` | Gemini CLI | `mcpServers` JSON |
 | `codex` | Codex CLI | TOML `[mcp_servers.dotcontext]` |
 | `kiro` | Kiro | `mcpServers` JSON |
 | `zed` | Zed Editor | `context_servers` JSON |
@@ -248,6 +257,9 @@ npx @dotcontext/mcp install claude --dry-run --verbose
 | `trae` | Trae AI | `mcpServers` JSON |
 | `kilo` | Kilo Code | `mcp` JSON |
 | `copilot-cli` | GitHub Copilot CLI | `mcpServers` JSON |
+| `pi` | Pi | `mcpServers` JSON (`.mcp.json` or `~/.config/mcp/mcp.json`) |
+
+The installer supports **17 AI clients** total. The legacy tool id `gemini-cli` is accepted as an alias for `gemini`.
 
 ### Manual Configuration
 
@@ -365,6 +377,39 @@ command = "npx"
 args = ["-y", "@dotcontext/mcp@latest"]
 ```
 
+### Hook Install (Claude Code, Codex CLI, Pi)
+
+Lifecycle hooks bootstrap context, append durable traces after file edits, and surface workflow reminders at session end — with lower token cost than loading the full MCP surface on every turn.
+
+```bash
+npx -y @dotcontext/cli@latest hook install
+```
+
+Examples:
+
+```bash
+npx -y @dotcontext/cli@latest hook install claude-code --dry-run
+npx -y @dotcontext/cli@latest hook install codex --local
+npx -y @dotcontext/cli@latest hook install codex --local --format toml
+npx -y @dotcontext/cli@latest hook install pi --local
+```
+
+| Host | Config | Dispatch |
+| --- | --- | --- |
+| `claude-code` | `.claude/settings.json` | `npx -y @dotcontext/cli@latest hook dispatch --source claude-code` |
+| `codex` | `.codex/hooks.json` or inline in `.codex/config.toml` | `npx -y @dotcontext/cli@latest hook dispatch --source codex` |
+| `pi` | `pi install npm:@dotcontext/pi` | In-process TypeScript extension |
+
+For Pi, combine the extension (hooks) with MCP for the full tool surface:
+
+```bash
+pi install npm:@dotcontext/pi
+npx @dotcontext/mcp install pi --local
+pi install npm:pi-mcp-adapter
+```
+
+After Codex hook install, run `/hooks` in Codex and trust project hooks when prompted.
+
 ### Local Development MCP Config
 
 For local development, build first and point directly to the dedicated MCP binary:
@@ -427,6 +472,8 @@ For AI-agent use, provide `repoPath` on the first context-heavy MCP call so dotc
 | --- | --- |
 | `npx -y @dotcontext/cli@latest` | Launch the interactive CLI, including quick sync |
 | `npx @dotcontext/mcp install` | Install MCP configuration for supported AI tools |
+| `npx -y @dotcontext/cli@latest hook install [host]` | Install lifecycle hooks for Claude Code, Codex CLI, or Pi |
+| `npx -y @dotcontext/cli@latest hook uninstall [host]` | Remove dotcontext hook entries |
 | `npx -y @dotcontext/mcp@latest` | Start the MCP server manually |
 | `npx -y @dotcontext/cli@latest sync` | Export agent playbooks to AI tools |
 | `npx -y @dotcontext/cli@latest export-rules` | Export `.context/docs` rules to AI tools |
@@ -454,20 +501,21 @@ npx -y @dotcontext/cli@latest admin report
 
 Dotcontext can export/import rules, agents, and skills across these current tool surfaces. As of 1.0.0, legacy flat-file and old-layout surfaces (e.g. `.cursorrules`, `.windsurfrules`, `.clinerules`, `.continuerules`, `.github/copilot/*`, `.codex/instructions.md`, the Antigravity `.agent/*` layout, older `.claude` memory files) are no longer imported or exported.
 
-| Tool | Primary surface |
-| --- | --- |
-| Cursor | `.cursor/rules/*.mdc`, `.cursor/agents` |
-| Claude Code | `CLAUDE.md`, `.claude/agents`, `.claude/skills` |
-| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/skills` |
-| Windsurf | `.windsurf/rules`, `.windsurf/agents`, `.windsurf/skills` |
-| Gemini CLI | `GEMINI.md`, `.gemini/skills` |
-| Codex CLI | `AGENTS.md`, `.codex/skills`, `.codex/config.toml` |
-| Google Antigravity | `.agents/rules`, `.agents/agents`, `.agents/workflows` |
-| Trae AI | `.trae/rules`, `.trae/agents` |
-| Cline | `.cline/rules`, `.cline/agents` |
-| Continue.dev | `.continue/rules`, `.continue/agents` |
-| Aider | `CONVENTIONS.md` |
-| Zed | `.zed/rules` |
+| Tool | Primary surface | Sync | MCP | Hooks |
+| --- | --- | --- | --- | --- |
+| Cursor | `.cursor/rules/*.mdc`, `.cursor/agents` | ✓ | ✓ | — |
+| Claude Code | `CLAUDE.md`, `.claude/agents`, `.claude/skills` | ✓ | ✓ | ✓ |
+| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/skills` | ✓ | ✓ (`vscode`, `copilot-cli`) | — |
+| Windsurf | `.windsurf/rules`, `.windsurf/agents`, `.windsurf/skills` | ✓ | ✓ | — |
+| Gemini CLI | `GEMINI.md`, `.gemini/skills` | ✓ | ✓ | — |
+| Codex CLI | `AGENTS.md`, `.codex/skills`, `.codex/config.toml` | ✓ | ✓ | ✓ |
+| Pi | MCP + extension | — | ✓ | ✓ (`@dotcontext/pi`) |
+| Google Antigravity | `.agents/rules`, `.agents/agents`, `.agents/workflows` | ✓ | — | — |
+| Trae AI | `.trae/rules`, `.trae/agents` | ✓ | ✓ | — |
+| Cline | `.cline/rules`, `.cline/agents` | ✓ | — | — |
+| Continue.dev | `.continue/rules`, `.continue/agents` | ✓ | ✓ | — |
+| Aider | `CONVENTIONS.md` | ✓ | — | — |
+| Zed | `.zed/rules` | ✓ | ✓ | — |
 
 ## Built-In Agents and Skills
 
@@ -516,7 +564,7 @@ npm run build:packages
 npm run smoke:packages
 ```
 
-The package build prepares local bundles in `.release/packages/cli`, `.release/packages/harness`, and `.release/packages/mcp`.
+The package build prepares local bundles in `.release/packages/cli`, `.release/packages/harness`, `.release/packages/mcp`, `.release/packages/integrations`, and `.release/packages/pi`.
 
 ## Documentation
 
@@ -524,7 +572,7 @@ The package build prepares local bundles in `.release/packages/cli`, `.release/p
 
 Other references in this repo:
 
-- [User Guide](./docs/GUIDE.md) - current usage guide
+- [Documentation site](https://dotcontext.dev) — user guide, concepts, and MCP/CLI reference ([`website/`](./website/) source)
 - [Architecture](./ARCHITECTURE.md) - harness architecture and package boundaries
 - [Contributing](./CONTRIBUTING.md) - contributor workflow
 - [Changelog](./CHANGELOG.md) - release-facing changes

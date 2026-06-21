@@ -6,6 +6,7 @@ Current product shape:
 
 ```text
 cli -> harness <- mcp
+              <- integrations (host hooks / extensions)
 ```
 
 ## Source of Truth
@@ -13,20 +14,18 @@ cli -> harness <- mcp
 Start here:
 
 - `README.md` for product description and install guidance
-- `docs/GUIDE.md` for usage flows
+- [dotcontext.dev](https://dotcontext.dev) (`website/`) for usage guidance
 - `ARCHITECTURE.md` for runtime and boundary diagrams
 - `CHANGELOG.md` for release notes
 
 ## Working Boundaries
 
-- `src/cli` contains operator-facing exports and CLI-oriented services
-- `src/harness` contains reusable runtime exports
-- `src/mcp` contains the MCP transport boundary
-- `src/services/harness` contains transport-agnostic harness logic
-- `src/services/mcp/gateway` contains MCP handlers and schemas
-- `src/services/workflow` contains PREVC workflow integration
+- `src/cli` contains operator-facing exports and CLI-oriented services (sync, MCP install, hook install, admin)
+- `src/harness` contains reusable runtime exports — domain rules, application services, and adapters
+- `src/mcp` contains the MCP transport boundary — server, gateway handlers, and schemas
+- `src/integrations` contains host hook adapters for Claude Code, Codex CLI, and Pi
 
-Do not move domain behavior into `cli` or `mcp` if it belongs in `harness`.
+Do not move domain behavior into `cli`, `mcp`, or `integrations` if it belongs in `harness`. Integrations call the harness only — they never import `cli` or `mcp`.
 
 ## Current Priorities
 
@@ -37,7 +36,8 @@ The repository now supports:
 - task contracts and handoffs
 - policy documents and policy evaluation
 - replay and failure datasets
-- local packaging for `cli`, `harness`, and `mcp`
+- host hook install for Claude Code, Codex CLI, and Pi
+- local packaging for `cli`, `harness`, `mcp`, `integrations`, and `pi`
 
 ## Validation Commands
 
@@ -54,6 +54,7 @@ When changing any of the following, keep docs in sync:
 
 - product positioning
 - MCP install behavior
+- hook install behavior
 - package boundaries
 - workflow commands
 - release/versioning guidance
@@ -61,7 +62,7 @@ When changing any of the following, keep docs in sync:
 At minimum, review:
 
 - `README.md`
-- `docs/GUIDE.md`
+- `website/src/content/docs/` (published at [dotcontext.dev](https://dotcontext.dev))
 - `ARCHITECTURE.md`
 - `CONTRIBUTING.md`
 - `CHANGELOG.md`

@@ -4,6 +4,7 @@ Dotcontext is now organized around an explicit runtime split:
 
 ```text
 cli -> harness <- mcp
+              <- integrations (host hooks / extensions)
 ```
 
 If you change behavior, keep that boundary intact:
@@ -11,6 +12,7 @@ If you change behavior, keep that boundary intact:
 - `cli` is the operator-facing surface
 - `harness` is the reusable runtime/domain layer
 - `mcp` is the transport adapter over the harness
+- `integrations` is the host hook and extension layer (Claude Code, Codex CLI, Pi)
 
 ## Development Setup
 
@@ -46,7 +48,7 @@ npm run smoke:packages
 The public docs that matter most are:
 
 - `README.md` for product positioning and install guidance
-- `docs/GUIDE.md` for usage guidance
+- [dotcontext.dev](https://dotcontext.dev) (`website/`) for usage guidance
 - `ARCHITECTURE.md` for runtime and boundary explanations
 - `CHANGELOG.md` for release notes
 
@@ -63,12 +65,28 @@ If you update one of these areas, check the adjacent docs for drift.
 If you change `mcp:install`, update all of the following together:
 
 - `README.md`
-- `docs/GUIDE.md`
+- `website/src/content/docs/` (installation, guides, reference)
 - `CHANGELOG.md`
-- `src/services/cli/mcpInstallService.ts`
-- `src/services/cli/mcpInstallService.test.ts`
+- `src/cli/services/mcpInstallService.ts`
+- `src/cli/services/__tests__/mcpInstallService.test.ts`
 
 The installer is the source of truth for supported clients and config formats. Documentation should describe what the installer actually writes, not what we hope clients support.
+
+## Hook Install Changes
+
+If you change `hook install`, `hook dispatch`, or `hook uninstall`, update all of the following together:
+
+- `README.md`
+- `website/src/content/docs/` (installation, guides, reference)
+- `CHANGELOG.md`
+- `src/cli/services/hookInstallService.ts`
+- `src/cli/services/hookDispatchService.ts`
+- `src/cli/services/__tests__/hookInstallService.test.ts`
+- `src/integrations/claude-code/`, `src/integrations/codex/`, `src/integrations/pi-dev/`
+
+Supported hook hosts (v1): `claude-code`, `codex`, `pi`. Pi uses the npm extension `@dotcontext/pi` rather than shell dispatch.
+
+The hook installer is the source of truth for supported hosts and config shapes. Document what the installer writes and what users must do after install (for example, trusting Codex project hooks via `/hooks`).
 
 ## Release Expectations
 
@@ -104,6 +122,12 @@ npm publish --access public
 
 cd ../mcp
 npm publish --access public
+
+cd ../integrations
+npm publish --access public
+
+cd ../pi
+npm publish --access public
 ```
 
 3. If npm 2FA is enabled for publishes, pass the current OTP:
@@ -118,12 +142,15 @@ Useful verification commands:
 npm view @dotcontext/cli version
 npm view @dotcontext/harness version
 npm view @dotcontext/mcp version
+npm view @dotcontext/integrations version
+npm view @dotcontext/pi version
 ```
 
 Notes:
 
 - Publish from `.release/packages/<slug>`, not from the repo root.
 - `@dotcontext/mcp` is a separately published package. If it is missing from npm, `npx @dotcontext/mcp install` will fail with a registry `404`.
+- `@dotcontext/integrations` is for extension authors and host hook mappers; `@dotcontext/pi` is the Pi npm extension package.
 - Run `npm publish --dry-run --access public` first if you want to inspect the tarball before the real publish.
 
 ## Pull Requests

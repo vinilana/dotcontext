@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Hook install CLI** — `dotcontext hook install`, `hook dispatch`, and `hook uninstall` for Claude Code, Codex CLI, and Pi, with `--local`, `--global`, `--dry-run`, and Codex-specific `--format json|toml`.
+- **Host hook runtime** — typed event mappers and response adapters for Claude Code, Codex CLI, and Pi (`session_start`, `PostToolUse`, `Stop` / `agent_end`), wired through a shared harness hook adapter.
+- **`@dotcontext/integrations` package** — publishable host hook adapters and mappers (`./claude-code`, `./codex`, `./pi-dev` subpaths).
+- **`@dotcontext/pi` package** — Pi npm extension for in-process lifecycle hooks (bootstrap, tracing, workflow reminders).
+- **MCP install: Pi** — `npx @dotcontext/mcp install pi` writes `.mcp.json` (local) or `~/.config/mcp/mcp.json` (global).
+
+### Changed
+
+- **MCP install: Gemini** — merged `gemini-cli` into a single `gemini` registry id; `gemini-cli` remains a one-release alias for install commands.
+- **MCP detection paths** — Windsurf and Amazon Q detection now checks alternate config directories.
+- **Documentation** — updated architecture, installation, and contributor docs for integrations, hooks, and Pi; MCP client count is now 17.
+
 ## [1.0.0] - 2026-06-06
 
 This is the first stable release. It removes **all legacy backwards-compatibility
@@ -80,18 +96,18 @@ formats — there is no automatic migration from pre-1.0 layouts.
   - Detection rules: `locales/*.json` or `i18n/*.json` → `i18n-coverage` in E; real `scripts.test` in `package.json` → `tests-passing` in V; `tsconfig.json` → `typecheck-clean` in V; `.eslintrc*` / `eslint.config.*` / `eslintConfig` in `package.json` → `lint` in V
   - `mergeSuggestionsIntoPhases` only fills `required_sensors`/`required_artifacts` for phases that did not already declare them — never overwrites an explicit author choice; existing scaffolds keep working unchanged
   - Wired into `PlanGenerator` via `renderPlanTemplate` so `context({ action: "scaffoldPlan", ... })` emits the suggestions in the YAML frontmatter
-  - Documented under "Built-in Sensors" and "Plan scaffolding auto-detects requirements" in `docs/GUIDE.md`
+  - Documented on the documentation site under Sensors and Authoring plans guides
 - **`RequiredArtifactSpec.fromFilesystem: true`** for `glob` and `file-count` kinds
   - When set, `evaluateTaskCompletion` also scans the project working tree (relative to `repoPath`) and unions filesystem hits with recorded session artifacts, eliminating the false-blocked case where a file exists in the repo but `recordArtifact` was never called
   - Hard-coded ignore list (`node_modules`, `.git`, `dist`), 5s scan timeout, refusal to escape `repoPath`; I/O failures and timeouts surface as `blockingFinding` entries (`filesystem scan failed for <pattern>: ...`) instead of crashing
   - Recorded artifacts and filesystem hits deduplicated by path so a file never counts twice
-  - Documented under "Structured artifact requirements -> fromFilesystem: true" in `docs/GUIDE.md`
+  - Documented on the documentation site (Authoring plans guide)
 - **Built-in `i18n-coverage` sensor** (`src/services/harness/sensors/i18nCoverage.ts`)
   - Compares translation keys between a configurable base locale (`baseLocale`, default `'en'`) and every other `<locale>.json` in `localesDir` (default `'locales'`); supports flat (`format: 'json'`) and nested (`format: 'json-nested'`) key extraction
   - Persists structured output `{ coverage: { locale: ratio }, missingKeys: { locale: string[] } }` on the `sensor.run` trace; passes only when every non-base locale has zero missing keys
   - Registered by default in every harness session via `HarnessSessionFacade.registerDefaultSensors`; only executes when a plan declares `required_sensors: [i18n-coverage]`
   - Clear, non-crashing failure modes for missing `localesDir`, malformed JSON (with file name), and missing base locale
-  - Documented under "Built-in Sensors -> i18n-coverage" in `docs/GUIDE.md`
+  - Documented on the documentation site (Sensors guide)
 
 - **Structured artifact requirements (`RequiredArtifactSpec`)**
   - `HarnessTaskContract.requiredArtifacts` accepts `(string | RequiredArtifactSpec)[]`; strings remain backwards-compatible (interpreted as `{ kind: 'name', name }`)
@@ -100,7 +116,7 @@ formats — there is no automatic migration from pre-1.0 layouts.
   - Plan frontmatter `required_artifacts` accepts the same shapes (zod discriminated union); specs propagate through `DerivedPlanTaskContractBuilder` without stringification
   - MCP `defineTask`/`createTask` schemas widened to accept structured specs alongside strings
   - Filesystem-glob (`fromFilesystem: true`) is intentionally out of scope; matching is restricted to recorded session artifacts
-  - Documented under "Structured artifact requirements" in `docs/GUIDE.md`
+  - Documented on the documentation site (Authoring plans guide)
 - **`checkGates` validates `nextPhase` against `PREVC_PHASE_ORDER` and `status.phases`**
   - Throws when `nextPhase` is not a valid PREVC phase, or is missing from `status.phases` (in addition to the existing `skipped` guard)
 
@@ -109,7 +125,7 @@ formats — there is no automatic migration from pre-1.0 layouts.
   - `DerivedPlanTaskContractBuilder` now honors declared requirements and falls back to conservative defaults when absent (`E` -> `['tests']`, `V` -> `['tests', 'lint']`; P/R/C have no default)
   - `plan({ action: "link", ... })` hard-fails when a plan's Execution phase has no `required_sensors`, preventing silent "execution verified" claims at the source
   - New builder tests under `src/services/workflow/derivedPlanTaskContractBuilder.test.ts` and an e2e rejection test under `src/services/workflow/__tests__/falseCompletion.e2e.test.ts`
-  - Documented under "Declaring Execution Requirements in Plans" in `docs/GUIDE.md`
+  - Documented on the documentation site (Authoring plans guide)
 
 - **`execution_evidence` phase gate wires `evaluateTaskCompletion` into `workflow-advance`**
   - `GateCheckResult.gates` now includes `execution_evidence` with `missingSensors`, `missingArtifacts`, and `blockingFindings`

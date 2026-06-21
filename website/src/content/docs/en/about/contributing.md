@@ -112,7 +112,7 @@ At minimum, review these files in the repo when your change affects them:
 | File | Covers |
 | --- | --- |
 | `README.md` | Product description and install guidance. |
-| `docs/GUIDE.md` | Usage flows. |
+| `website/src/content/docs/` | Usage flows (published at [dotcontext.dev](https://dotcontext.dev)). |
 | `ARCHITECTURE.md` | Runtime and boundary diagrams. |
 | `CONTRIBUTING.md` | Contributor process. |
 | `CHANGELOG.md` | Release notes. |
@@ -128,14 +128,12 @@ The source is organized around the `cli -> harness <- mcp` shape. Keep domain be
 | `src/cli` | Operator-facing exports and CLI-oriented services. |
 | `src/harness` | Reusable runtime exports (domain rules, sessions, sensors, policies, contracts, replay). |
 | `src/mcp` | The MCP transport boundary. |
-| `src/services/harness` | Transport-agnostic harness logic. |
-| `src/services/mcp/gateway` | MCP handlers and schemas. |
-| `src/services/workflow` | PREVC workflow integration. |
+| `src/integrations` | Host hook adapters and install helpers (Claude Code, Codex, Pi). |
 | `src/shared/fs/pathHelpers.ts` | Centralized path resolution — the single source of truth for `.context/` paths. |
 | `scripts/build-package-bundles.js` | Package bundling. |
 | `scripts/smoke-package-bundles.js` | Package smoke tests. |
 
-A good first read is `ARCHITECTURE.md` for the boundary diagrams, then `README.md` for the product framing, then `docs/GUIDE.md` for the usage flows you are about to change.
+A good first read is `ARCHITECTURE.md` for the boundary diagrams, then `README.md` for the product framing, then the [documentation site](/getting-started/quickstart/) for the usage flows you are about to change.
 
 ## Branching and commits
 
