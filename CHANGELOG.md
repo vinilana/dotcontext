@@ -7,9 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0]
 
-This release removes **all legacy backwards-compatibility code**. Projects, tool configs, and
-on-disk state must already be on the current formats — there is no automatic
-migration from pre-1.0 layouts.
+This is a structural refactor of dotcontext ahead of **1.0.0**. It replaces the monolithic `src/services` / `src/workflow` layout with a **hexagonal harness core** and **thin adapters** for CLI, MCP, and host hooks.
+
+### New: Claude Code hooks, Codex CLI hooks, and Pi.dev
+
+Dotcontext is no longer MCP-only. **1.0.0 introduces first-class support for three major agent hosts** — the same harness runtime, wired into each tool's native lifecycle:
+
+| Host | How it connects | What you get |
+|------|-----------------|--------------|
+| **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** | Shell hooks via `settings.json` | Context bootstrap on session start, durable traces after Write/Edit/Bash, PREVC workflow reminders on stop |
+| **[Codex CLI](https://github.com/openai/codex)** | Shell hooks via `hooks.json` or inline TOML | Same harness actions as Claude Code; JSON or TOML install formats |
+| **[Pi.dev](https://pi.dev)** | In-process npm extension (`@dotcontext/pi`) | Lifecycle hooks without shell dispatch — bootstrap, tracing, and workflow guidance inside Pi |
+
+**One runtime, three surfaces.** Hooks and Pi call the same harness actions as MCP (`context check`, `harness appendTrace`, `workflow-guide`). No duplicated PREVC logic per host.
+
+Quick start:
+
+```bash
+# Install hooks (interactive — detects installed hosts)
+npx -y @dotcontext/cli@latest hook install
+
+# Or target a host explicitly
+npx -y @dotcontext/cli@latest hook install claude-code
+npx -y @dotcontext/cli@latest hook install codex --local
+npx -y @dotcontext/cli@latest hook install pi --local
+
+# MCP for Pi (optional, alongside the extension)
+npx -y @dotcontext/mcp install pi
+```
+
+Install docs: [Using with Hooks](https://dotcontext.dev/guides/using-with-hooks/) · [Using with Pi](https://dotcontext.dev/guides/using-with-pi/)
+
+The runtime now follows one rule:
+
+```text
+cli ──► harness ◄── mcp
+         ▲
+         └── integrations (Claude Code · Codex CLI · Pi)
+```
+
+**Harness** owns workflow, execution state, context scaffolding, sensors, and domain rules.  
+**Adapters** own transport, installation, and host-specific rendering — they call into the harness; they do not duplicate PREVC logic.
+
+### Why
+
+On `main`, runtime code lived under `src/services` with workflow, harness, MCP gateway, and semantic tooling mixed together. That made it hard to:
+
+- reuse the runtime outside MCP/CLI
+- test domain rules without pulling in transport code
+- add new host surfaces (hooks, Pi) without copying workflow behavior
+
+This refactor consolidates reusable logic under `src/harness`, moves operator and protocol code to `src/cli` / `src/mcp` / `src/integrations`, and enforces the split with architecture boundary tests.
 
 ### Removed — BREAKING CHANGES
 
