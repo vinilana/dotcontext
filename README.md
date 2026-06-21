@@ -518,6 +518,15 @@ Dotcontext can export/import rules, agents, and skills across these current tool
 | Aider | `CONVENTIONS.md` | ✓ | — | — |
 | Zed | `.zed/rules` | ✓ | ✓ | — |
 
+## Roadmap
+
+Lifecycle hooks ship today for Claude Code, Codex CLI, and Pi. The harness runtime and `hook dispatch` model are host-agnostic; upcoming work extends `hook install` to more agents:
+
+- **Cursor hooks** — bootstrap, durable traces, and PREVC workflow reminders (MCP and sync already supported)
+- **Google Antigravity hooks** — harness-backed lifecycle integration for Antigravity hosts
+- **OpenCode hooks** — session bootstrap, tracing, and workflow guidance for OpenCode CLI
+- **Additional hosts** — Windsurf, GitHub Copilot, and other MCP clients as stable hook surfaces emerge
+
 ## Built-In Agents and Skills
 
 Dotcontext includes 14 built-in agent playbook types:
