@@ -1,6 +1,6 @@
 ---
 title: Arquitetura
-description: Como o dotcontext é estruturado em torno do formato "cli -> harness <- mcp" — um runtime de harness agnóstico de transporte, limites claros e três pacotes publicáveis.
+description: Como o dotcontext é estruturado em torno do formato "cli -> harness <- mcp" — um runtime de harness agnóstico de transporte, limites claros e cinco pacotes publicáveis.
 sidebar:
   order: 1
 ---
@@ -11,9 +11,10 @@ O produto inteiro cabe em uma linha:
 
 ```text
 cli -> harness <- mcp
+              <- integrations (hooks / extensões de host)
 ```
 
-Esta página explica pelo que cada peça é responsável, por que o harness fica no meio e como a base de código se divide em três pacotes independentes que você pode instalar separadamente.
+Esta página explica pelo que cada peça é responsável, por que o harness fica no meio e como a base de código se divide em cinco pacotes independentes que você pode instalar separadamente.
 
 ::: tip[A única regra]
 Comportamento de domínio pertence ao **harness**. As camadas de CLI e MCP devem permanecer finas — elas traduzem uma requisição em uma chamada ao harness e formatam o resultado. Se você notar lógica se infiltrando em `cli` ou `mcp` que outros transportes também precisariam, ela pertence ao harness.
@@ -65,12 +66,10 @@ O repositório mantém limites rígidos para que o harness permaneça reutilizá
 
 | Limite | Responsabilidade |
 | --- | --- |
-| `src/cli` | Superfície voltada ao operador — sync, import/export, instalação do MCP, relatórios e comandos admin de workflow |
+| `src/cli` | Superfície voltada ao operador — sync, import/export, instalação MCP, instalação de hooks, relatórios e comandos admin de workflow |
 | `src/mcp` | O limite de transporte MCP — expõe o comportamento do harness como tools e resources do Model Context Protocol |
 | `src/harness` | O runtime de domínio — regras de domínio, serviços de aplicação e adapters (o núcleo reutilizável) |
-| `src/services/harness` | Lógica de harness agnóstica de transporte compartilhada pelas superfícies |
-| `src/services/mcp/gateway` | Handlers e schemas do MCP (as tools consolidadas do gateway) |
-| `src/services/workflow` | Integração com o workflow PREVC |
+| `src/integrations` | Adapters de hooks de host — mappers de eventos, templates e helpers de instalação para Claude Code, Codex CLI e Pi |
 
 ### A superfície de operador da CLI
 
@@ -96,15 +95,17 @@ Dentro de `src/harness`, o código segue um layout hexagonal para que as regras 
 
 É por isso que o mesmo `WorkflowService` ou `HarnessSensorsService` se comporta de forma idêntica seja alcançado via MCP ou via CLI: os transportes plugam na camada de application, e a camada de application conversa com o domain.
 
-## Três pacotes, um runtime
+## Cinco pacotes, um runtime
 
-O monorepo é compilado em **três pacotes independentes e publicáveis**. Eles compartilham uma única versão raiz e são lançados juntos para que permaneçam sempre compatíveis.
+O monorepo é compilado em **cinco pacotes independentes e publicáveis**. Eles compartilham uma única versão raiz e são lançados juntos para que permaneçam sempre compatíveis.
 
 | Pacote | Papel | Bin |
 | --- | --- | --- |
-| `@dotcontext/cli` | Sync, import/export, setup do MCP, relatórios e workflows admin voltados ao operador | `dotcontext` |
+| `@dotcontext/cli` | Sync, import/export, setup do MCP, instalação de hooks, relatórios e workflows admin voltados ao operador | `dotcontext` |
 | `@dotcontext/harness` | O runtime reutilizável — regras de domínio, sessions, policies, sensors, contracts, replay, estado de workflow | — |
 | `@dotcontext/mcp` | O adapter de transporte MCP e instalador para ferramentas de IA | `dotcontext-mcp` |
+| `@dotcontext/integrations` | Adapters de hooks de host e mappers de eventos para autores de extensões | — |
+| `@dotcontext/pi` | Extensão npm do Pi para hooks in-process | — |
 
 ### `@dotcontext/cli`
 

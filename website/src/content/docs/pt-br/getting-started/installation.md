@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-O dotcontext é distribuído como três pacotes coordenados — `@dotcontext/mcp`, `@dotcontext/cli` e `@dotcontext/harness` — que seguem o formato de produto `cli -> harness <- mcp`. Para o uso do dia a dia, você só precisa de um dos dois caminhos de instalação.
+O dotcontext é distribuído como cinco pacotes coordenados — `@dotcontext/mcp`, `@dotcontext/cli`, `@dotcontext/harness`, `@dotcontext/integrations` e `@dotcontext/pi` — que seguem o formato de produto `cli -> harness <- mcp` com hooks de host via `integrations`. Para o uso do dia a dia, você só precisa de um dos dois caminhos de instalação.
 
 Existem duas formas de começar:
 
@@ -47,7 +47,7 @@ npx @dotcontext/cli mcp:install claude
 
 ### Clientes de IA suportados
 
-O instalador suporta 16 clientes de IA e escreve um arquivo de configuração específico para cada um:
+O instalador suporta **17 clientes de IA** e escreve um arquivo de configuração específico para cada um:
 
 | Cliente | Arquivo de configuração |
 | --- | --- |
@@ -67,6 +67,7 @@ O instalador suporta 16 clientes de IA e escreve um arquivo de configuração es
 | Trae AI (ByteDance) | `.trae/mcp.json` |
 | Kilo Code | `.kilo/mcp.json` |
 | GitHub Copilot CLI | `.copilot/mcp-config.json` |
+| Pi | `.mcp.json` (local) ou `~/.config/mcp/mcp.json` (global) |
 
 ### O que o instalador escreve
 
@@ -102,6 +103,34 @@ A instalação global é o padrão: o instalador varre seu diretório home em bu
 :::
 
 Depois de instalar, reinicie seu cliente de IA para que ele reconheça o novo servidor MCP. Em seguida, continue com o [Quickstart](/pt-br/getting-started/quickstart/).
+
+## Caminho 1b: instalação de hooks (Claude Code, Codex CLI, Pi)
+
+Hooks conectam o dotcontext a eventos de ciclo de vida do host — bootstrap de context no início, traces duráveis após edições e lembretes de workflow no fim da sessão.
+
+```bash
+npx -y @dotcontext/cli@latest hook install
+```
+
+Exemplos:
+
+```bash
+npx -y @dotcontext/cli@latest hook install claude-code --local --dry-run
+npx -y @dotcontext/cli@latest hook install codex --local --format toml
+```
+
+Após instalar hooks do Codex, rode `/hooks` no Codex e confie nos hooks do projeto quando solicitado.
+
+## Caminho 1c: extensão Pi
+
+Pi usa uma extensão npm in-process:
+
+```bash
+npx -y @dotcontext/cli@latest hook install pi --local
+pi install npm:@dotcontext/pi
+npx @dotcontext/mcp install pi --local
+pi install npm:pi-mcp-adapter
+```
 
 ## Caminho 2: instalação da CLI
 
@@ -140,6 +169,7 @@ A superfície da CLI cobre:
 - `reverse-sync` — varre os diretórios das ferramentas de IA e importa rules, agents e skills de volta para o `.context/`
 - `export-rules` — distribui as rules de `.context/docs/` para as ferramentas de IA
 - `mcp` / `mcp:install` — inicia o servidor MCP ou o configura para clientes de IA
+- `hook install` / `hook uninstall` — configura hooks de ciclo de vida para Claude Code, Codex CLI ou Pi
 - `admin` — estado de workflow de baixo nível, export de skills e relatórios
 
 :::caution[Recursos MCP-first]

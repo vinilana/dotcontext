@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-dotcontext ships as three coordinated packages — `@dotcontext/mcp`, `@dotcontext/cli`, and `@dotcontext/harness` — that follow the product shape `cli -> harness <- mcp`. For day-to-day use you only need one of two install paths.
+dotcontext ships as five coordinated packages — `@dotcontext/mcp`, `@dotcontext/cli`, `@dotcontext/harness`, `@dotcontext/integrations`, and `@dotcontext/pi` — that follow the product shape `cli -> harness <- mcp` with host hooks via `integrations`. For day-to-day use you only need one of two install paths.
 
 There are two ways to get started:
 
@@ -47,7 +47,7 @@ npx @dotcontext/cli mcp:install claude
 
 ### Supported AI clients
 
-The installer supports 16 AI clients and writes a client-specific config file for each:
+The installer supports **17 AI clients** and writes a client-specific config file for each:
 
 | Client | Config file |
 | --- | --- |
@@ -67,6 +67,7 @@ The installer supports 16 AI clients and writes a client-specific config file fo
 | Trae AI (ByteDance) | `.trae/mcp.json` |
 | Kilo Code | `.kilo/mcp.json` |
 | GitHub Copilot CLI | `.copilot/mcp-config.json` |
+| Pi | `.mcp.json` (local) or `~/.config/mcp/mcp.json` (global) |
 
 ### What the installer writes
 
@@ -102,6 +103,50 @@ Global install is the default: the installer scans your home directory for insta
 :::
 
 After installing, restart your AI client so it picks up the new MCP server. Then continue with the [Quickstart](/getting-started/quickstart/).
+
+## Path 1b: Hook install (Claude Code, Codex CLI, Pi)
+
+Lifecycle hooks wire dotcontext into host session events — context bootstrap on start, durable traces after file edits, and workflow reminders on stop. They complement MCP: hooks are low-token background wiring; MCP remains the full tool surface.
+
+```bash
+npx -y @dotcontext/cli@latest hook install
+```
+
+Target a specific host or preview changes:
+
+```bash
+npx -y @dotcontext/cli@latest hook install claude-code --dry-run
+npx -y @dotcontext/cli@latest hook install codex --local
+npx -y @dotcontext/cli@latest hook install codex --local --format toml
+```
+
+| Host | What gets written | After install |
+| --- | --- | --- |
+| `claude-code` | `hooks` entries in `.claude/settings.json` | Restart Claude Code |
+| `codex` | `.codex/hooks.json` or inline `[[hooks.*]]` in `.codex/config.toml` | Run `/hooks` and trust project hooks |
+| `pi` | Instructions + optional `.mcp.json` snippet | Run `pi install npm:@dotcontext/pi` |
+
+Hook install flags mirror MCP install where applicable: `--global` (default), `--local`, `--dry-run`, and `-v, --verbose`. Codex also accepts `--format json|toml`.
+
+Actions are logged to `.context/logs/hook-install.log`. See [Using dotcontext with hooks](/guides/using-with-hooks/) for lifecycle details.
+
+## Path 1c: Pi extension
+
+Pi uses an in-process npm extension instead of shell hook dispatch:
+
+```bash
+npx -y @dotcontext/cli@latest hook install pi --local
+pi install npm:@dotcontext/pi
+```
+
+For the full MCP tool surface inside Pi, also run:
+
+```bash
+npx @dotcontext/mcp install pi --local
+pi install npm:pi-mcp-adapter
+```
+
+See [Using dotcontext with Pi](/guides/using-with-pi/) for the recommended hooks + MCP setup.
 
 ## Path 2: CLI install
 
@@ -140,6 +185,7 @@ The CLI surface covers:
 - `reverse-sync` — scan AI tool directories and import rules, agents, and skills back into `.context/`
 - `export-rules` — distribute `.context/docs/` rules out to AI tools
 - `mcp` / `mcp:install` — start the MCP server or configure it for AI clients
+- `hook install` / `hook uninstall` — wire lifecycle hooks for Claude Code, Codex CLI, or Pi
 - `admin` — low-level workflow state, skill export, and reports
 
 :::caution[MCP-first features]
@@ -153,6 +199,8 @@ After the MCP install, confirm your AI client can see the dotcontext tools (for 
 ## Next steps
 
 - [Quickstart](/getting-started/quickstart/) — initialize `.context/` and start your first PREVC workflow.
+- [Using dotcontext with hooks](/guides/using-with-hooks/) — Claude Code and Codex CLI lifecycle hooks.
+- [Using dotcontext with Pi](/guides/using-with-pi/) — Pi extension and MCP coexistence.
 - [The PREVC workflow](/concepts/prevc-workflow/) — understand the five phases.
 - [MCP tools reference](/reference/mcp-tools/) — full list of tools and parameters.
 

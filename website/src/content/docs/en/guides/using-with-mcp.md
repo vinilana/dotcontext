@@ -40,7 +40,7 @@ npx @dotcontext/cli mcp install --tool claude
 npx @dotcontext/cli mcp install --dry-run
 ```
 
-The installer supports 16 AI clients, including Claude Code, Claude Desktop, Cursor, Windsurf, Continue.dev, VS Code / GitHub Copilot, Zed, JetBrains IDEs, Codex CLI, Gemini CLI, Amazon Q, and more. It detects what you already have installed and writes (or updates) the appropriate config file.
+The installer supports 17 AI clients, including Claude Code, Claude Desktop, Cursor, Windsurf, Continue.dev, VS Code / GitHub Copilot, Zed, JetBrains IDEs, Codex CLI, Gemini CLI, Amazon Q, Pi, and more. It detects what you already have installed and writes (or updates) the appropriate config file.
 
 The config it writes is the same for every tool:
 

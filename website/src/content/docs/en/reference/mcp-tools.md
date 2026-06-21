@@ -345,7 +345,7 @@ To actually call these tools, install the MCP server into your AI client:
 npx @dotcontext/mcp install
 ```
 
-The installer supports 16 AI clients (Claude Code, Claude Desktop, Cursor, Windsurf, Continue.dev, VS Code / GitHub Copilot, Roo Code, Amazon Q Developer CLI, Google Gemini CLI, Codex CLI, Kiro, Zed, JetBrains IDEs, Trae AI, Kilo Code, and GitHub Copilot CLI). For the full setup and client-by-client details, see [Using dotcontext with MCP](/guides/using-with-mcp/).
+The installer supports 17 AI clients (Claude Code, Claude Desktop, Cursor, Windsurf, Continue.dev, VS Code / GitHub Copilot, Roo Code, Amazon Q Developer CLI, Google Gemini CLI, Codex CLI, Kiro, Zed, JetBrains IDEs, Trae AI, Kilo Code, GitHub Copilot CLI, and Pi). For the full setup and client-by-client details, see [Using dotcontext with MCP](/guides/using-with-mcp/).
 
 ## See also
 
