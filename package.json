@@ -8,7 +8,11 @@
     "./package.json": "./package.json",
     "./cli": "./dist/cli/index.js",
     "./harness": "./dist/harness/index.js",
-    "./mcp": "./dist/mcp/index.js"
+    "./mcp": "./dist/mcp/index.js",
+    "./integrations": "./dist/integrations/index.js",
+    "./integrations/claude-code": "./dist/integrations/claude-code/index.js",
+    "./integrations/codex": "./dist/integrations/codex/index.js",
+    "./integrations/pi-dev": "./dist/integrations/pi-dev/index.js"
   },
   "bin": {
     "dotcontext": "dist/index.js"

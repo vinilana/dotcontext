@@ -93,6 +93,7 @@ function createManifest(rootPkg, packageName, description, main, types, options 
   if (options.bin) manifest.bin = options.bin;
   if (options.dependencies) manifest.dependencies = options.dependencies;
   if (options.files) manifest.files = options.files;
+  if (options.keywords) manifest.keywords = options.keywords;
 
   return manifest;
 }
@@ -177,12 +178,63 @@ function buildBundles() {
       ),
       readme: loadTemplate('mcp.README.md'),
     },
+    {
+      slug: 'integrations',
+      manifest: createManifest(
+        rootPkg,
+        '@dotcontext/integrations',
+        'Host hook integrations for dotcontext',
+        'dist/integrations/index.js',
+        'dist/integrations/index.d.ts',
+        {
+          exports: {
+            '.': './dist/integrations/index.js',
+            './claude-code': './dist/integrations/claude-code/index.js',
+            './codex': './dist/integrations/codex/index.js',
+            './pi-dev': './dist/integrations/pi-dev/index.js',
+          },
+          dependencies: {
+            '@dotcontext/harness': `^${rootPkg.version}`,
+          },
+        }
+      ),
+      readme: loadTemplate('integrations.README.md'),
+    },
+    {
+      slug: 'pi',
+      manifest: createManifest(
+        rootPkg,
+        '@dotcontext/pi',
+        'Pi extension for dotcontext harness integrations',
+        'extension/index.ts',
+        undefined,
+        {
+          keywords: ['pi-package'],
+          dependencies: {
+            '@dotcontext/harness': `^${rootPkg.version}`,
+            '@dotcontext/integrations': `^${rootPkg.version}`,
+          },
+          files: ['extension/**/*', 'README.md', 'LICENSE'],
+        }
+      ),
+      readme: loadTemplate('pi.README.md'),
+      piPackage: true,
+    },
   ];
 
   for (const pkg of packages) {
     const pkgRoot = path.join(outputRoot, pkg.slug);
     resetDir(pkgRoot);
-    copyDir(distDir, path.join(pkgRoot, 'dist'));
+
+    if (pkg.piPackage) {
+      const piManifest = readJson(path.join(repoRoot, 'src/integrations/pi-dev/pi-package.json'));
+      const extensionSrc = path.join(repoRoot, 'src/integrations/pi-dev/extension');
+      copyDir(extensionSrc, path.join(pkgRoot, 'extension'));
+      pkg.manifest.pi = piManifest;
+    } else {
+      copyDir(distDir, path.join(pkgRoot, 'dist'));
+    }
+
     if (pkg.copyPrompts && fs.existsSync(path.join(repoRoot, 'prompts'))) {
       copyDir(path.join(repoRoot, 'prompts'), path.join(pkgRoot, 'prompts'));
     }
