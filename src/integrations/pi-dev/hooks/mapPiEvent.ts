@@ -1,4 +1,7 @@
-import type { HarnessHookEvent } from '../../../harness';
+import {
+  buildHookTraceData,
+  type HarnessHookEvent,
+} from '../../../harness';
 
 export interface PiSessionStartEvent {
   type: 'session_start';
@@ -104,7 +107,7 @@ export function mapPiEvent(
           event: 'tool.use',
           message: event.toolName,
           data: {
-            tool_input: event.toolInput,
+            ...buildHookTraceData(event.toolName, event.toolInput),
             host: 'pi-dev',
           },
         },

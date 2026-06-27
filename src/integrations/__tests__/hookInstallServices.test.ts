@@ -8,6 +8,7 @@ import {
   previewClaudeCodeHooks,
 } from '../claude-code';
 import {
+  CODEX_HOOK_TRUST_REMINDER,
   CODEX_HOOK_DISPATCH_COMMAND,
   buildCodexHooksDocument,
   buildCodexTomlHookBlocks,
@@ -105,6 +106,8 @@ describe('hook install services', () => {
 
     expect(result.format).toBe('json');
     expect(result.action).toBe('updated');
+    expect(result.trustReminder).toBe(CODEX_HOOK_TRUST_REMINDER);
+    expect(result.trustReminder).toContain('/hooks');
 
     const written = await fs.readJson(configPath);
     expect(written.hooks).toMatchObject(buildCodexHooksDocument().hooks);
@@ -123,6 +126,8 @@ describe('hook install services', () => {
 
     expect(result.format).toBe('toml');
     expect(result.action).toBe('updated');
+    expect(result.trustReminder).toBe(CODEX_HOOK_TRUST_REMINDER);
+    expect(result.trustReminder).toContain('/hooks');
 
     const written = await fs.readFile(configPath, 'utf8');
     expect(written).toContain('[features]');

@@ -1,4 +1,8 @@
-import type { HarnessHookResponse } from '../../../harness';
+import {
+  extractHookReadinessSummary,
+  formatHookReadinessAdditionalContext,
+  type HarnessHookResponse,
+} from '../../../harness';
 
 import { extractHarnessSessionId } from '../../shared/extractHarnessSessionId';
 import { formatNavigationExcerpt } from '../../shared/formatNavigationExcerpt';
@@ -27,8 +31,13 @@ function extractResultData(response: Extract<HarnessHookResponse, { ok: true }>)
 }
 
 function formatContextMessage(data: unknown): string {
+  const readiness = extractHookReadinessSummary(data);
+  if (readiness) {
+    return formatHookReadinessAdditionalContext(readiness, { source: 'pi-dev' });
+  }
+
   if (!isRecord(data) || !data.initialized) {
-    return 'dotcontext: no .context/ — run npx @dotcontext/mcp install and initialize context.';
+    return 'dotcontext: this repository does not have .context/ yet.\nNext step: configure MCP and ask the agent to run context init in this project.';
   }
 
   const enabled: string[] = [];

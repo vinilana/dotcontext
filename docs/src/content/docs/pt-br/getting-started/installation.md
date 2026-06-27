@@ -124,6 +124,12 @@ Por padrão, a instalação de hooks escreve configuração no projeto atual. Us
 
 Após instalar hooks do Codex, rode `/hooks` no Codex e confie nos hooks do projeto quando solicitado.
 
+Para diagnosticar a configuração do Codex, rode:
+
+```bash
+npx -y @dotcontext/cli@latest hook doctor codex
+```
+
 ## Caminho 1c: extensão Pi
 
 Pi usa uma extensão npm in-process:

@@ -62,12 +62,19 @@ All supported hosts run the same harness actions; only the event envelope differ
 
 | Lifecycle moment | Harness action | Host effect |
 | --- | --- | --- |
-| Session start | `context` → `check` | Inject compact index excerpt when `.context/` exists |
-| Session start (no `.context/`) | none (informational) | One-line hint to run MCP init or initialize context |
-| Post tool use (Write / Edit / Bash) | `harness` → `appendTrace` | Append durable trace under `.context/runtime/` |
+| Session start (no `.context/`) | `context` → `check` | Return a short JSON-safe hint to configure MCP and run `context init`; does not create `.context/runtime` |
+| Session start (`.context/` partial) | `context` → `check` | List up to three missing setup areas, such as `workflow` or `plans` |
+| Session start (`.context/` ready) | `context` → `check`, then harness session binding and `context` → `getMap` | Inject compact context/navigation, daily no-workflow reminder, or active PREVC preflight |
+| Post tool use (Write / Edit / Bash) | `harness` → `appendTrace` | Append durable trace under `.context/runtime/`; Bash traces get best-effort classification |
 | Stop / session end | `workflow-guide` | Inject compact PREVC next steps, skills, and gate hints only when an active PREVC workflow exists |
 
-Hooks are **non-blocking by default**. Harness errors do not stop your agent session. Stop/session-end hooks also stay silent when no PREVC workflow is active, and reentrant stop calls from the host are treated as successful no-ops so hook feedback cannot create an end-of-turn loop.
+Hooks are **non-blocking by default**. Harness errors do not stop your agent session. Stop/session-end hooks also stay silent when no PREVC workflow is active, when workflow state is missing or malformed, and during host reentry. Those cases return successful no-ops so hook feedback cannot create end-of-turn noise.
+
+Hook dispatch resolves the repository root as `--repo-path` first, then the nearest parent directory with `.context/`, then `cwd`, then `process.cwd()`. This keeps traces attached to the expected root when a host session starts in a monorepo subdirectory.
+
+Bash classification is best-effort and only reads the command already supplied by the host. Examples: `npm test`, `vitest`, and `jest` become `test`; `npm run build` and `tsc` become `build`; `eslint` and `npm run lint` become `lint`; `git status` and `git diff` become `inspection`.
+
+Repeated trace append failures are recorded under `.context/runtime/hooks/trace-failures.json` and are surfaced by `hook doctor`; the first failure remains silent to the host.
 
 ## Claude Code
 
@@ -117,12 +124,21 @@ npx -y @dotcontext/cli@latest hook install codex --format toml
 The installer also enables `[features].hooks = true` when that flag is missing.
 
 :::caution[Trust project hooks]
-After install, run `/hooks` in Codex and **trust project hooks** when prompted. Without trust, Codex will not execute the dispatch commands.
+After install, run `/hooks` in Codex and **trust project hooks** when prompted. This is a required activation step. Without trust, Codex can have `.codex/hooks.json` or `.codex/config.toml` configured but will not execute the dispatch commands.
 :::
 
 ### Verify
 
 Edit a file through Codex, then inspect `.context/runtime/sessions/*/trace.jsonl` for a `tool.use` trace entry.
+
+Run the hook doctor for a machine-readable or human-readable setup checklist:
+
+```bash
+npx -y @dotcontext/cli@latest hook doctor codex
+npx -y @dotcontext/cli@latest hook doctor codex --json
+```
+
+The Codex doctor checks `.codex/hooks.json` or `.codex/config.toml`, `[features].hooks = true` for TOML hooks, current dotcontext dispatch commands, `.context/`, workflow state, recent traces, and trace append failures.
 
 ## Uninstall
 
@@ -159,7 +175,9 @@ Recommended setup for Claude Code or Codex CLI:
    npx -y @dotcontext/cli@latest hook install codex
    ```
 
-3. Initialize context through your agent (MCP `context init`), then let hooks keep sessions and traces warm on every subsequent start.
+3. If you installed Codex hooks, run `/hooks` in Codex and trust project hooks.
+
+4. Initialize context through your agent (MCP `context init`), then let hooks keep sessions and traces warm on every subsequent start.
 
 ## Next steps
 

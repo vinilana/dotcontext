@@ -129,7 +129,13 @@ npx -y @dotcontext/cli@latest hook install claude-code --global
 
 Hook install writes project-level config by default. Use `--global` for home-directory hook config, `--dry-run` to preview changes, and `-v, --verbose` for detailed output. Codex also accepts `--format json|toml`.
 
-Actions are logged to `.context/logs/hook-install.log`. See [Using dotcontext with hooks](/guides/using-with-hooks/) for lifecycle details.
+Actions are logged to `.context/logs/hook-install.log`. For Codex setup checks, run:
+
+```bash
+npx -y @dotcontext/cli@latest hook doctor codex
+```
+
+See [Using dotcontext with hooks](/guides/using-with-hooks/) for lifecycle details.
 
 ## Path 1c: Pi extension
 

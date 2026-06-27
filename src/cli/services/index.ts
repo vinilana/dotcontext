@@ -41,6 +41,19 @@ export {
 } from './hookDispatchService';
 
 export {
+  HookDoctorService,
+  formatHookDoctorResult,
+  type HookDoctorServiceDependencies,
+  type HookDoctorOptions,
+  type HookDoctorResult,
+  type HookDoctorHostReport,
+  type HookDoctorCheck,
+  type HookDoctorCheckStatus,
+  type HookDoctorSummary,
+  type HookDoctorHost,
+} from './hookDoctorService';
+
+export {
   StateDetector,
   default as DefaultStateDetector,
   type ProjectState,

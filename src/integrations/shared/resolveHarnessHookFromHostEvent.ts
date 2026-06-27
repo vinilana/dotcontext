@@ -1,4 +1,7 @@
-import type { HarnessHookEvent } from '../../harness';
+import {
+  buildHookTraceData,
+  type HarnessHookEvent,
+} from '../../harness';
 
 import type { NormalizedToolEvent } from './toolEventNormalizer';
 
@@ -94,7 +97,7 @@ export function resolveHarnessHookFromHostEvent(
           level: 'info',
           event: 'tool.use',
           message: event.toolName ?? 'tool.use',
-          data: { tool_input: event.toolInput },
+          data: buildHookTraceData(event.toolName, event.toolInput),
         },
       };
     }

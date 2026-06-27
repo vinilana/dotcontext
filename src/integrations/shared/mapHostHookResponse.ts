@@ -1,4 +1,9 @@
-import type { HarnessHookResponse, HarnessHookSource } from '../../harness';
+import {
+  extractHookReadinessSummary,
+  formatHookReadinessAdditionalContext,
+  type HarnessHookResponse,
+  type HarnessHookSource,
+} from '../../harness';
 
 export interface HostHookOutput {
   continue?: boolean;
@@ -10,7 +15,7 @@ export interface HostHookOutput {
 }
 
 const MISSING_CONTEXT_HINT =
-  'dotcontext: no .context/ — run npx @dotcontext/mcp install and initialize context.';
+  'dotcontext: this repository does not have .context/ yet.\nNext step: configure MCP and ask the agent to run context init in this project.';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -23,7 +28,12 @@ function extractResultData(response: Extract<HarnessHookResponse, { ok: true }>)
   return response.result;
 }
 
-function formatContextAdditionalContext(data: unknown): string {
+function formatContextAdditionalContext(data: unknown, source?: HarnessHookSource): string {
+  const readiness = extractHookReadinessSummary(data);
+  if (readiness) {
+    return formatHookReadinessAdditionalContext(readiness, { source });
+  }
+
   if (!isRecord(data) || !data.initialized) {
     return MISSING_CONTEXT_HINT;
   }
@@ -62,7 +72,8 @@ function formatWorkflowGuideAdditionalContext(data: unknown): string | undefined
 
 function mapSuccessResponse(
   hostEventName: string,
-  response: Extract<HarnessHookResponse, { ok: true }>
+  response: Extract<HarnessHookResponse, { ok: true }>,
+  source?: HarnessHookSource
 ): HostHookOutput {
   const data = extractResultData(response);
 
@@ -70,7 +81,7 @@ function mapSuccessResponse(
     return {
       hookSpecificOutput: {
         hookEventName: 'SessionStart',
-        additionalContext: formatContextAdditionalContext(data),
+        additionalContext: formatContextAdditionalContext(data, source),
       },
     };
   }
@@ -112,6 +123,6 @@ export function mapHostHookResponse(
 
   return {
     ...output,
-    ...mapSuccessResponse(hostEventName, response),
+    ...mapSuccessResponse(hostEventName, response, options?.source),
   };
 }

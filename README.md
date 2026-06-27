@@ -65,6 +65,8 @@ Optionally wire lifecycle hooks for Claude Code, Codex CLI, or Pi (bootstrap, tr
 npx -y @dotcontext/cli@latest hook install
 ```
 
+For Codex CLI, finish hook activation inside Codex by running `/hooks` and trusting the project hooks.
+
 Then prompt your AI tool:
 
 ```text
@@ -379,13 +381,19 @@ args = ["-y", "@dotcontext/mcp@latest"]
 
 ### Hook Install (Claude Code, Codex CLI, Pi)
 
-Lifecycle hooks bootstrap context, append durable traces after file edits, and surface workflow reminders at session end when an active PREVC workflow exists — with lower token cost than loading the full MCP surface on every turn.
+Lifecycle hooks bootstrap context, append durable traces after file edits, and surface workflow guidance when it is useful, with lower token cost than loading the full MCP surface on every turn.
 
 ```bash
 npx -y @dotcontext/cli@latest hook install
 ```
 
 Hook install writes project-level configuration by default. Use `--global` only when you intentionally want home-directory hook config.
+
+`SessionStart` resolves the project root first (`--repo-path`, then the nearest parent with `.context/`, then `cwd`) and checks readiness. If the repository is not initialized yet, the hook returns a short JSON-safe hint and does not create `.context/runtime`. Partial context lists up to three missing areas. Ready context gets compact navigation, a daily no-workflow reminder, or active PREVC preflight when a workflow is running.
+
+`PostToolUse` appends durable `tool.use` traces for `Write`, `Edit`, and `Bash`. Bash traces include best-effort classification such as `test`, `build`, `lint`, or `inspection` without running extra commands. Repeated trace append failures are counted under `.context/runtime/hooks/trace-failures.json` and stay non-blocking.
+
+`Stop` and session-end hooks stay quiet unless there is an active PREVC workflow. Missing, inactive, malformed, or reentrant workflow state returns a successful no-op so end-of-turn feedback does not become noise.
 
 Examples:
 
@@ -395,6 +403,7 @@ npx -y @dotcontext/cli@latest hook install codex
 npx -y @dotcontext/cli@latest hook install codex --format toml
 npx -y @dotcontext/cli@latest hook install pi
 npx -y @dotcontext/cli@latest hook install claude-code --global
+npx -y @dotcontext/cli@latest hook doctor codex --json
 ```
 
 | Host | Config | Dispatch |
@@ -403,6 +412,23 @@ npx -y @dotcontext/cli@latest hook install claude-code --global
 | `codex` | `.codex/hooks.json` or inline in `.codex/config.toml` | `npx -y @dotcontext/cli@latest hook dispatch --source codex` |
 | `pi` | `pi install npm:@dotcontext/pi` | In-process TypeScript extension |
 
+Codex-specific activation step:
+
+```text
+/hooks
+```
+
+After installing Codex hooks, run `/hooks` in Codex and trust project hooks when prompted. The config file can be present before this step, but Codex will not execute project hooks until they are trusted.
+
+Diagnose Codex hook setup with:
+
+```bash
+npx -y @dotcontext/cli@latest hook doctor codex
+npx -y @dotcontext/cli@latest hook doctor codex --json
+```
+
+The doctor checks Codex hook config, TOML `[features].hooks = true`, the current dotcontext dispatch command, `.context/`, workflow state, recent traces, and trace append failures.
+
 For Pi, combine the extension (hooks) with MCP for the full tool surface:
 
 ```bash
@@ -410,8 +436,6 @@ pi install npm:@dotcontext/pi
 npx @dotcontext/mcp install pi --local
 pi install npm:pi-mcp-adapter
 ```
-
-After Codex hook install, run `/hooks` in Codex and trust project hooks when prompted.
 
 ### Local Development MCP Config
 
@@ -477,6 +501,7 @@ For AI-agent use, provide `repoPath` on the first context-heavy MCP call so dotc
 | `npx -y @dotcontext/cli@latest` | Launch the interactive CLI, including quick sync |
 | `npx @dotcontext/mcp install` | Install MCP configuration for supported AI tools |
 | `npx -y @dotcontext/cli@latest hook install [host]` | Install lifecycle hooks for Claude Code, Codex CLI, or Pi |
+| `npx -y @dotcontext/cli@latest hook doctor codex` | Diagnose Codex hook config, trust prerequisites, traces, and runtime state |
 | `npx -y @dotcontext/cli@latest hook uninstall [host]` | Remove dotcontext hook entries |
 | `npx -y @dotcontext/mcp@latest` | Start the MCP server manually |
 | `npx -y @dotcontext/cli@latest sync` | Export agent playbooks to AI tools |

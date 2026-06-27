@@ -17,6 +17,13 @@ export {
 } from './resolveHarnessHookFromHostEvent';
 
 export {
+  resolveHookRepoRoot,
+  type HookRepoRootResolution,
+  type HookRepoRootResolutionSource,
+  type ResolveHookRepoRootOptions,
+} from './hookRepoRootResolver';
+
+export {
   mapHostHookResponse,
   type HostHookOutput,
 } from './mapHostHookResponse';

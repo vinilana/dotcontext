@@ -22,6 +22,7 @@ import {
   HookInstallService,
   resolveHookInstallHostSelection,
   runHookDispatch,
+  HookDoctorService,
   SyncService,
   ImportRulesService,
   ImportAgentsService,
@@ -122,7 +123,10 @@ function scheduleVersionCheck(force: boolean = false): Promise<void> {
 }
 
 program.hook('preAction', (_thisCommand, actionCommand) => {
-  if (actionCommand.name() === 'dispatch' && actionCommand.parent?.name() === 'hook') {
+  if (
+    actionCommand.parent?.name() === 'hook'
+    && (actionCommand.name() === 'dispatch' || actionCommand.name() === 'doctor')
+  ) {
     return;
   }
 
@@ -369,6 +373,32 @@ hookCommand
       process.exit(result.exitCode);
     } catch (error) {
       ui.displayError(t('errors.hook.dispatchFailed'), error as Error);
+      process.exit(1);
+    }
+  });
+
+hookCommand
+  .command('doctor [host]')
+  .description('Diagnose dotcontext hook setup')
+  .option('--repo-path <path>', 'Repository path override')
+  .option('--json', 'Output machine-readable JSON')
+  .action(async (host: string | undefined, options: any) => {
+    try {
+      const service = new HookDoctorService({ ui, t, version: VERSION });
+      const result = await service.run({
+        host,
+        repoPath: options.repoPath,
+      });
+
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        console.log(service.formatHuman(result));
+      }
+
+      process.exit(result.exitCode);
+    } catch (error) {
+      ui.displayError('Hook doctor failed', error as Error);
       process.exit(1);
     }
   });

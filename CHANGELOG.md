@@ -7,13 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `hook doctor [host] --json` with Codex diagnostics for hook config, TOML hooks feature flags, current dispatch commands, `.context/`, workflow state, recent traces, and trace append failures.
+- Added hook readiness summaries for `SessionStart`, including missing/partial/ready tiers, capped setup gaps, workflow-missing reminder cooldown, and active PREVC preflight.
+- Added lightweight Bash trace classification for hook traces (`test`, `build`, `lint`, `inspection`, migration/destructive hints) without running extra commands.
+
 ### Fixed
 
 - Reduced host hook noise: Stop/session-end hooks now emit PREVC workflow guidance only when an active workflow exists.
 - Prevented Stop/session-end hook reentry loops across Claude Code, Codex, and Pi by silently continuing when host reentry flags are active.
 - Kept `hook dispatch` stdout machine-readable by skipping the global update check for hook dispatch commands.
 - Prevented `SessionStart` hooks from creating `.context/runtime` before context initialization has been confirmed.
-- Made hook tracing more resilient by recovering stale hook session bindings and treating trace append failures as non-blocking.
+- Made hook tracing more resilient by recovering stale hook session bindings, treating trace append failures as non-blocking, and recording repeated failures under `.context/runtime/hooks/trace-failures.json`.
+- Kept hook trace-failure diagnostics in the harness runtime state instead of duplicating a second store in host integrations.
+- Aligned hook readiness fallback checks with `context check` so hook-only runtime files do not count as harness runtime readiness.
+- Made `hook doctor` inspect only the tail of large trace files when looking for the latest trace timestamp.
 - Suppressed inactive, skipped, blank, or malformed workflow-guide output in Claude Code, Codex, and Pi hook renderers.
 - Made Stop hooks silently continue when workflow state is missing or malformed instead of returning non-zero hook failures.
 - Aligned Pi session-start context summaries with Claude/Codex by recognizing `workflow` and `harness` readiness flags.
@@ -23,7 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Defaulted hook install/uninstall to project-level config; pass `--global` to target home-directory hook config.
 - Anchored the Claude Code `PostToolUse` matcher to exact `Write`, `Edit`, and `Bash` events.
 - Tightened Codex TOML hook install detection so partially installed hook blocks are repaired instead of being treated as up to date.
+- Hook dispatch now resolves repo roots as `--repo-path`, nearest ancestor with `.context/`, `cwd`, then `process.cwd()`.
+- Standardized hook runtime hints in English across Claude Code, Codex, and Pi outputs.
 - Updated hook documentation to clarify that session-end PREVC reminders appear only for active workflows.
+- Documented Codex `/hooks` trust as a required post-install step and expanded hook renderer tests across Claude Code, Codex, and Pi.
 
 ## [1.0.0]
 

@@ -7,6 +7,7 @@ import {
   type HarnessAdapterRuntimeResult,
   type HarnessAdapterToolName,
 } from '../actions/adapterRuntime';
+import { getHookReadinessSummary } from './hookReadiness';
 
 export const HARNESS_HOOK_SOURCES = [
   'generic',
@@ -129,10 +130,12 @@ function createRuntime(options: HarnessHookAdapterOptions): Pick<HarnessAdapterR
 export class HarnessHookAdapter {
   private readonly runtime: Pick<HarnessAdapterRuntime, 'execute'>;
   private readonly source: HarnessHookSource;
+  private readonly repoPath?: string;
 
   constructor(options: HarnessHookAdapterOptions) {
     this.runtime = createRuntime(options);
     this.source = options.source ?? 'generic';
+    this.repoPath = options.repoPath;
   }
 
   async handle(event: unknown): Promise<HarnessHookResponse> {
@@ -148,7 +151,10 @@ export class HarnessHookAdapter {
 
     try {
       const request = this.toRuntimeRequest(event);
-      const result = await this.runtime.execute(request);
+      const result = await this.enrichRuntimeResult(
+        request,
+        await this.runtime.execute(request)
+      );
 
       return {
         ok: true,
@@ -189,6 +195,44 @@ export class HarnessHookAdapter {
       tool: event.tool,
       params: event.params as HarnessAdapterInput,
     };
+  }
+
+  private async enrichRuntimeResult(
+    request: HarnessAdapterRequest,
+    result: HarnessAdapterRuntimeResult
+  ): Promise<HarnessAdapterRuntimeResult> {
+    if (
+      request.tool !== 'context' ||
+      !isRecord(request.params) ||
+      request.params.action !== 'check' ||
+      result.kind !== 'json' ||
+      !isRecord(result.data)
+    ) {
+      return result;
+    }
+
+    const repoPath = typeof request.params.repoPath === 'string'
+      ? request.params.repoPath
+      : this.repoPath;
+
+    if (!repoPath) {
+      return result;
+    }
+
+    try {
+      return {
+        ...result,
+        data: {
+          ...result.data,
+          hookReadiness: await getHookReadinessSummary({
+            repoPath,
+            scaffoldStatus: result.data,
+          }),
+        },
+      };
+    } catch {
+      return result;
+    }
   }
 }
 

@@ -6,6 +6,7 @@ import {
   buildHookInstallHostChoices,
   resolveHookInstallHostSelection,
 } from '../hookInstallService';
+import { CODEX_HOOK_TRUST_REMINDER } from '../../../integrations/codex';
 import type { CLIInterface } from '../../../utils/cliUI';
 
 const createMockUI = (): CLIInterface => ({
@@ -178,7 +179,7 @@ describe('HookInstallService', () => {
       expect(result.filesCreated).toBe(1);
       expect(mockUI.displayInfo).toHaveBeenCalledWith(
         'Codex CLI',
-        'After install, run /hooks in Codex and trust project hooks when prompted.'
+        CODEX_HOOK_TRUST_REMINDER
       );
 
       const configPath = path.join(tempDir, '.codex', 'hooks.json');

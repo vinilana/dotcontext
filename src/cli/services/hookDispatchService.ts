@@ -5,9 +5,9 @@
  * and writes host-specific JSON to stdout.
  */
 
-import * as path from 'path';
 import {
   createHarnessHookAdapter,
+  recordHookTraceFailure,
   type HarnessHookResponse,
   WorkflowService,
 } from '../../harness';
@@ -21,6 +21,7 @@ import {
   getHookHarnessSessionId,
   isSessionEndReentry,
   normalizeToolEvent,
+  resolveHookRepoRoot,
   resolveHarnessHookFromHostEvent,
   saveHookHarnessSession,
   type HostHookOutput,
@@ -39,21 +40,6 @@ export interface HookDispatchOptions {
 export interface HookDispatchResult {
   exitCode: 0 | 1 | 2;
   output: unknown;
-}
-
-function resolveRepoPath(
-  envelope: Record<string, unknown>,
-  repoPath?: string
-): string {
-  if (repoPath) {
-    return path.resolve(repoPath);
-  }
-
-  if (typeof envelope.cwd === 'string' && envelope.cwd.length > 0) {
-    return path.resolve(envelope.cwd);
-  }
-
-  return process.cwd();
 }
 
 function isBlockingResponse(response: HarnessHookResponse): boolean {
@@ -261,6 +247,21 @@ async function recreateHookHarnessSession(
   return harnessSessionId;
 }
 
+async function recordTraceAppendFailure(options: {
+  repoPath: string;
+  source: HookDispatchSource;
+  reason: string;
+  message?: string;
+  hostSessionId?: string;
+  harnessSessionId?: string;
+}): Promise<void> {
+  try {
+    await recordHookTraceFailure(options);
+  } catch {
+    // Diagnostics must never make hook dispatch blocking.
+  }
+}
+
 async function readStdin(stdin: NodeJS.ReadableStream = process.stdin): Promise<string> {
   const chunks: Buffer[] = [];
 
@@ -405,6 +406,13 @@ async function dispatchShellHookEvent(
           });
         }
       } catch {
+        await recordTraceAppendFailure({
+          repoPath,
+          source,
+          reason: 'stale_session_recovery_failed',
+          hostSessionId: normalizedEvent.sessionId,
+          harnessSessionId,
+        });
         response = createHookDispatchSuccessResponse(source, {
           skipped: true,
           reason: 'trace_append_failed',
@@ -413,6 +421,14 @@ async function dispatchShellHookEvent(
     }
 
     if (isAppendTraceRequest(mapped) && !response.ok) {
+      await recordTraceAppendFailure({
+        repoPath,
+        source,
+        reason: 'append_trace_failed',
+        message: response.error.message,
+        hostSessionId: normalizedEvent.sessionId,
+        harnessSessionId,
+      });
       response = createHookDispatchSuccessResponse(source, {
         skipped: true,
         reason: 'trace_append_failed',
@@ -485,7 +501,11 @@ export async function runHookDispatch(
     throw new Error(`Invalid hook dispatch JSON: ${(error as Error).message}`);
   }
 
-  const repoPath = resolveRepoPath(envelope, options.repoPath);
+  const rootResolution = await resolveHookRepoRoot({
+    repoPath: options.repoPath,
+    cwd: normalizeToolEvent(envelope).cwd,
+  });
+  const repoPath = rootResolution.repoPath;
 
   let response: HarnessHookResponse;
   let output: HostHookOutput;

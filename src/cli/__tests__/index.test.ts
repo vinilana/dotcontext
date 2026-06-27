@@ -7,6 +7,7 @@ import {
   ReportService,
   QuickSyncService,
   ReverseQuickSyncService,
+  HookDoctorService,
   StateDetector,
 } from '..';
 
@@ -20,6 +21,7 @@ describe('CLI boundary exports', () => {
     expect(ReportService).toBeDefined();
     expect(QuickSyncService).toBeDefined();
     expect(ReverseQuickSyncService).toBeDefined();
+    expect(HookDoctorService).toBeDefined();
     expect(StateDetector).toBeDefined();
   });
 });
