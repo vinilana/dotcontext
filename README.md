@@ -6,6 +6,8 @@
 
 > **Formerly `@ai-coders/context`.** The package was renamed to avoid confusion with Context7 and other generic "context" tools. The `.context/` directory convention is unchanged. See [Migration from @ai-coders/context](#migration-from-ai-coderscontext).
 
+<img width="1672" height="941" alt="Dotcontext" src="https://github.com/user-attachments/assets/d967d901-edcf-4512-af56-3b98322a4522" />
+
 **Dotcontext is a harness for your harness.** We provide the contextual layer you need to keep the work going no matter which tool you switch to.
 
 Instead of re-teaching every AI tool your project from scratch, dotcontext keeps a durable contextual layer in your repo — shared project context, workflow structure, policies, sensors, task contracts, replayable execution history, and MCP access — that travels with the project across whatever tool you use next.
