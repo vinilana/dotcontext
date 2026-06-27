@@ -18,6 +18,7 @@ import type { CodexHookInput } from '../../integrations/codex/hooks/mapCodexEven
 import {
   ensureHookHarnessSession,
   extractHarnessSessionId,
+  finalizeHostHookOutput,
   getHookHarnessSessionId,
   isSessionEndReentry,
   normalizeToolEvent,
@@ -190,7 +191,7 @@ function isAppendTraceRequest(mapped: { tool: string; params: unknown }): boolea
     && mapped.params.action === 'appendTrace';
 }
 
-function isMissingHarnessSessionResponse(
+function isRecoverableHarnessSessionResponse(
   response: HarnessHookResponse,
   harnessSessionId?: string
 ): boolean {
@@ -199,11 +200,25 @@ function isMissingHarnessSessionResponse(
   }
 
   const message = response.error.message;
-  if (!message.includes('Harness session not found')) {
+  if (message.includes('Harness session not found')) {
+    return !harnessSessionId || message.includes(harnessSessionId);
+  }
+
+  if (!harnessSessionId) {
     return false;
   }
 
-  return !harnessSessionId || message.includes(harnessSessionId);
+  const normalizedMessage = message.replace(/\\/g, '/');
+  const sessionPathFragment = `/sessions/${harnessSessionId}/session.json`;
+  const looksLikeJsonParseFailure = normalizedMessage.includes('Unexpected end of JSON input')
+    || normalizedMessage.includes('Unexpected token')
+    || normalizedMessage.includes('Expected property name')
+    || normalizedMessage.includes('Expected double-quoted property name')
+    || normalizedMessage.includes('Expected \',\' or \'}\'')
+    || normalizedMessage.includes('not valid JSON');
+
+  return looksLikeJsonParseFailure
+    && (!normalizedMessage.includes('/sessions/') || normalizedMessage.includes(sessionPathFragment));
 }
 
 async function recreateHookHarnessSession(
@@ -387,7 +402,7 @@ async function dispatchShellHookEvent(
     if (
       isAppendTraceRequest(mapped)
       && normalizedEvent.sessionId
-      && isMissingHarnessSessionResponse(response, harnessSessionId)
+      && isRecoverableHarnessSessionResponse(response, harnessSessionId)
     ) {
       try {
         const recreatedSessionId = await recreateHookHarnessSession(adapter, {
@@ -527,6 +542,7 @@ export async function runHookDispatch(
   }
 
   const exitCode = resolveExitCode(response);
+  output = finalizeHostHookOutput(options.source, output);
 
   stdout.write(`${JSON.stringify(output)}\n`);
 

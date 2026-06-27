@@ -24,8 +24,14 @@ export {
 } from './hookRepoRootResolver';
 
 export {
-  mapHostHookResponse,
+  finalizeHostHookOutput,
+  getHostHookOutputFields,
   type HostHookOutput,
+} from './hostHookOutputContract';
+
+export {
+  mapHostHookResponse,
+  mapHostHookResponseForSource,
 } from './mapHostHookResponse';
 
 export {

@@ -150,12 +150,16 @@ describe('HookDispatchService session lifecycle', () => {
 
       expect(startResult.exitCode).toBe(0);
       expect(startResult.output).toMatchObject({
-        source,
         hookSpecificOutput: {
           hookEventName: 'SessionStart',
           additionalContext: expect.stringContaining('this repository does not have .context/ yet'),
         },
       });
+      if (source === 'claude-code') {
+        expect(startResult.output).toMatchObject({ source });
+      } else {
+        expect(startResult.output).not.toHaveProperty('source');
+      }
       expect(JSON.stringify(startResult.output)).toContain('context init');
       expect(await fs.pathExists(path.join(tempDir, '.context'))).toBe(false);
       expect(await fs.pathExists(path.join(tempDir, '.context', 'runtime', 'logs'))).toBe(false);
@@ -286,6 +290,71 @@ describe('HookDispatchService session lifecycle', () => {
     expect(traceContent).toContain('tool.use');
   });
 
+  it('recreates corrupt PostToolUse session bindings and appends trace to the recovered session', async () => {
+    const sessionId = 'host-session-corrupt';
+    const corruptHarnessSessionId = 'corrupt-harness-session';
+    await fs.outputFile(
+      path.join(tempDir, '.context', 'runtime', 'sessions', corruptHarnessSessionId, 'session.json'),
+      '{'
+    );
+    await saveHookHarnessSession({
+      harnessSessionId: corruptHarnessSessionId,
+      hostSessionId: sessionId,
+      source: 'codex',
+      repoPath: tempDir,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const postStdin = PassThrough.from([
+      JSON.stringify({
+        session_id: sessionId,
+        cwd: tempDir,
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: { file_path: 'README.md' },
+      }),
+    ]);
+    const postStdout = new PassThrough();
+    postStdout.on('data', () => {});
+
+    const postResult = await runHookDispatch({
+      source: 'codex',
+      repoPath: tempDir,
+      stdin: postStdin,
+      stdout: postStdout,
+    });
+
+    expect(postResult.exitCode).toBe(0);
+    expect(postResult.output).toEqual({ continue: true });
+
+    const recreatedSessionId = await getHookHarnessSessionId({
+      repoPath: tempDir,
+      source: 'codex',
+      hostSessionId: sessionId,
+    });
+    expect(recreatedSessionId).toBeDefined();
+    expect(recreatedSessionId).not.toBe(corruptHarnessSessionId);
+
+    const tracePath = path.join(
+      tempDir,
+      '.context',
+      'runtime',
+      'sessions',
+      recreatedSessionId!,
+      'trace.jsonl'
+    );
+    const traceContent = await fs.readFile(tracePath, 'utf8');
+    expect(traceContent).toContain('tool.use');
+    expect(await fs.pathExists(path.join(
+      tempDir,
+      '.context',
+      'runtime',
+      'hooks',
+      'trace-failures.json'
+    ))).toBe(false);
+  });
+
   it('records trace append failures without blocking PostToolUse', async () => {
     const sessionId = 'host-session-trace-failure';
     await saveHookHarnessSession({
@@ -357,11 +426,11 @@ describe('HookDispatchService session lifecycle', () => {
 
     expect(startResult.exitCode).toBe(0);
     expect(startResult.output).toMatchObject({
-      source: 'codex',
       hookSpecificOutput: {
         hookEventName: 'SessionStart',
       },
     });
+    expect(startResult.output).not.toHaveProperty('source');
   });
 
   it('emits workflow missing reminder only once per cooldown on SessionStart', async () => {
@@ -546,12 +615,12 @@ describe('HookDispatchService session lifecycle', () => {
 
     expect(stopResult.exitCode).toBe(0);
     expect(stopResult.output).toMatchObject({
-      source: 'codex',
       hookSpecificOutput: {
         hookEventName: 'Stop',
         additionalContext: expect.stringContaining('feature-x'),
       },
     });
+    expect(stopResult.output).not.toHaveProperty('source');
   });
 
   it.each(['Stop', 'SubagentStop'])(

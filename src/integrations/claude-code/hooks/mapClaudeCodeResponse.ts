@@ -2,7 +2,7 @@ import type { HarnessHookResponse } from '../../../harness';
 
 import {
   isSessionEndReentry,
-  mapHostHookResponse,
+  mapHostHookResponseForSource,
   type HostHookOutput,
 } from '../../shared';
 
@@ -17,8 +17,7 @@ export function mapClaudeCodeResponse(
   const hookEventName =
     typeof event.hook_event_name === 'string' ? event.hook_event_name : 'unknown';
 
-  return mapHostHookResponse(hookEventName, response, {
-    source: 'claude-code',
+  return mapHostHookResponseForSource('claude-code', hookEventName, response, {
     suppressAdditionalContext: isSessionEndReentry(event),
   });
 }

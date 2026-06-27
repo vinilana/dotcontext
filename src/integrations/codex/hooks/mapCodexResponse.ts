@@ -2,13 +2,13 @@ import type { HarnessHookResponse } from '../../../harness';
 
 import {
   isSessionEndReentry,
-  mapHostHookResponse,
+  mapHostHookResponseForSource,
   type HostHookOutput,
 } from '../../shared';
 
 import type { CodexHookInput } from './mapCodexEvent';
 
-export type CodexHookOutput = HostHookOutput;
+export type CodexHookOutput = Omit<HostHookOutput, 'source'>;
 
 export function mapCodexResponse(
   event: CodexHookInput,
@@ -17,8 +17,7 @@ export function mapCodexResponse(
   const hookEventName =
     typeof event.hook_event_name === 'string' ? event.hook_event_name : 'unknown';
 
-  return mapHostHookResponse(hookEventName, response, {
-    source: 'codex',
+  return mapHostHookResponseForSource('codex', hookEventName, response, {
     suppressAdditionalContext: isSessionEndReentry(event),
-  });
+  }) as CodexHookOutput;
 }

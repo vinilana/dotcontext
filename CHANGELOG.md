@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Removed the Codex-only `source` field from hook stdout so `SessionStart` output matches Codex's strict JSON schema.
+- Added host-specific hook stdout contracts so future integrations default to strict, schema-safe output instead of inheriting fields from other hosts.
+- Made hook trace appends recover from corrupt harness session bindings and write session metadata atomically to avoid transient invalid JSON.
+
 ## [1.1.0] - 2026-06-27
 
 ### Added

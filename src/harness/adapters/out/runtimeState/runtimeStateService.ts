@@ -172,7 +172,14 @@ export class HarnessRuntimeStateService {
 
   private async saveSession(session: HarnessSessionRecord): Promise<void> {
     await this.ensureSessionDir(session.id);
-    await fs.writeJson(this.sessionFile(session.id), session, { spaces: 2 });
+    const sessionFile = this.sessionFile(session.id);
+    const tmpFile = `${sessionFile}.${process.pid}.${randomUUID()}.tmp`;
+    try {
+      await fs.writeJson(tmpFile, session, { spaces: 2 });
+      await fs.rename(tmpFile, sessionFile);
+    } finally {
+      await fs.remove(tmpFile).catch(() => undefined);
+    }
   }
 
   private async appendTraceLine(sessionId: string, trace: HarnessTraceRecord): Promise<void> {

@@ -4,15 +4,10 @@ import {
   type HarnessHookResponse,
   type HarnessHookSource,
 } from '../../harness';
-
-export interface HostHookOutput {
-  continue?: boolean;
-  source?: HarnessHookSource;
-  hookSpecificOutput?: {
-    hookEventName: string;
-    additionalContext?: string;
-  };
-}
+import {
+  finalizeHostHookOutput,
+  type HostHookOutput,
+} from './hostHookOutputContract';
 
 const MISSING_CONTEXT_HINT =
   'dotcontext: this repository does not have .context/ yet.\nNext step: configure MCP and ask the agent to run context init in this project.';
@@ -104,7 +99,8 @@ function mapSuccessResponse(
 }
 
 /**
- * Map HarnessHookResponse to Claude/Codex stdout JSON control fields.
+ * Map HarnessHookResponse to protocol-neutral command hook stdout fields.
+ * Run the result through finalizeHostHookOutput before writing to a host.
  */
 export function mapHostHookResponse(
   hostEventName: string,
@@ -126,3 +122,20 @@ export function mapHostHookResponse(
     ...mapSuccessResponse(hostEventName, response, options?.source),
   };
 }
+
+export function mapHostHookResponseForSource(
+  source: HarnessHookSource,
+  hostEventName: string,
+  response: HarnessHookResponse,
+  options?: { suppressAdditionalContext?: boolean }
+): HostHookOutput {
+  return finalizeHostHookOutput(
+    source,
+    mapHostHookResponse(hostEventName, response, {
+      source,
+      suppressAdditionalContext: options?.suppressAdditionalContext,
+    })
+  );
+}
+
+export type { HostHookOutput } from './hostHookOutputContract';

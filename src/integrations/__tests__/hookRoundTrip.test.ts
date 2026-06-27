@@ -2,11 +2,13 @@ import {
   createClaudeCodeHookAdapter,
   createCodexHookAdapter,
   createPiDevHookAdapter,
+  finalizeHostHookOutput,
   mapClaudeCodeEvent,
   mapClaudeCodeResponse,
   mapCodexEvent,
   mapCodexResponse,
   mapHostHookResponse,
+  mapHostHookResponseForSource,
   mapPiEvent,
   mapPiResponse,
   normalizeToolEvent,
@@ -208,7 +210,8 @@ describe('hook mapper unit tests', () => {
         },
       });
 
-      expect(output.source).toBe('codex');
+      expect(output).not.toHaveProperty('source');
+      expect(Object.keys(output)).toEqual(['hookSpecificOutput']);
       expect(output.hookSpecificOutput).toEqual({
         hookEventName: 'SessionStart',
         additionalContext: expect.stringContaining('scaffold ready (docs, workflow, harness)'),
@@ -233,7 +236,6 @@ describe('hook mapper unit tests', () => {
       );
 
       expect(output).toEqual({
-        source: 'codex',
         continue: true,
       });
     });
@@ -258,6 +260,49 @@ describe('hook mapper unit tests', () => {
       expect(mapHostHookResponse('Stop', response, { source: 'codex' })).toEqual({
         source: 'codex',
         continue: true,
+      });
+      expect(mapHostHookResponseForSource('codex', 'Stop', response)).toEqual({
+        continue: true,
+      });
+    });
+
+    it('filters stdout fields through host-specific output contracts', () => {
+      const hookSpecificOutput = {
+        hookEventName: 'SessionStart',
+        additionalContext: 'ready',
+      };
+
+      expect(finalizeHostHookOutput('claude-code', {
+        continue: true,
+        source: 'claude-code',
+        hookSpecificOutput,
+        systemMessage: 'unsupported by current Claude renderer',
+      })).toEqual({
+        continue: true,
+        source: 'claude-code',
+        hookSpecificOutput,
+      });
+
+      expect(finalizeHostHookOutput('codex', {
+        continue: true,
+        source: 'codex',
+        hookSpecificOutput,
+        systemMessage: 'allowed by Codex',
+      })).toEqual({
+        continue: true,
+        hookSpecificOutput,
+        systemMessage: 'allowed by Codex',
+      });
+
+      expect(finalizeHostHookOutput('future-host', {
+        continue: true,
+        source: 'future-host',
+        hookSpecificOutput,
+        systemMessage: 'requires explicit contract',
+        suppressOutput: true,
+      })).toEqual({
+        continue: true,
+        hookSpecificOutput,
       });
     });
 
@@ -286,7 +331,6 @@ describe('hook mapper unit tests', () => {
           result: { kind: 'json', data },
         })
       ).toEqual({
-        source: 'codex',
         continue: true,
       });
 
@@ -490,7 +534,7 @@ describe('hook round-trip integrations', () => {
         },
       },
       (output: ReturnType<typeof mapCodexResponse>) => {
-        expect(output.source).toBe('codex');
+        expect(output).not.toHaveProperty('source');
         expect(output.hookSpecificOutput?.hookEventName).toBe('Stop');
         expect(output.hookSpecificOutput?.additionalContext).toContain('feature-x');
       },
