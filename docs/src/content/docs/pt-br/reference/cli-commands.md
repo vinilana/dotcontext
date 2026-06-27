@@ -185,12 +185,17 @@ Não existe um binário global separado para o servidor no pacote `@dotcontext/c
 
 Instala (ou atualiza) a configuração do servidor MCP para uma ferramenta de IA suportada. Execute sem nome de ferramenta para escolher interativamente; passe um nome de ferramenta para mirá-la diretamente. Veja [Instalando com MCP](/pt-br/guides/using-with-mcp/) para a lista completa de clientes suportados e caminhos de config.
 
+MCP é a superfície completa de tools do dotcontext. Para alvos com hooks, `mcp:install` pode recomendar hooks de ciclo de vida depois que a config MCP é tratada. Hooks são recomendados, opcionais e não bloqueantes; são elegíveis somente para `claude` -> `claude-code`, `codex` -> `codex` e `pi` -> `pi`.
+
 | Flag | Descrição | Padrão |
 | --- | --- | --- |
 | `[tool]` | Nome de ferramenta específica (omita para escolher interativamente) | pergunta |
 | `-g, --global` | Instala na config global (home) | `true` |
 | `-l, --local` | Instala na config local/no nível do repositório | `false` |
 | `--dry-run` | Pré-visualiza sem gravar | `false` |
+| `--with-hooks` | Instala hooks recomendados elegíveis depois do MCP sem perguntar | `false` |
+| `--no-hooks` | Não pergunta, não instala e não imprime recomendação de hooks | `false` |
+| `--hook-format <json\|toml>` | Formato dos hooks do Codex na etapa recomendada | `json` |
 | `-v, --verbose` | Saída detalhada | `false` |
 
 ```bash
@@ -198,7 +203,14 @@ dotcontext mcp:install
 dotcontext mcp:install claude
 dotcontext mcp:install --global
 dotcontext mcp:install --local --dry-run
+dotcontext mcp:install codex --with-hooks
+dotcontext mcp:install codex --with-hooks --hook-format toml
+dotcontext mcp:install codex --no-hooks
 ```
+
+Execuções interativas perguntam sobre hooks recomendados depois da config MCP quando o alvo selecionado é Claude Code, Codex CLI ou Pi. Execuções não interativas nunca escrevem hooks sem `--with-hooks`. `--no-hooks` suprime prompts e a recomendação. `--with-hooks --no-hooks` é inválido.
+
+A config MCP é global por padrão; hooks recomendados instalam config local no projeto por padrão. Para Codex, rode `/hooks` dentro do Codex e confie nos hooks do projeto depois que a config for escrita. Para Pi, o fluxo combinado usa o instalador MCP para o snippet MCP e não o duplica pela etapa de hook do Pi.
 
 ## Modo interativo
 
@@ -208,7 +220,7 @@ Invocar a CLI sem argumentos (`npx -y @dotcontext/cli@latest`) abre um menu guia
 - **Projeto não preenchido** — lista os arquivos pendentes aguardando conteúdo e então mostra o menu completo.
 - **Projeto atualizado** — mostra o menu completo com estatísticas de sync.
 
-O menu completo oferece Quick Sync (sync unificado de agentes, skills e docs), Reverse Sync, MCP Install, Settings (seleção de idioma), View Pending (quando há arquivos aguardando conteúdo) e Exit.
+O menu completo oferece Quick Sync (sync unificado de agentes, skills e docs), Reverse Sync, MCP Install, Settings (seleção de idioma), View Pending (quando há arquivos aguardando conteúdo) e Exit. A ação MCP Install usa o mesmo caminho de recomendação de hooks que `mcp:install`: hooks são oferecidos somente para Claude Code, Codex CLI e Pi, e continuam opcionais.
 
 ## Comandos ocultos / admin
 

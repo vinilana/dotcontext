@@ -10,7 +10,7 @@ import {
   packageNameToDisplayName,
   renderSplashScreen
 } from '../utils/splashScreen';
-import { themedSelect, Separator } from '../utils/themedPrompt';
+import { themedCheckbox, themedConfirm, themedSelect, Separator } from '../utils/themedPrompt';
 import { CLIInterface } from '../utils/cliUI';
 import { checkForUpdates } from '../utils/versionChecker';
 import { registerProcessShutdown } from '../utils/processShutdown';
@@ -19,7 +19,13 @@ import type { TranslateFn, Locale, TranslationKey } from '../utils/i18n';
 import {
   MCPInstallService,
   resolveMcpInstallToolSelection,
+  buildHookInstallCommand,
+  getAvailableRecommendedHookTargets,
+  getMcpHookRecommendationDecision,
+  type RecommendedHookFormat,
+  type RecommendedHookTarget,
   HookInstallService,
+  type HookHost,
   resolveHookInstallHostSelection,
   runHookDispatch,
   HookDoctorService,
@@ -273,6 +279,223 @@ program
     }
   });
 
+class McpHookOptionError extends Error {}
+
+interface McpInstallCommandOptions {
+  global: boolean;
+  local?: boolean;
+  dryRun?: boolean;
+  verbose?: boolean;
+  withHooks?: boolean;
+  hooks?: boolean;
+  hookFormat: string;
+}
+
+interface RunMcpInstallFlowOptions {
+  selectedToolArg?: string;
+  isInteractive: boolean;
+  mcpGlobal: boolean;
+  dryRun: boolean;
+  verbose: boolean;
+  withHooks: boolean;
+  noHooks: boolean;
+  hookFormat: RecommendedHookFormat;
+  showInteractiveIntro?: boolean;
+}
+
+function parseMcpInstallHookOptions(options: McpInstallCommandOptions): Pick<
+  RunMcpInstallFlowOptions,
+  'withHooks' | 'noHooks' | 'hookFormat'
+> {
+  if (options.withHooks && options.hooks === false) {
+    throw new McpHookOptionError(t('errors.mcp.hookOptionsConflict'));
+  }
+
+  if (options.hookFormat !== 'json' && options.hookFormat !== 'toml') {
+    throw new McpHookOptionError(t('errors.mcp.invalidHookFormat', { format: options.hookFormat }));
+  }
+
+  return {
+    withHooks: Boolean(options.withHooks),
+    noHooks: options.hooks === false,
+    hookFormat: options.hookFormat,
+  };
+}
+
+function isMcpHookOptionValidationError(error: unknown): boolean {
+  return error instanceof McpHookOptionError;
+}
+
+function formatHookInstallCommands(targets: RecommendedHookTarget[]): string {
+  return targets.map((target) => buildHookInstallCommand(target.host)).join('\n');
+}
+
+function hookTargetChoiceName(target: RecommendedHookTarget): string {
+  return `${target.displayName} (${target.sourceTool})`;
+}
+
+async function chooseRecommendedHookTargets(
+  targets: RecommendedHookTarget[]
+): Promise<RecommendedHookTarget[]> {
+  if (targets.length === 0) {
+    return [];
+  }
+
+  if (targets.length === 1) {
+    const [target] = targets;
+    const accepted = await themedConfirm({
+      message: t('prompts.mcpInstall.installRecommendedHooks', {
+        host: target.displayName,
+      }),
+      default: true,
+    });
+    return accepted ? targets : [];
+  }
+
+  const selectedHosts = await themedCheckbox<HookHost>({
+    message: t('prompts.mcpInstall.selectRecommendedHooks'),
+    choices: targets.map((target) => ({
+      name: hookTargetChoiceName(target),
+      value: target.host,
+      checked: true,
+    })),
+  });
+  const selectedHostSet = new Set(selectedHosts);
+  return targets.filter((target) => selectedHostSet.has(target.host));
+}
+
+async function installRecommendedHooks(
+  targets: RecommendedHookTarget[],
+  options: Pick<RunMcpInstallFlowOptions, 'dryRun' | 'verbose' | 'hookFormat'>
+): Promise<void> {
+  if (targets.length === 0) {
+    return;
+  }
+
+  ui.displayInfo('Hooks', t('info.mcp.hooksProjectScope'));
+
+  const hookInstallService = new HookInstallService({ ui, t, version: VERSION });
+  for (const target of targets) {
+    try {
+      await hookInstallService.runInstall({
+        host: target.host,
+        global: false,
+        dryRun: options.dryRun,
+        verbose: options.verbose,
+        format: options.hookFormat,
+        repoPath: process.cwd(),
+        writeMcpSnippet: target.host !== 'pi',
+      });
+    } catch (error) {
+      ui.displayWarning(
+        t('warnings.mcp.recommendedHookInstallFailed', {
+          host: target.displayName,
+          command: buildHookInstallCommand(target.host),
+        })
+      );
+      if (options.verbose && error instanceof Error) {
+        ui.displayError(error.message, error);
+      }
+    }
+  }
+}
+
+function displayAvailableHooksRecommendation(
+  targets: RecommendedHookTarget[] = getAvailableRecommendedHookTargets()
+): void {
+  ui.displayInfo('Hooks', t('info.mcp.hooksAvailable', {
+    commands: formatHookInstallCommands(targets),
+  }));
+}
+
+async function runMcpInstallFlow(options: RunMcpInstallFlowOptions): Promise<void> {
+  const mcpInstallService = new MCPInstallService({ ui, t, version: VERSION });
+
+  if (options.showInteractiveIntro) {
+    ui.displayInfo('MCP', t('info.mcp.installWithHooksIntro'));
+  }
+
+  const detectedTools = await mcpInstallService.detectInstalledTools();
+  const selectedTool = await resolveMcpInstallToolSelection({
+    selectedTool: options.selectedToolArg,
+    isInteractive: options.isInteractive,
+    service: mcpInstallService,
+    t,
+    promptTool: ({ message, choices }) => themedSelect({ message, choices }),
+  });
+
+  const result = await mcpInstallService.run({
+    tool: selectedTool,
+    global: options.mcpGlobal,
+    dryRun: options.dryRun,
+    verbose: options.verbose,
+    repoPath: process.cwd(),
+  });
+
+  if (result.installations.length > 0) {
+    ui.displayInfo('MCP', t('info.mcp.restartTools'));
+  }
+
+  if (result.filesFailed > 0) {
+    return;
+  }
+
+  if (options.noHooks || result.installations.length === 0) {
+    return;
+  }
+
+  const hookDecision = getMcpHookRecommendationDecision({
+    selectedTool,
+    detectedTools,
+    mcpInstallations: result.installations,
+    isInteractive: options.isInteractive,
+    withHooks: options.withHooks,
+    noHooks: options.noHooks,
+  });
+
+  if (hookDecision.mode === 'skip') {
+    if (options.withHooks && hookDecision.reason === 'no-eligible-targets') {
+      ui.displayWarning(t('warnings.mcp.noEligibleHooks'));
+    }
+    return;
+  }
+
+  if (hookDecision.mode === 'suggest') {
+    if (hookDecision.reason === 'fallback-all-without-detected-tools') {
+      displayAvailableHooksRecommendation(hookDecision.suggestedTargets);
+      return;
+    }
+
+    ui.displayInfo(
+      'Hooks',
+      t('info.mcp.hooksRecommendedNextStep', {
+        commands: formatHookInstallCommands(hookDecision.suggestedTargets),
+      })
+    );
+    return;
+  }
+
+  if (hookDecision.mode === 'install') {
+    await installRecommendedHooks(hookDecision.targets, options);
+    return;
+  }
+
+  ui.displayInfo('Hooks', t('info.mcp.hooksRecommendation'));
+  const selectedTargets = await chooseRecommendedHookTargets(hookDecision.targets);
+
+  if (selectedTargets.length === 0) {
+    ui.displayInfo(
+      'Hooks',
+      t('info.mcp.hooksSkipped', {
+        commands: formatHookInstallCommands(hookDecision.targets),
+      })
+    );
+    return;
+  }
+
+  await installRecommendedHooks(selectedTargets, options);
+}
+
 // MCP Install Command
 program
   .command('mcp:install [tool]')
@@ -280,31 +503,27 @@ program
   .option('-g, --global', t('commands.mcpInstall.options.global'), true)
   .option('-l, --local', t('commands.mcpInstall.options.local'))
   .option('--dry-run', t('commands.mcpInstall.options.dryRun'))
+  .option('--with-hooks', t('commands.mcpInstall.options.withHooks'))
+  .option('--no-hooks', t('commands.mcpInstall.options.noHooks'))
+  .option('--hook-format <format>', t('commands.mcpInstall.options.hookFormat'), 'json')
   .option('-v, --verbose', t('commands.mcpInstall.options.verbose'))
-  .action(async (tool: string | undefined, options: any) => {
+  .action(async (tool: string | undefined, options: McpInstallCommandOptions) => {
     try {
-      const mcpInstallService = new MCPInstallService({ ui, t, version: VERSION });
-      const selectedTool = await resolveMcpInstallToolSelection({
-        selectedTool: tool,
+      const hookOptions = parseMcpInstallHookOptions(options);
+      await runMcpInstallFlow({
+        selectedToolArg: tool,
         isInteractive: Boolean(process.stdin.isTTY),
-        service: mcpInstallService,
-        t,
-        promptTool: ({ message, choices }) => themedSelect({ message, choices }),
+        mcpGlobal: options.local ? false : options.global,
+        dryRun: Boolean(options.dryRun),
+        verbose: Boolean(options.verbose),
+        ...hookOptions,
       });
-
-      const result = await mcpInstallService.run({
-        tool: selectedTool,
-        global: options.local ? false : options.global,
-        dryRun: options.dryRun,
-        verbose: options.verbose,
-        repoPath: process.cwd(),
-      });
-
-      if (result.installations.length > 0) {
-        ui.displayInfo('MCP', t('info.mcp.restartTools'));
-      }
     } catch (error) {
-      ui.displayError(t('errors.mcp.installFailed', { tool: tool || 'unknown' }), error as Error);
+      if (isMcpHookOptionValidationError(error)) {
+        ui.displayError((error as Error).message);
+      } else {
+        ui.displayError(t('errors.mcp.installFailed', { tool: tool || 'unknown' }), error as Error);
+      }
       process.exit(1);
     }
   });
@@ -1004,25 +1223,16 @@ async function displayPendingFiles(contextDir: string): Promise<void> {
 }
 
 async function runMcpInstall(): Promise<void> {
-  const mcpInstallService = new MCPInstallService({ ui, t, version: VERSION });
-  const selectedTool = await resolveMcpInstallToolSelection({
+  await runMcpInstallFlow({
     isInteractive: true,
-    service: mcpInstallService,
-    t,
-    promptTool: ({ message, choices }) => themedSelect({ message, choices }),
-  });
-
-  const mcpResult = await mcpInstallService.run({
-    tool: selectedTool,
-    global: true,
+    mcpGlobal: true,
     dryRun: false,
     verbose: false,
-    repoPath: process.cwd(),
+    withHooks: false,
+    noHooks: false,
+    hookFormat: 'json',
+    showInteractiveIntro: true,
   });
-
-  if (mcpResult.installations.length > 0) {
-    ui.displayInfo('MCP', t('info.mcp.restartTools'));
-  }
 }
 
 async function runInteractiveSync(): Promise<void> {

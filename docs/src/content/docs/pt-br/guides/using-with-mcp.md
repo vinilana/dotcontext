@@ -24,23 +24,40 @@ Isso significa que, uma vez conectado o servidor, você conversa com o agente em
 O caminho mais rápido é deixar o dotcontext escrever a configuração do seu cliente:
 
 ```bash
-npx @dotcontext/mcp@latest
+npx @dotcontext/mcp@latest install
 ```
 
 Ou conduza o instalador pela CLI, opcionalmente apontando para uma ferramenta específica:
 
 ```bash
 # Interativo — detecta as ferramentas instaladas e pergunta
-npx @dotcontext/cli mcp install
+npx -y @dotcontext/cli@latest mcp:install
 
 # Apontar para um cliente específico
-npx @dotcontext/cli mcp install --tool claude
+npx -y @dotcontext/cli@latest mcp:install claude
 
 # Pré-visualizar a configuração sem escrever nada
-npx @dotcontext/cli mcp install --dry-run
+npx -y @dotcontext/cli@latest mcp:install --dry-run
 ```
 
-O instalador suporta 16 clientes de IA, incluindo Claude Code, Claude Desktop, Cursor, Windsurf, Continue.dev, VS Code / GitHub Copilot, Zed, IDEs JetBrains, Codex CLI, Gemini CLI, Amazon Q e mais. Ele detecta o que você já tem instalado e escreve (ou atualiza) o arquivo de configuração apropriado.
+O instalador suporta 17 clientes de IA, incluindo Claude Code, Claude Desktop, Cursor, Windsurf, Continue.dev, VS Code / GitHub Copilot, Zed, IDEs JetBrains, Codex CLI, Gemini CLI, Amazon Q, Pi e mais. Ele detecta o que você já tem instalado e escreve (ou atualiza) o arquivo de configuração apropriado.
+
+MCP é a superfície completa de tools do dotcontext. Hooks são o complemento recomendado para hosts com integração de ciclo de vida porque fazem bootstrap de sessões, registram traces de edição/bash e mostram lembretes PREVC em segundo plano. Hooks são opcionais e não bloqueantes; o sucesso da instalação MCP não depende do sucesso da instalação de hooks.
+
+O fluxo `mcp:install` da CLI recomenda hooks somente para hosts de ciclo de vida suportados: Claude Code (`claude` -> `claude-code`), Codex CLI (`codex`) e Pi (`pi`). Em um terminal interativo, o prompt aparece depois que a configuração MCP é tratada. Em execuções não interativas, use `--with-hooks` para escrever hooks; caso contrário, o comando só imprime o próximo passo recomendado. Use `--no-hooks` para suprimir a recomendação.
+
+```bash
+# MCP + hooks recomendados
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks
+
+# Escolher o formato dos hooks do Codex no fluxo combinado
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks --hook-format toml
+
+# Só MCP, sem prompts nem recomendação de hooks
+npx -y @dotcontext/cli@latest mcp:install codex --no-hooks
+```
+
+Para Codex, rode `/hooks` dentro do Codex e confie nos hooks do projeto depois que a config for escrita. Para Pi, o fluxo combinado deixa o instalador MCP escrever o snippet MCP e não pede para a etapa de hook do Pi adicionar um snippet duplicado.
 
 A configuração que ele escreve é a mesma para todas as ferramentas:
 

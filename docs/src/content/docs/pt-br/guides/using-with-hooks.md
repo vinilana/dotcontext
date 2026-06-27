@@ -1,14 +1,16 @@
 ---
 title: Usando dotcontext com Hooks
-description: Instale hooks de ciclo de vida para Claude Code e Codex CLI — bootstrap de contexto, traces duráveis e lembretes de workflow sem carregar o MCP inteiro a cada turno.
+description: Instale hooks de ciclo de vida para Claude Code, Codex CLI e Pi — bootstrap de contexto, traces duráveis e lembretes de workflow sem carregar o MCP inteiro a cada turno.
 sidebar:
   order: 2
 ---
 
 Hooks conectam o dotcontext aos eventos de ciclo de vida do seu agente. Em vez de depender do MCP em cada início de sessão, hooks executam chamadas leves ao harness: verificar `.context/`, registrar traces após Write/Edit/Bash e mostrar status PREVC ao encerrar quando existe um workflow PREVC ativo.
 
+Hooks são recomendados para hosts suportados, mas opcionais e não bloqueantes; MCP continua sendo a superfície completa de tools do dotcontext.
+
 :::tip[Hooks vs MCP]
-Use **hooks** para bootstrap, tracing e lembretes (baixo custo de tokens). Use **MCP** para a superfície completa (`context init`, `workflow-init`, sensores, planos). A maioria dos usuários de Claude Code e Codex se beneficia dos dois.
+Use **hooks** para bootstrap, tracing e lembretes (baixo custo de tokens). Use **MCP** para a superfície completa (`context init`, `workflow-init`, sensores, planos). A maioria dos usuários de Claude Code, Codex CLI e Pi se beneficia dos dois.
 :::
 
 ## Hosts suportados
@@ -17,6 +19,7 @@ Use **hooks** para bootstrap, tracing e lembretes (baixo custo de tokens). Use *
 | --- | --- | --- |
 | Claude Code | `dotcontext hook install claude-code` | `.claude/settings.json` por padrão, ou `~/.claude/settings.json` com `--global` |
 | Codex CLI | `dotcontext hook install codex` | `.codex/hooks.json` por padrão, ou `.codex/config.toml` com `--format toml` |
+| Pi | `dotcontext hook install pi` | Orientação de instalação da extensão `pi install npm:@dotcontext/pi` |
 
 Pi usa extensão in-process — veja [Usando dotcontext com Pi](/pt-br/guides/using-with-pi/).
 
@@ -42,6 +45,17 @@ npx -y @dotcontext/cli@latest hook install codex --dry-run
 ```
 
 Flags: `--global`, `--local`, `--dry-run`, `--format json|toml` (somente Codex), `-v`. Ações de instalação são registradas em `.context/logs/hook-install.log`.
+
+Você também pode instalar hooks elegíveis pelo fluxo MCP da CLI. `mcp:install` interativo pergunta depois da configuração MCP somente para Claude Code, Codex CLI e Pi. Execuções não interativas exigem `--with-hooks` para escrever config de hooks, e `--no-hooks` suprime a recomendação:
+
+```bash
+npx -y @dotcontext/cli@latest mcp:install claude --with-hooks
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks --hook-format toml
+npx -y @dotcontext/cli@latest mcp:install pi --with-hooks
+npx -y @dotcontext/cli@latest mcp:install codex --no-hooks
+```
+
+`--hook-format json|toml` controla apenas o formato dos hooks do Codex no fluxo MCP combinado. Hooks recomendados instalam config local no projeto por padrão, mesmo que a config MCP seja global por padrão.
 
 ## O que os hooks fazem
 
@@ -124,27 +138,33 @@ Use `--dry-run` para pré-visualizar remoções.
 
 ## Combine com MCP
 
-Configuração recomendada para Claude Code ou Codex CLI:
+Configuração recomendada para Claude Code, Codex CLI ou Pi:
 
-1. Instale MCP para a superfície completa:
+1. Instale MCP para a superfície completa, opcionalmente com hooks recomendados no mesmo fluxo da CLI:
 
    ```bash
-   npx @dotcontext/mcp install claude
+   npx -y @dotcontext/cli@latest mcp:install claude --with-hooks
    # ou
-   npx @dotcontext/mcp install codex --local
+   npx -y @dotcontext/cli@latest mcp:install codex --with-hooks --hook-format toml
+   # ou
+   npx -y @dotcontext/cli@latest mcp:install pi --with-hooks
    ```
 
-2. Instale hooks para bootstrap e tracing em segundo plano:
+2. Se você instalou MCP via `@dotcontext/mcp install` ou pulou hooks, instale hooks separadamente para bootstrap e tracing em segundo plano:
 
    ```bash
    npx -y @dotcontext/cli@latest hook install claude-code
    # ou
    npx -y @dotcontext/cli@latest hook install codex
+   # ou
+   npx -y @dotcontext/cli@latest hook install pi
    ```
 
 3. Se instalou hooks do Codex, rode `/hooks` no Codex e confie nos hooks do projeto.
 
-4. Inicialize contexto pelo agente (MCP `context init`) e deixe os hooks manterem sessões e traces nas próximas execuções.
+4. Para Pi, o fluxo combinado `mcp:install pi --with-hooks` usa o instalador MCP para o snippet MCP e não o duplica pela etapa de hook do Pi.
+
+5. Inicialize contexto pelo agente (MCP `context init`) e deixe os hooks manterem sessões e traces nas próximas execuções.
 
 ## Próximos passos
 

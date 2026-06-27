@@ -30,6 +30,13 @@ describe('CLI Commands', () => {
       expect(output).not.toMatch(/\n\s+serve\b/);
     });
 
+    it('should expose recommended hook options on mcp:install help', () => {
+      const output = execSync(`node ${cliPath} mcp:install --help`, { encoding: 'utf8' });
+      expect(output).toContain('--with-hooks');
+      expect(output).toContain('--no-hooks');
+      expect(output).toContain('--hook-format');
+    });
+
     it('should display version when --version flag is used', () => {
       const output = execSync(`node ${cliPath} --version`, { encoding: 'utf8' });
       expect(output).toMatch(/\d+\.\d+\.\d+/);

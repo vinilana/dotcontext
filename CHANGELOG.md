@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `hook doctor [host] --json` with Codex diagnostics for hook config, TOML hooks feature flags, current dispatch commands, `.context/`, workflow state, recent traces, and trace append failures.
 - Added hook readiness summaries for `SessionStart`, including missing/partial/ready tiers, capped setup gaps, workflow-missing reminder cooldown, and active PREVC preflight.
 - Added lightweight Bash trace classification for hook traces (`test`, `build`, `lint`, `inspection`, migration/destructive hints) without running extra commands.
+- Added the `mcp:install` recommended hooks flow, including `--with-hooks`, `--no-hooks`, Codex `--hook-format`, `/hooks` trust, non-blocking hook behavior, and Pi's no-duplicate MCP snippet behavior in combined installs.
 
 ### Fixed
 

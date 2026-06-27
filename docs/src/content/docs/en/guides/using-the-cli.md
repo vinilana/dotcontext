@@ -168,9 +168,12 @@ dotcontext mcp:install claude
 # Choose scope and preview
 dotcontext mcp:install --global
 dotcontext mcp:install --local --dry-run
+
+# Install MCP plus eligible recommended hooks
+dotcontext mcp:install codex --with-hooks
 ```
 
-Options: `[tool]` (omit to be prompted), `-g, --global` (default), `-l, --local`, `--dry-run`, `-v, --verbose`. See [Using dotcontext with MCP](/guides/using-with-mcp/) for the full list of supported tools and config paths.
+Options: `[tool]` (omit to be prompted), `-g, --global` (default), `-l, --local`, `--dry-run`, `--with-hooks`, `--no-hooks`, `--hook-format json|toml`, and `-v, --verbose`. Hooks are recommended and optional for Claude Code, Codex CLI, and Pi; they install project-local config by default. See [Using dotcontext with MCP](/guides/using-with-mcp/) for the full list of supported tools and config paths.
 
 ### Run the MCP server
 

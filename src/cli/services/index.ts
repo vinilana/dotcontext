@@ -18,6 +18,33 @@ export {
 } from './mcpInstallService';
 
 export {
+  buildHookInstallCommand,
+  getAvailableRecommendedHookTargets,
+  getHookCapableMcpToolIds,
+  getHookHostDisplayName,
+  getHookHostForMcpTool,
+  getMcpHookRecommendationDecision,
+  getMcpHookSuggestionTargets,
+  getRecommendedHookTargets,
+  getRecommendedHookTargetForMcpTool,
+  isHookRecommendationEligibleMcpTool,
+  isMcpInstallAllFallback,
+  parseRecommendedHookFormat,
+  validateMcpHookRecommendationOptions,
+  type BuildHookInstallCommandOptions,
+  type GetMcpHookRecommendationDecisionInput,
+  type GetRecommendedHookTargetsOptions,
+  type GetRecommendedHookTargetsInput,
+  type HookRecommendationMode,
+  type HookRecommendationReason,
+  type MCPHookRecommendationDecision,
+  type MCPHookRecommendationOptionValidationInput,
+  type RecommendedHookFormat,
+  type RecommendedHookSourceTool,
+  type RecommendedHookTarget,
+} from './mcpHookRecommendationService';
+
+export {
   HookInstallService,
   buildHookInstallHostChoices,
   resolveHookInstallHostSelection,

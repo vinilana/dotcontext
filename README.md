@@ -59,13 +59,21 @@ Use this path when you want an AI coding tool to initialize context, create plan
 npx @dotcontext/mcp install
 ```
 
-Optionally wire lifecycle hooks for Claude Code, Codex CLI, or Pi (bootstrap, tracing, workflow reminders):
+Lifecycle hooks for Claude Code, Codex CLI, and Pi are the recommended companion to MCP for bootstrap, tracing, and workflow reminders. They are optional and non-blocking: MCP remains the full dotcontext tool surface, and hook failures should not prevent MCP from working.
 
 ```bash
 npx -y @dotcontext/cli@latest hook install
 ```
 
-For Codex CLI, finish hook activation inside Codex by running `/hooks` and trusting the project hooks.
+When you use the CLI MCP installer directly, interactive installs recommend eligible hooks after MCP is configured. Non-interactive installs only write hooks when you opt in:
+
+```bash
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks --hook-format toml
+npx -y @dotcontext/cli@latest mcp:install codex --no-hooks
+```
+
+`--no-hooks` suppresses the recommendation entirely. For Codex CLI, finish hook activation inside Codex by running `/hooks` and trusting the project hooks.
 
 Then prompt your AI tool:
 
@@ -221,6 +229,10 @@ The installer:
 - supports `--dry-run` and `--verbose`
 - writes the config shape required by each supported client
 
+The CLI `mcp:install` flow can also recommend lifecycle hooks for the MCP targets that have supported host integrations: `claude` -> `claude-code`, `codex` -> `codex`, and `pi` -> `pi`. Hooks are recommended, optional, and non-blocking; they add deterministic session bootstrap, edit/bash traces, and PREVC workflow reminders, while MCP remains the full tool surface.
+
+Interactive `mcp:install` prompts after the MCP config step for eligible targets. Non-interactive installs do not write hooks unless `--with-hooks` is present. Use `--no-hooks` to suppress the recommendation in scripts, and `--hook-format json|toml` to choose the Codex hook config format for the recommended hook step. MCP install is global by default; recommended hooks install project-local config by default. For Pi, the combined flow lets the MCP installer own the MCP snippet and does not duplicate it from the Pi extension hook step.
+
 Examples:
 
 ```bash
@@ -235,6 +247,15 @@ npx @dotcontext/mcp install cursor --local
 
 # Preview without writing files
 npx @dotcontext/mcp install claude --dry-run --verbose
+
+# CLI combined MCP + recommended hooks for Codex
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks
+
+# Codex hooks in TOML during the combined CLI flow
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks --hook-format toml
+
+# MCP only, without hook recommendation output
+npx -y @dotcontext/cli@latest mcp:install codex --no-hooks
 ```
 
 ### Supported MCP Install Targets
@@ -381,7 +402,7 @@ args = ["-y", "@dotcontext/mcp@latest"]
 
 ### Hook Install (Claude Code, Codex CLI, Pi)
 
-Lifecycle hooks bootstrap context, append durable traces after file edits, and surface workflow guidance when it is useful, with lower token cost than loading the full MCP surface on every turn.
+Lifecycle hooks bootstrap context, append durable traces after file edits, and surface workflow guidance when it is useful, with lower token cost than loading the full MCP surface on every turn. They are recommended for hook-capable hosts, but optional and non-blocking.
 
 ```bash
 npx -y @dotcontext/cli@latest hook install
@@ -436,6 +457,8 @@ pi install npm:@dotcontext/pi
 npx @dotcontext/mcp install pi --local
 pi install npm:pi-mcp-adapter
 ```
+
+When Pi hooks are installed from `mcp:install pi --with-hooks`, the MCP installer has already written the MCP config, so the Pi hook step should not add a second `.mcp.json` snippet.
 
 ### Local Development MCP Config
 
@@ -500,6 +523,7 @@ For AI-agent use, provide `repoPath` on the first context-heavy MCP call so dotc
 | --- | --- |
 | `npx -y @dotcontext/cli@latest` | Launch the interactive CLI, including quick sync |
 | `npx @dotcontext/mcp install` | Install MCP configuration for supported AI tools |
+| `npx -y @dotcontext/cli@latest mcp:install [tool] --with-hooks` | Install MCP config and eligible recommended hooks for Claude Code, Codex CLI, or Pi |
 | `npx -y @dotcontext/cli@latest hook install [host]` | Install lifecycle hooks for Claude Code, Codex CLI, or Pi |
 | `npx -y @dotcontext/cli@latest hook doctor codex` | Diagnose Codex hook config, trust prerequisites, traces, and runtime state |
 | `npx -y @dotcontext/cli@latest hook uninstall [host]` | Remove dotcontext hook entries |

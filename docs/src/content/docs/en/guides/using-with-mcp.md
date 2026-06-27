@@ -24,23 +24,40 @@ That means once the server is connected, you mostly talk to your agent in natura
 The fastest path is to let dotcontext write the config for your client:
 
 ```bash
-npx @dotcontext/mcp@latest
+npx @dotcontext/mcp@latest install
 ```
 
 Or drive the installer through the CLI, optionally targeting a specific tool:
 
 ```bash
 # Interactive — detects installed tools and prompts you
-npx @dotcontext/cli mcp install
+npx -y @dotcontext/cli@latest mcp:install
 
 # Target a specific client
-npx @dotcontext/cli mcp install --tool claude
+npx -y @dotcontext/cli@latest mcp:install claude
 
 # Preview the config without writing anything
-npx @dotcontext/cli mcp install --dry-run
+npx -y @dotcontext/cli@latest mcp:install --dry-run
 ```
 
 The installer supports 17 AI clients, including Claude Code, Claude Desktop, Cursor, Windsurf, Continue.dev, VS Code / GitHub Copilot, Zed, JetBrains IDEs, Codex CLI, Gemini CLI, Amazon Q, Pi, and more. It detects what you already have installed and writes (or updates) the appropriate config file.
+
+MCP is the full dotcontext tool surface. Hooks are the recommended companion for hook-capable hosts because they bootstrap sessions, append edit/bash traces, and surface PREVC workflow reminders in the background. Hooks are optional and non-blocking; MCP install success does not depend on hook install success.
+
+The CLI `mcp:install` flow recommends hooks only for supported lifecycle hosts: Claude Code (`claude` -> `claude-code`), Codex CLI (`codex`), and Pi (`pi`). In an interactive terminal, the prompt appears after MCP config is handled. In non-interactive runs, use `--with-hooks` to write hooks; otherwise the command only prints the recommended next step. Use `--no-hooks` to suppress the recommendation entirely.
+
+```bash
+# MCP + recommended hooks
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks
+
+# Choose the Codex hook config format for the combined flow
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks --hook-format toml
+
+# MCP only, without hook prompts or recommendation output
+npx -y @dotcontext/cli@latest mcp:install codex --no-hooks
+```
+
+For Codex, run `/hooks` inside Codex and trust project hooks after the hook config is written. For Pi, the combined flow lets the MCP installer write the MCP snippet and does not ask the Pi hook step to add a duplicate snippet.
 
 The config it writes is the same for every tool:
 

@@ -8,6 +8,8 @@ import {
   QuickSyncService,
   ReverseQuickSyncService,
   HookDoctorService,
+  getRecommendedHookTargets,
+  buildHookInstallCommand,
   StateDetector,
 } from '..';
 
@@ -22,6 +24,8 @@ describe('CLI boundary exports', () => {
     expect(QuickSyncService).toBeDefined();
     expect(ReverseQuickSyncService).toBeDefined();
     expect(HookDoctorService).toBeDefined();
+    expect(getRecommendedHookTargets).toBeDefined();
+    expect(buildHookInstallCommand).toBeDefined();
     expect(StateDetector).toBeDefined();
   });
 });

@@ -47,6 +47,7 @@ export interface MCPInstallation {
   configPath: string;
   action: 'created' | 'updated' | 'skipped';
   dryRun: boolean;
+  error?: string;
 }
 
 export interface MCPInstallToolChoice {
@@ -617,7 +618,9 @@ export class MCPInstallService {
       const installation = await this.installForTool(toolId, basePath, isGlobal, dryRun, verbose);
       result.installations.push(installation);
 
-      if (installation.action === 'created' || installation.action === 'updated') {
+      if (installation.error) {
+        addError(result, installation.configPath, installation.error);
+      } else if (installation.action === 'created' || installation.action === 'updated') {
         result.filesCreated++;
       } else if (installation.action === 'skipped') {
         result.filesSkipped++;
@@ -734,6 +737,7 @@ export class MCPInstallService {
         dryRun: false,
       };
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       this.deps.ui.displayError(
         this.deps.t('errors.mcp.installFailed', { tool: toolDef.displayName }),
         error as Error
@@ -744,6 +748,7 @@ export class MCPInstallService {
         configPath: fullConfigPath,
         action: 'skipped',
         dryRun: false,
+        error: message,
       };
     }
   }

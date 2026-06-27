@@ -154,6 +154,16 @@ describe('HookInstallService', () => {
       expect(await fs.pathExists(path.join(tempDir, '.claude', 'settings.json'))).toBe(false);
     });
 
+    it('does not write install logs in dry-run mode', async () => {
+      await service.runInstall({
+        host: 'claude-code',
+        repoPath: tempDir,
+        dryRun: true,
+      });
+
+      expect(await fs.pathExists(path.join(tempDir, '.context', 'logs', 'hook-install.log'))).toBe(false);
+    });
+
     it('skips when Claude Code hooks are already configured', async () => {
       await service.runInstall({
         host: 'claude-code',

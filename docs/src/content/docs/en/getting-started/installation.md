@@ -36,14 +36,26 @@ npx @dotcontext/mcp install
 If you prefer to drive the installer from the CLI, the equivalent command is:
 
 ```bash
-npx @dotcontext/cli mcp:install
+npx -y @dotcontext/cli@latest mcp:install
 ```
 
 When run without a tool name, the installer prompts you interactively and prioritizes clients it detects on your machine. You can also target a specific client directly:
 
 ```bash
-npx @dotcontext/cli mcp:install claude
+npx -y @dotcontext/cli@latest mcp:install claude
 ```
+
+MCP is the full dotcontext tool surface. For Claude Code, Codex CLI, and Pi, the CLI MCP flow also recommends lifecycle hooks after MCP is configured. Hooks are optional and non-blocking; they add deterministic session bootstrap, durable edit/bash traces, and PREVC workflow reminders.
+
+In an interactive terminal, `mcp:install` prompts for recommended hooks only when the selected MCP target has a matching hook host: `claude` -> `claude-code`, `codex` -> `codex`, or `pi` -> `pi`. In non-interactive runs, hooks are never written unless you pass `--with-hooks`.
+
+```bash
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks
+npx -y @dotcontext/cli@latest mcp:install codex --with-hooks --hook-format toml
+npx -y @dotcontext/cli@latest mcp:install codex --no-hooks
+```
+
+Use `--no-hooks` when scripts should avoid both prompts and hook recommendation output. For Codex, `--hook-format json|toml` controls the hook config format used by the combined flow. After Codex project hooks are written, run `/hooks` inside Codex and trust the project hooks before expecting them to run.
 
 ### Supported AI clients
 
@@ -85,10 +97,11 @@ Installation behavior:
 
 - Creates the config file if it does not exist, or updates an existing one if dotcontext is not already configured.
 - Ensures parent directories exist before writing.
-- Validates paths against the workspace boundary to prevent path-traversal.
-- Logs every action to `.context/logs/mcp.log`.
+- Merges with existing client config without overwriting unrelated MCP servers.
 
-### Install flags
+### CLI install flags
+
+For the CLI `dotcontext mcp:install` flow:
 
 | Flag | Description | Default |
 | --- | --- | --- |
@@ -96,17 +109,26 @@ Installation behavior:
 | `-g, --global` | Write to the global (home directory) config | `true` |
 | `-l, --local` | Write to the local/repo-level config | — |
 | `--dry-run` | Preview the changes without writing any files | — |
+| `--with-hooks` | Install eligible recommended hooks after MCP without prompting | — |
+| `--no-hooks` | Do not prompt, install, or print the hook recommendation | — |
+| `--hook-format json\|toml` | Codex hook format for the recommended hook step | `json` |
 | `-v, --verbose` | Verbose output | — |
 
 :::note
 Global install is the default: the installer scans your home directory for installed tools and prioritizes them. Use `--local` to write a per-project config (such as `.mcp.json` or a tool-specific directory) instead. Combine with `--dry-run` to review changes safely first.
 :::
 
+:::note[Hook scope]
+MCP config remains global by default. Recommended hooks install project-local config by default, matching `dotcontext hook install`. Use `dotcontext hook install <host> --global` when you intentionally want home-directory hook config.
+:::
+
+For Pi, the combined `mcp:install pi --with-hooks` flow uses the MCP installer for the `.mcp.json` snippet and the Pi hook step for extension guidance. It should not duplicate the MCP snippet.
+
 After installing, restart your AI client so it picks up the new MCP server. Then continue with the [Quickstart](/getting-started/quickstart/).
 
 ## Path 1b: Hook install (Claude Code, Codex CLI, Pi)
 
-Lifecycle hooks wire dotcontext into host session events — context bootstrap on start, durable traces after file edits, and workflow reminders on stop. They complement MCP: hooks are low-token background wiring; MCP remains the full tool surface.
+Lifecycle hooks wire dotcontext into host session events — context bootstrap on start, durable traces after file edits, and workflow reminders on stop. They complement MCP: hooks are recommended, optional, non-blocking background wiring; MCP remains the full tool surface.
 
 ```bash
 npx -y @dotcontext/cli@latest hook install
@@ -125,7 +147,7 @@ npx -y @dotcontext/cli@latest hook install claude-code --global
 | --- | --- | --- |
 | `claude-code` | `hooks` entries in `.claude/settings.json` | Restart Claude Code |
 | `codex` | `.codex/hooks.json` or inline `[[hooks.*]]` in `.codex/config.toml` | Run `/hooks` and trust project hooks |
-| `pi` | Instructions + optional `.mcp.json` snippet | Run `pi install npm:@dotcontext/pi` |
+| `pi` | Extension install guidance, with an optional MCP snippet only in standalone hook flow | Run `pi install npm:@dotcontext/pi` |
 
 Hook install writes project-level config by default. Use `--global` for home-directory hook config, `--dry-run` to preview changes, and `-v, --verbose` for detailed output. Codex also accepts `--format json|toml`.
 

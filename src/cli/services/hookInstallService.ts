@@ -175,14 +175,16 @@ export class HookInstallService {
         result.filesSkipped++;
       }
 
-      await this.appendInstallLog(logRepoPath, {
-        operation: 'install',
-        host: hostId,
-        action: installation.action,
-        configPath: installation.configPath,
-        dryRun,
-        global: isGlobal,
-      });
+      if (!dryRun) {
+        await this.appendInstallLog(logRepoPath, {
+          operation: 'install',
+          host: hostId,
+          action: installation.action,
+          configPath: installation.configPath,
+          dryRun,
+          global: isGlobal,
+        });
+      }
     }
 
     if (!dryRun && result.filesCreated > 0) {
@@ -232,14 +234,16 @@ export class HookInstallService {
         result.filesSkipped++;
       }
 
-      await this.appendInstallLog(logRepoPath, {
-        operation: 'uninstall',
-        host: hostId,
-        action: installation.action,
-        configPath: installation.configPath,
-        dryRun,
-        global: isGlobal,
-      });
+      if (!dryRun) {
+        await this.appendInstallLog(logRepoPath, {
+          operation: 'uninstall',
+          host: hostId,
+          action: installation.action,
+          configPath: installation.configPath,
+          dryRun,
+          global: isGlobal,
+        });
+      }
     }
 
     if (!dryRun && result.filesCreated > 0) {
