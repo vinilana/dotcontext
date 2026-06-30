@@ -44,7 +44,7 @@ cli -> harness <- mcp
 - The router matches `(method, pathname)` against a small static table of route definitions (path template + handler), extracting `:param` segments itself; this mirrors the existing `src/mcp/gateway/*.ts` pattern of one handler module per resource area (`docs.ts`, `skills.ts`, `agents.ts`, `sessions.ts`, `workflow.ts`, `events.ts`).
 - JSON responses use one envelope for the whole API: `{ "data": <payload> }` on success, `{ "error": { "message": string } }` with a non-2xx status on failure — this is a new, consistent envelope (existing harness services return ad hoc `{ success, ... }` shapes meant for MCP tool results, not for an HTTP API).
 - Static asset serving (the built `web-ui/dist`) is a second, smaller responsibility of the same server: any request that doesn't match an `/api/*` route falls through to a static file handler, enabling SPA client-side routing via a catch-all `index.html` fallback.
-- The runtime watcher (§4.6) needs a recursive, debounced file watcher across `.context/runtime/**`; plain `fs.watch({ recursive: true })` is not reliably available on Linux across supported Node versions, so `chokidar` is added as the one new dependency for `src/web` (devDependency of the watcher, declared in the root `package.json` since `src/web` ships inside `@dotcontext/cli`/`@dotcontext/harness`, not as a separate package).
+- The runtime watcher (§4.6) needs a recursive, debounced file watcher across `.context/runtime/**`; plain `fs.watch({ recursive: true })` is not reliably available on Linux across supported Node versions, so `chokidar` is added as the one new dependency for `src/web`. It must be declared as a real `dependencies` entry in the root `package.json` (not `devDependencies`) since `src/web` ships inside `@dotcontext/cli`/`@dotcontext/harness` and `scripts/build-package-bundles.js` only copies `dependencies` into published package bundles; the `@dotcontext/harness` bundle's explicit dependency allowlist must also be updated to include `chokidar`, or `GET /api/events` will throw at runtime for installed packages. This is a required Phase 3 setup step, not optional polish.
 
 **Alternatives considered:**
 - *Express* — most familiar, but pulls in a sizeable dependency tree (body-parser, etc.) for a route count this small, and the project has otherwise stayed dependency-light (see `package.json`).
@@ -134,3 +134,11 @@ These are read-only in Phase 1-5; no write routes (create/checkpoint/append) are
 
 - All routes are `GET` only in this phase (read-only dashboard). Any future write route (e.g. plan approval) must go through `HarnessPolicyService.authorize(...)` exactly like the MCP gateway does, and is out of scope for Phases 3-4 unless explicitly added back into this contract.
 - Default bind address is `127.0.0.1`; binding elsewhere requires an explicit `--host` flag and should log a warning, per the plan's risk assessment ("no auth, localhost-only" is the default security posture).
+
+## 5. Phase 2 Review Notes
+
+Reviewed against `ARCHITECTURE.md`/`CLAUDE.md` boundary rules and `src/mcp/gateway` precedent. **Outcome: Approved with notes.**
+
+- No `src/cli`/`src/mcp` imports proposed; all domain logic stays in `src/harness`; `HarnessDocsService` naming matches the existing `Harness<Noun>Service` convention.
+- Fixed during review: ADR-1's chokidar dependency placement (§2) — now a `dependencies` entry, not `devDependencies`, with the harness package-bundle allowlist called out explicitly.
+- Carried into Phase 3 as implementation notes (non-blocking): (a) `HarnessDocsService.getContent` must reuse the existing `src/utils/pathSecurity.ts` path-validation pattern (same as `HarnessSkillsService`) since `:name`/`:slug` route params are now reachable over plain local HTTP; (b) consider a Host-header check or strict CORS policy as a defense-in-depth note against DNS-rebinding, even though "localhost-only, no auth" remains the accepted default posture; (c) the plan's "Reusable services" list should be updated to mention the new `HarnessDocsService` deliverable.
