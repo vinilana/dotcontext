@@ -152,6 +152,7 @@ function buildBundles() {
             '@ai-sdk/openai',
             '@modelcontextprotocol/sdk',
             'ai',
+            'chokidar',
             'fs-extra',
             'glob',
             'ignore',

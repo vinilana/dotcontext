@@ -1,0 +1,384 @@
+/* Minimal, utilitarian layout styles -- no design system, just enough
+   structure to make the five views legible. */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e2e2e2;
+  padding: 16px 12px;
+  background: #fafafa;
+}
+
+.sidebar-header {
+  margin-bottom: 16px;
+  padding: 0 8px;
+}
+
+.sidebar-title {
+  display: block;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.sidebar-subtitle {
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-link {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #222;
+  font-size: 0.92rem;
+}
+
+.sidebar-link:hover {
+  background: #eee;
+}
+
+.sidebar-link--active {
+  background: #1f2933;
+  color: #fff;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 8px;
+}
+
+.connection-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #555;
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #999;
+}
+
+.connection-badge--open .connection-dot {
+  background: #2e7d32;
+}
+
+.connection-badge--connecting .connection-dot {
+  background: #f9a825;
+}
+
+.connection-badge--error .connection-dot {
+  background: #c62828;
+}
+
+.content {
+  flex: 1 1 auto;
+  padding: 24px 28px;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.two-pane {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.list-panel {
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.panel-heading {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.entry-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.entry-button {
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font: inherit;
+}
+
+.entry-button:hover {
+  background: #f3f3f3;
+}
+
+.entry-button--active {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.entry-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.entry-subtitle {
+  font-size: 0.78rem;
+  color: #666;
+}
+
+.entry-badge {
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.detail-panel {
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  padding: 16px 20px;
+  background: #fff;
+  min-height: 200px;
+}
+
+.markdown-content {
+  line-height: 1.55;
+}
+
+.markdown-content pre {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.muted {
+  color: #666;
+}
+
+.muted.small,
+.small {
+  font-size: 0.8rem;
+}
+
+.error-note {
+  color: #c62828;
+}
+
+.pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  background: #eee;
+  color: #333;
+  text-transform: capitalize;
+}
+
+.pill--active,
+.pill--passed,
+.pill--completed,
+.pill--clear {
+  background: #e6f4ea;
+  color: #1e4620;
+}
+
+.pill--failed,
+.pill--blocked,
+.pill--error {
+  background: #fdecea;
+  color: #611a15;
+}
+
+.pill--warning,
+.pill--in-progress,
+.pill--connecting {
+  background: #fff4e5;
+  color: #663c00;
+}
+
+.kv-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 12px 0;
+}
+
+.kv-grid dt {
+  font-weight: 600;
+  color: #444;
+}
+
+.kv-grid dd {
+  margin: 0;
+}
+
+.plain-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.json-block {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+}
+
+.trace-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 360px;
+  overflow-y: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+}
+
+.trace-item {
+  display: grid;
+  grid-template-columns: 150px 60px 140px 1fr;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+.trace-item--error {
+  background: #fdecea;
+}
+
+.trace-item--warn {
+  background: #fff4e5;
+}
+
+.trace-level {
+  text-transform: uppercase;
+  color: #555;
+}
+
+.workflow-view section {
+  margin-bottom: 28px;
+}
+
+.phase-tracker {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin: 16px 0;
+}
+
+.phase-step {
+  position: relative;
+  flex: 1;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.phase-step-connector {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: #ddd;
+  z-index: 0;
+}
+
+.phase-step-marker {
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  border-radius: 50%;
+  background: #eee;
+  color: #333;
+  font-weight: 700;
+  margin: 0 auto 6px;
+}
+
+.phase-step--completed .phase-step-marker {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.phase-step--in_progress .phase-step-marker {
+  background: #f9a825;
+  color: #fff;
+}
+
+.phase-step--current .phase-step-marker {
+  outline: 3px solid #1f2933;
+  outline-offset: 2px;
+}
+
+.phase-step-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.phase-step-status {
+  font-size: 0.72rem;
+  color: #666;
+  text-transform: capitalize;
+}
+
+.plan-phase-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-phase {
+  border: 1px solid #e2e2e2;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.plan-phase-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
