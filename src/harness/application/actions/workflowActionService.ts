@@ -12,7 +12,7 @@ import {
 } from '../workflow';
 
 import { HarnessPolicyBlockedError } from '../policies/policyService';
-import { resolveRuntimeLayout } from '../../../shared/fs/pathHelpers';
+import { resolveRuntimeLayout, toPosixContextPath } from '../../../shared/fs/pathHelpers';
 import type { HarnessWorkflowGuideInput } from '../workflow/workflowGuideTypes';
 
 export interface HarnessWorkflowInitInput {
@@ -62,7 +62,7 @@ export class HarnessWorkflowActionService {
       archivePrevious: params.archive_previous,
     });
 
-    const workflowStatePath = resolveRuntimeLayout(contextPath).prevcFile;
+    const workflowStatePath = toPosixContextPath(resolveRuntimeLayout(contextPath).prevcFile);
     const settings = await service.getSettings();
     const scale = getScaleName(status.project.scale as ProjectScale);
     const isAutonomous = settings.autonomous_mode;
@@ -131,13 +131,13 @@ export class HarnessWorkflowActionService {
         error: 'No workflow found. Initialize a workflow first.',
         suggestion: 'Use workflow-init({ name: "feature-name" }) to start.',
         note: 'Workflows enable structured PREVC phases. Skip for trivial changes.',
-        workflowStatePath: resolveRuntimeLayout(contextPath).prevcFile,
+        workflowStatePath: toPosixContextPath(resolveRuntimeLayout(contextPath).prevcFile),
       };
     }
 
     const summary = await service.getSummary();
     const status = await service.getStatus();
-    const workflowStatePath = resolveRuntimeLayout(contextPath).prevcFile;
+    const workflowStatePath = toPosixContextPath(resolveRuntimeLayout(contextPath).prevcFile);
     const orchestration = await service.getPhaseOrchestration(summary.currentPhase);
     const harness = await service.getHarnessStatus();
 
@@ -170,7 +170,7 @@ export class HarnessWorkflowActionService {
         success: false,
         error: 'No workflow found. Initialize a workflow first.',
         suggestion: 'Use workflow-init({ name: "feature-name" }) to start.',
-        workflowStatePath: resolveRuntimeLayout(contextPath).prevcFile,
+        workflowStatePath: toPosixContextPath(resolveRuntimeLayout(contextPath).prevcFile),
       };
     }
 

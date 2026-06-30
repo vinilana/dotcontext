@@ -348,11 +348,11 @@ export const listFilesTool = createInternalTool<
   async (input) => {
     const { pattern, cwd, ignore } = input;
     try {
-      const files = await glob(pattern, {
+      const files = (await glob(pattern, {
         cwd: cwd || process.cwd(),
         ignore: ignore || ['node_modules/**', '.git/**', 'dist/**'],
         absolute: false
-      });
+      })).map((file) => file.split(path.sep).join('/'));
       return {
         success: true,
         files,

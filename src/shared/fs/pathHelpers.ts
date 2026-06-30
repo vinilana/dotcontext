@@ -246,6 +246,13 @@ export async function isFile(targetPath: string): Promise<boolean> {
 }
 
 /**
+ * Normalize an absolute path for cross-platform API responses (forward slashes).
+ */
+export function toPosixContextPath(absolutePath: string): string {
+  return absolutePath.split(path.sep).join('/');
+}
+
+/**
  * Normalize path separators to forward slashes
  */
 export function normalizePath(inputPath: string): string {
