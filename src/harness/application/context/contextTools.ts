@@ -353,9 +353,10 @@ export const listFilesTool = createInternalTool<
         ignore: ignore || ['node_modules/**', '.git/**', 'dist/**'],
         absolute: false
       });
+      const normalizedFiles = files.map((file) => file.split(path.sep).join('/'));
       return {
         success: true,
-        files,
+        files: normalizedFiles,
         count: files.length,
         pattern
       };

@@ -179,6 +179,51 @@ export function resolveRuntimeLayoutFromRepo(repoPath: string): RuntimeLayout {
   return resolveRuntimeLayout(path.join(path.resolve(repoPath), '.context'));
 }
 
+/** Forward slashes for stable cross-platform paths in APIs, tests, and prompts. */
+export function toPosixPath(input: string): string {
+  return input.split(path.sep).join('/');
+}
+
+/**
+ * Relative `.context/...` workflow state path for user-facing strings (POSIX).
+ */
+export function workflowPrevcRelativePath(): string {
+  return '.context/runtime/workflows/prevc.json';
+}
+
+/**
+ * Rename with retries for Windows EPERM when the destination is briefly locked
+ * (e.g. concurrent Jest workers reading the same tracking file).
+ */
+export async function renameWithRetry(
+  sourcePath: string,
+  destPath: string,
+  options: { maxAttempts?: number; delayMs?: number } = {}
+): Promise<void> {
+  const maxAttempts = options.maxAttempts ?? 8;
+  const delayMs = options.delayMs ?? 25;
+
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await fs.rename(sourcePath, destPath);
+      return;
+    } catch (error) {
+      lastError = error;
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (code !== 'EPERM' && code !== 'EACCES' && code !== 'EBUSY') {
+        throw error;
+      }
+      if (attempt === maxAttempts) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+    }
+  }
+
+  throw lastError;
+}
+
 /**
  * Resolve an absolute path from input
  */

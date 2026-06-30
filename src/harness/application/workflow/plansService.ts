@@ -15,7 +15,7 @@ import {
 } from '../../domain/workflow/plans';
 import { PrevcStatusManager } from '../../domain/workflow/status/statusManager';
 import { GitService } from '../../../utils/gitService';
-import { resolveRuntimeLayoutFromRepo } from '../../../shared/fs/pathHelpers';
+import { workflowPrevcRelativePath } from '../../../shared/fs/pathHelpers';
 import type { PrevcPhase } from '../../domain/workflow/types';
 
 export interface HarnessPlansServiceOptions {
@@ -87,7 +87,7 @@ export class HarnessPlansService {
       canAdvanceToReview = gateResult.gates.plan_required.passed;
     }
 
-    const workflowStatePath = resolveRuntimeLayoutFromRepo(this.repoPath).prevcFile;
+    const workflowStatePath = workflowPrevcRelativePath();
     const enhancementPrompt = workflowActive
       ? `PLAN LINKED TO ACTIVE WORKFLOW
 

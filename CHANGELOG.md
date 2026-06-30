@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Normalized splash directory display to forward slashes so path formatting is consistent on Windows.
+- Loaded optional tree-sitter packages via dynamic module names so TypeScript builds without those dependencies installed.
+- Retried atomic plan-tracking renames on Windows when EPERM, EACCES, or EBUSY occurs under concurrent writes.
+
 ## [1.1.1] - 2026-06-27
 
 ### Fixed

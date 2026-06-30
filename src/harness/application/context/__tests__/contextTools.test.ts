@@ -172,7 +172,7 @@ describe('contextTools sensors scaffolding', () => {
     expect(Array.isArray(missingResult.data)).toBe(true);
     expect(typeof missingResult.mapPath).toBe('string');
     expect((missingResult.mapPath as string)).toMatch(
-      new RegExp(`\\.context${path.sep}cache${path.sep}semantic${path.sep}versions${path.sep}.+${path.sep}key-files\\.json$`)
+      /\.context\/cache\/semantic\/versions\/.+\/key-files\.json$/
     );
     expect(await fs.pathExists(path.join(tempDir, '.context', 'cache', 'semantic', 'manifest.json'))).toBe(true);
 

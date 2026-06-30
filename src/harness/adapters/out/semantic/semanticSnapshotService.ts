@@ -10,6 +10,7 @@ import type {
   SemanticSnapshotMetadata,
 } from '../../../application/context/scaffolding/generators/documentation/codebaseMapGenerator';
 import { FileMapper } from '../../../../utils/fileMapper';
+import { toPosixPath } from '../../../../shared/fs/pathHelpers';
 import { CodebaseAnalyzer } from './codebaseAnalyzer';
 import type { AnalyzerOptions, DetectedFunctionalPatterns, SemanticContext } from './types';
 import { StackDetector } from '../../../application/context/intelligence/stack/stackDetector';
@@ -217,7 +218,7 @@ export class SemanticSnapshotService {
       summary: refreshed.summary,
       fresh: true,
       source: 'snapshot',
-      path: path.join(refreshed.snapshotDir, refreshed.manifest.sections.summary),
+      path: toPosixPath(path.join(refreshed.snapshotDir, refreshed.manifest.sections.summary)),
       manifest: refreshed.manifest,
       refreshed: true,
       refreshReason: current ? 'stale' : 'missing',
@@ -385,7 +386,7 @@ export class SemanticSnapshotService {
       summary,
       fresh,
       source: 'snapshot',
-      path: summaryPath,
+      path: toPosixPath(summaryPath),
       manifest,
     };
   }
@@ -477,7 +478,7 @@ export class SemanticSnapshotService {
         keyFiles: SECTION_FILENAMES.keyFiles,
         navigation: SECTION_FILENAMES.navigation,
       },
-      publishedSummary: path.join(SNAPSHOT_DIRNAME, SUMMARY_FILENAME),
+      publishedSummary: path.posix.join('cache', 'semantic', SUMMARY_FILENAME),
     };
 
     return { summary, manifest };
@@ -545,7 +546,7 @@ export class SemanticSnapshotService {
         data: snapshot.manifest,
         fresh: true,
         source: 'snapshot',
-        path: path.join(snapshot.snapshotDir, MANIFEST_FILENAME),
+        path: toPosixPath(path.join(snapshot.snapshotDir, MANIFEST_FILENAME)),
         manifest: snapshot.manifest,
       };
     }
@@ -558,7 +559,7 @@ export class SemanticSnapshotService {
       data: this.extractSectionData(snapshot.summary, section),
       fresh: true,
       source: 'snapshot',
-      path: path.join(snapshot.snapshotDir, relativeFile),
+      path: toPosixPath(path.join(snapshot.snapshotDir, relativeFile)),
       manifest: snapshot.manifest,
     };
   }
@@ -574,7 +575,7 @@ export class SemanticSnapshotService {
         data: manifest,
         fresh,
         source: 'snapshot',
-        path: path.join(snapshotDir, MANIFEST_FILENAME),
+        path: toPosixPath(path.join(snapshotDir, MANIFEST_FILENAME)),
         manifest,
       };
     }
@@ -592,7 +593,7 @@ export class SemanticSnapshotService {
       data: await fs.readJson(sectionPath),
       fresh,
       source: 'snapshot',
-      path: sectionPath,
+      path: toPosixPath(sectionPath),
       manifest,
     };
   }
@@ -675,7 +676,7 @@ export class SemanticSnapshotService {
   ): SemanticSnapshotManifest {
     return {
       ...manifest,
-      publishedSummary: path.posix.join(SNAPSHOT_DIRNAME, SUMMARY_FILENAME),
+      publishedSummary: path.posix.join('cache', 'semantic', SUMMARY_FILENAME),
       sections: {
         summary: path.posix.join(versionPrefix, SUMMARY_FILENAME),
         stack: path.posix.join(versionPrefix, SECTION_FILENAMES.stack),

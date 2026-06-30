@@ -12,7 +12,7 @@ import {
 } from '../workflow';
 
 import { HarnessPolicyBlockedError } from '../policies/policyService';
-import { resolveRuntimeLayout } from '../../../shared/fs/pathHelpers';
+import { resolveRuntimeLayout, workflowPrevcRelativePath } from '../../../shared/fs/pathHelpers';
 import type { HarnessWorkflowGuideInput } from '../workflow/workflowGuideTypes';
 
 export interface HarnessWorkflowInitInput {

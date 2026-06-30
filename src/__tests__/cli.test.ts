@@ -45,8 +45,11 @@ describe('CLI Commands', () => {
 
     it('should render the splash preview command', () => {
       const output = execSync(
-        `FORCE_COLOR=0 node ${cliPath} admin preview-splash --title "AI Coders CLI" --directory ${process.cwd()}`,
-        { encoding: 'utf8' }
+        `node ${cliPath} admin preview-splash --title "AI Coders CLI" --directory ${process.cwd()}`,
+        {
+          encoding: 'utf8',
+          env: { ...process.env, FORCE_COLOR: '0' },
+        }
       );
 
       expect(output).toContain('AI Coders CLI');

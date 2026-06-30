@@ -1,5 +1,6 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { renameWithRetry } from '../../../../shared/fs/pathHelpers';
 import {
   PlanDecision,
   PlanExecutionTracking,
@@ -83,7 +84,7 @@ export class PlanTrackingStore {
     // a partially-serialized JSON document.
     const tmpFile = `${trackingFile}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`;
     await fs.writeFile(tmpFile, JSON.stringify(tracking, null, 2), 'utf-8');
-    await fs.rename(tmpFile, trackingFile);
+    await renameWithRetry(tmpFile, trackingFile);
   }
 
   async loadAll(): Promise<PlanExecutionTracking[]> {

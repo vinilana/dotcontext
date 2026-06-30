@@ -63,7 +63,8 @@ export function formatSplashDirectory(directory: string, maxLength = 48): string
       ? `~${path.sep}${path.relative(homeDirectory, resolved)}`
       : resolved;
 
-  return truncateMiddle(withTilde, maxLength);
+  const normalized = withTilde.split(path.sep).join("/");
+  return truncateMiddle(normalized, maxLength);
 }
 
 function formatLine(line: SplashScreenLine, labelWidth: number): string {

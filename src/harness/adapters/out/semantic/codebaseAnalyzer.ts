@@ -770,7 +770,7 @@ export class CodebaseAnalyzer {
 
     // Check for auth-related files
     const authFiles = files.filter((f) =>
-      /\/(auth|login|session|middleware)[\./]/i.test(f)
+      /(?:^|[\\/])(auth|login|session|middleware)[\./]/i.test(f)
     );
     for (const f of authFiles) {
       indicators.push({

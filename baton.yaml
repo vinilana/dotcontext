@@ -1,0 +1,6 @@
+camadas:
+  ts:
+    - nome: compile
+      cmd: ["npm", "run", "build"]
+    - nome: test
+      cmd: ["npm", "test"]

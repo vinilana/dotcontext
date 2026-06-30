@@ -33,15 +33,16 @@ export class TreeSitterLayer {
 
   private async initializeParsers(): Promise<void> {
     try {
-      // Try to load tree-sitter dynamically
-      const Parser = await import('tree-sitter').catch(() => null);
+      // Dynamic module names avoid TS2307 when optional deps are not installed.
+      const treeSitterModule = 'tree-sitter';
+      const treeSitterTypescriptModule = 'tree-sitter-typescript';
+      const Parser = await import(treeSitterModule).catch(() => null);
       if (!Parser) {
         this.treeSitterAvailable = false;
         return;
       }
 
-      // Try to load language parsers
-      const tsParser = await import('tree-sitter-typescript').catch(() => null);
+      const tsParser = await import(treeSitterTypescriptModule).catch(() => null);
       if (tsParser && Parser.default) {
         const parser = new Parser.default();
         parser.setLanguage(tsParser.typescript);
