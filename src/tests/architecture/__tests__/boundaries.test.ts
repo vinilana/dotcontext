@@ -3,6 +3,7 @@ import * as path from 'path';
 
 const SRC_ROOT = path.resolve(__dirname, '..', '..', '..');
 const INTEGRATIONS_ROOT = path.join(SRC_ROOT, 'integrations');
+const WEB_ROOT = path.join(SRC_ROOT, 'web');
 const HARNESS_DOMAIN_ROOT = path.join(SRC_ROOT, 'harness', 'domain');
 const HARNESS_APPLICATION_ROOT = path.join(SRC_ROOT, 'harness', 'application');
 const HARNESS_ADAPTERS_ROOT = path.join(SRC_ROOT, 'harness', 'adapters');
@@ -206,6 +207,27 @@ describe('architecture boundaries', () => {
     if (violations.length > 0) {
       throw new Error(
         `src/integrations must not import cli or mcp surfaces.\n\n${formatViolations(violations)}`
+      );
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('keeps the web adapter independent from cli and mcp surfaces', () => {
+    // `src/web` is a fifth boundary alongside cli/harness/mcp/integrations
+    // (see .context/docs/web-interface-architecture.md section 1): it must
+    // depend only on src/harness, exactly like src/mcp does, and never reach
+    // into src/cli or src/mcp.
+    const files = walk(WEB_ROOT);
+    expect(files.length).toBeGreaterThan(0);
+
+    const violations = files
+      .flatMap(getImportReferences)
+      .filter(isForbiddenIntegrationImport);
+
+    if (violations.length > 0) {
+      throw new Error(
+        `src/web must not import cli or mcp surfaces.\n\n${formatViolations(violations)}`
       );
     }
 

@@ -10,3 +10,14 @@ export * from './derivedPlanTaskContractBuilder';
 export * from './fileCollaborationStore';
 export * from './harnessSessionFacade';
 export * from './plansService';
+export {
+  WorkflowGuideService,
+  type WorkflowGuideServiceOptions,
+} from './workflowGuideService';
+export type {
+  WorkflowGuideIntent,
+  WorkflowGuideFormat,
+  WorkflowGuideSkillRef,
+  WorkflowGuideDecision,
+  WorkflowGuideResult,
+} from './workflowGuideTypes';

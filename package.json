@@ -28,6 +28,7 @@
   },
   "scripts": {
     "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
+    "build:web-ui": "cd web-ui && npm install && npm run build",
     "build:packages": "npm run build && node scripts/build-package-bundles.js",
     "smoke:packages": "node scripts/smoke-package-bundles.js",
     "release:packages": "node scripts/release-packages.js",
@@ -69,6 +70,7 @@
     "@types/js-yaml": "^4.0.9",
     "boxen": "^5.1.2",
     "chalk": "^4.1.2",
+    "chokidar": "^4.0.3",
     "cli-progress": "^3.12.0",
     "commander": "^14.0.1",
     "fs-extra": "^11.3.2",
