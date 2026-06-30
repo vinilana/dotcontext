@@ -60,8 +60,8 @@ export function formatSplashDirectory(directory: string, maxLength = 48): string
   const withTilde = resolved === homeDirectory
     ? '~'
     : resolved.startsWith(`${homeDirectory}${path.sep}`)
-      ? `~${path.sep}${path.relative(homeDirectory, resolved)}`
-      : resolved;
+      ? `~/${path.relative(homeDirectory, resolved).split(path.sep).join('/')}`
+      : resolved.split(path.sep).join('/');
 
   return truncateMiddle(withTilde, maxLength);
 }
