@@ -20,9 +20,9 @@ Dotcontext is three things at once:
 
 - a `.context/` convention for durable project knowledge
 - a harness runtime that governs how agents execute work
-- CLI, MCP, and host integration surfaces that expose the same runtime to humans, AI tools, and lifecycle hooks
+- CLI, MCP, host integration, and web dashboard surfaces that expose the same runtime to humans, AI tools, lifecycle hooks, and a local browser UI
 
-The repository is organized around one runtime and five package surfaces:
+The repository is organized around one runtime, five package surfaces, and a bundled local web dashboard:
 
 ```text
 cli -> harness <- mcp
@@ -36,6 +36,7 @@ cli -> harness <- mcp
 | MCP | `@dotcontext/mcp` | MCP transport adapter and installer for AI tools |
 | Integrations | `@dotcontext/integrations` | Host hook adapters and event mappers for Claude Code, Codex CLI, and Pi |
 | Pi extension | `@dotcontext/pi` | Pi npm extension for in-process lifecycle hooks |
+| Web dashboard | bundled in `@dotcontext/cli` | Local browser dashboard for docs, skills, agents, sessions, traces, and PREVC workflow status |
 
 For the full system view, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -104,6 +105,32 @@ npx -y @dotcontext/cli@latest
 ```
 
 Context creation, AI-generated fills, and plan scaffolding are MCP-first. The standalone CLI does not provide the old direct `init`, `fill`, `plan`, `update`, or `analyze` command flow.
+
+### Path 3: Local web dashboard
+
+Use the bundled dashboard when you want to inspect a repository's `.context` state in a browser while CLI, MCP, or hook sessions are running.
+
+```bash
+npx -y @dotcontext/cli@latest web
+```
+
+By default it binds to `127.0.0.1:4317`, serves the built React UI, and opens the browser. The dashboard exposes read-only REST endpoints plus an SSE stream for live refreshes.
+
+For repository development with Vite HMR:
+
+```bash
+npm install
+npm --prefix web-ui install
+npm run dev:web
+```
+
+For a local production build from source:
+
+```bash
+npm run build:web-ui
+npm run build
+node dist/index.js web --no-open
+```
 
 ## Core Concepts
 

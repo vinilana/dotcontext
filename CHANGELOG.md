@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added the bundled `dotcontext web` dashboard for local browser inspection of docs, skills, agents, harness sessions, traces, artifacts, checkpoints, linked plans, and PREVC workflow status.
+- Added web development scripts: `npm run dev:web`, `npm run dev:web-api`, `npm run dev:web-ui`, and the `dotcontext web --api-only` mode for Vite-backed development.
+
+### Changed
+
+- Package builds now rebuild and include `web-ui/dist` in the `@dotcontext/cli` bundle, with smoke coverage that verifies the installed CLI package contains the web dashboard assets.
+
 ## [1.1.1] - 2026-06-27
 
 ### Fixed

@@ -150,6 +150,24 @@ dotcontext admin skill export --preset all
 dotcontext admin skill export --preset claude --force
 ```
 
+### Abrir o dashboard web
+
+`web` inicia um dashboard local no navegador para o estado `.context` do repositório atual.
+
+```bash
+dotcontext web
+dotcontext web --no-open
+dotcontext web --port 4399 --no-open
+```
+
+A CLI instalada serve a UI React empacotada. Ao desenvolver o próprio dotcontext, use o loop de desenvolvimento a partir do código-fonte:
+
+```bash
+npm run dev:web
+```
+
+Isso inicia a API com `dotcontext web --api-only --no-open` e o Vite com HMR. Veja [Dashboard web](/pt-br/guides/web-dashboard/) para o fluxo completo de desenvolvimento e empacotamento.
+
 ## Setup de integrações pela CLI
 
 A CLI também é como você conecta MCP, hooks de ciclo de vida e a extensão Pi ao seu editor ou agente. O submenu interativo **Integrações** oferece:

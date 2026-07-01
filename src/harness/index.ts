@@ -108,6 +108,10 @@ export {
   HarnessSkillsService,
   type HarnessSkillsServiceOptions,
   type HarnessBootstrapStatusResult,
+  HarnessDocsService,
+  type HarnessDocsServiceOptions,
+  type HarnessDocEntry,
+  type HarnessDocContent,
   HarnessRuntimeStateService,
   type HarnessRuntimeStateServiceOptions,
   type HarnessSessionStatus,
@@ -181,6 +185,15 @@ export {
   HarnessPlansService,
   type HarnessPlansServiceOptions,
 } from './application/workflow/plansService';
+export {
+  WorkflowGuideService,
+  type WorkflowGuideServiceOptions,
+  type WorkflowGuideIntent,
+  type WorkflowGuideFormat,
+  type WorkflowGuideSkillRef,
+  type WorkflowGuideDecision,
+  type WorkflowGuideResult,
+} from './application/workflow';
 
 export {
   getScaleName,

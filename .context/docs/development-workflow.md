@@ -74,7 +74,9 @@ npm install
 | Command           | Description                                      |
 | ----------------- | ------------------------------------------------ |
 | `npm run dev`     | Run CLI from source using tsx (fast, no build step) |
+| `npm run dev:web` | Run the web API and Vite UI together for dashboard development |
 | `npm run build`   | Compile TypeScript to `dist/` via tsc             |
+| `npm run build:web-ui` | Build the React dashboard into `web-ui/dist` |
 | `npm start`       | Run the compiled CLI from `dist/index.js`         |
 | `npm test`        | Run the full Jest test suite                      |
 
@@ -86,6 +88,26 @@ npm install
 4. Run `npm test` to verify nothing is broken.
 5. Run `npm run build` to confirm the TypeScript compiles cleanly.
 6. Commit, push, and open a pull request against `main`.
+
+### Web dashboard loop
+
+Use this loop when changing `src/web` or `web-ui/`:
+
+```bash
+npm install
+npm --prefix web-ui install
+npm run dev:web
+```
+
+`dev:web` starts the API via `dotcontext web --api-only --no-open` on `127.0.0.1:4317` and Vite on `localhost:5173`. Open the Vite URL while developing. For production-style local testing, run:
+
+```bash
+npm run build:web-ui
+npm run build
+node dist/index.js web --no-open
+```
+
+Because `@dotcontext/cli` bundles `web-ui/dist`, packaging-related web changes must also pass `npm run build:packages` and `npm run smoke:packages`.
 
 ### Environment variables
 

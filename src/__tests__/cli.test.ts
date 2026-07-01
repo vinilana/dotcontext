@@ -18,6 +18,7 @@ describe('CLI Commands', () => {
       expect(output).toContain('reverse-sync');
       expect(output).toContain('mcp:install');
       expect(output).toContain('mcp:uninstall');
+      expect(output).toMatch(/\n\s+web\b/);
       expect(output).toContain('admin');
       expect(output).not.toContain('report');
       expect(output).not.toContain('sync-agents');
@@ -36,6 +37,14 @@ describe('CLI Commands', () => {
       expect(output).toContain('--with-hooks');
       expect(output).toContain('--no-hooks');
       expect(output).toContain('--hook-format');
+    });
+
+    it('should expose web dashboard development options', () => {
+      const output = execSync(`node ${cliPath} web --help`, { encoding: 'utf8' });
+      expect(output).toContain('--api-only');
+      expect(output).toContain('--no-open');
+      expect(output).toContain('--port');
+      expect(output).toContain('--host');
     });
 
     it('should display version when --version flag is used', () => {

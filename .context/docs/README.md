@@ -12,6 +12,7 @@ Welcome to the `@dotcontext/cli` repository knowledge base. Start with the proje
 | Tooling & Productivity | [`tooling.md`](./tooling.md) | CLI scripts, IDE configs, automation workflows |
 | Harness Split Foundation | [`harness-split-foundation.md`](./harness-split-foundation.md) | Branch changes, package boundary decisions, harness engineering alignment |
 | Harness Roadmap | [`harness-roadmap.md`](./harness-roadmap.md) | Harness engineering capabilities, sequencing, and product direction |
+| Web Interface Architecture | [`web-interface-architecture.md`](./web-interface-architecture.md) | Phase 1 API/SSE contract and ADRs for the `src/web` harness adapter |
 
 ## Q&A
 

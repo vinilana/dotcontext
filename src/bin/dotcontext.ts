@@ -2,6 +2,8 @@
 
 import { Command } from 'commander';
 import * as path from 'path';
+import * as fs from 'fs-extra';
+import { exec } from 'child_process';
 
 import { colors, typography } from '../utils/theme';
 import {
@@ -49,6 +51,12 @@ import {
 import {
   startMCPServer,
 } from '../mcp';
+import {
+  startWebServer,
+  resolveWebUiDistDir,
+  DEFAULT_WEB_HOST,
+  DEFAULT_WEB_PORT,
+} from '../web';
 import {
   WorkflowService,
   HarnessWorkflowActionService,
@@ -281,6 +289,88 @@ program
       if (options.verbose) {
         process.stderr.write(`[mcp] Error: ${error}\n`);
       }
+      process.exit(1);
+    }
+  });
+
+interface WebCommandOptions {
+  port: string;
+  host: string;
+  open: boolean;
+  apiOnly?: boolean;
+}
+
+/**
+ * Best-effort open of the default browser. Never fatal: headless/CI
+ * environments (no display, no `xdg-open`/`open`/`start`) simply skip it.
+ */
+function openInBrowser(url: string): void {
+  const platform = process.platform;
+  const command =
+    platform === 'darwin' ? `open "${url}"`
+    : platform === 'win32' ? `start "" "${url}"`
+    : `xdg-open "${url}"`;
+
+  exec(command, (error) => {
+    if (error) {
+      process.stderr.write(`[web] Could not open browser automatically: ${error.message}\n`);
+    }
+  });
+}
+
+program
+  .command('web')
+  .description('Start the dotcontext web dashboard (REST + SSE API and the built web UI)')
+  .option('-p, --port <port>', 'Port to listen on', String(DEFAULT_WEB_PORT))
+  .option('--host <host>', `Host to bind to (default: ${DEFAULT_WEB_HOST}; binding elsewhere has no auth)`, DEFAULT_WEB_HOST)
+  .option('--api-only', 'Start only the REST + SSE API for web-ui development')
+  .option('--no-open', 'Do not open the dashboard in a browser automatically')
+  .action(async (options: WebCommandOptions) => {
+    const repoPath = process.cwd();
+    const distDir = resolveWebUiDistDir();
+
+    if (!options.apiOnly && !(await fs.pathExists(distDir))) {
+      ui.displayError(
+        'Web UI is not built yet.',
+        new Error(`Expected to find ${distDir}. Run "npm run build:web-ui" first, then retry "dotcontext web".`)
+      );
+      process.exit(1);
+      return;
+    }
+
+    const port = Number(options.port);
+    if (!Number.isInteger(port) || port <= 0) {
+      ui.displayError('Invalid --port value.', new Error(`"${options.port}" is not a valid port number.`));
+      process.exit(1);
+      return;
+    }
+
+    try {
+      const handle = await startWebServer({
+        repoPath,
+        port,
+        host: options.host,
+      });
+
+      if (options.apiOnly) {
+        ui.displaySuccess(`dotcontext web API running at ${handle.url}`);
+        ui.displayInfo('Web UI dev server', 'Run "npm run dev:web-ui" and open the Vite URL.');
+      } else {
+        ui.displaySuccess(`dotcontext web dashboard running at ${handle.url}`);
+      }
+
+      if (options.open && !options.apiOnly) {
+        openInBrowser(handle.url);
+      }
+
+      registerProcessShutdown(handle, {
+        onError: (error) => {
+          process.stderr.write(`[web] Shutdown error: ${error}\n`);
+        },
+        exit: (code) => process.exit(code),
+      });
+    } catch (error) {
+      ui.displayError('Failed to start the web dashboard.', error as Error);
       process.exit(1);
     }
   });

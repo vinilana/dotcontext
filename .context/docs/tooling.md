@@ -36,7 +36,11 @@ All scripts are defined in `package.json`:
 | Script              | Command                                           | Description                              |
 | ------------------- | ------------------------------------------------- | ---------------------------------------- |
 | `dev`               | `tsx src/index.ts`                                | Run CLI from source (no build step)       |
+| `dev:web`           | `node scripts/dev-web.js`                         | Run the web API and Vite UI together      |
+| `dev:web-api`       | `tsx src/index.ts web --api-only --no-open`       | Run only the dashboard REST + SSE API     |
+| `dev:web-ui`        | `npm --prefix web-ui run dev`                     | Run only the Vite React dashboard         |
 | `build`             | `tsc`                                             | Compile TypeScript to `dist/`             |
+| `build:web-ui`      | `npm --prefix web-ui install && npm --prefix web-ui run build` | Build the React dashboard into `web-ui/dist` |
 | `start`             | `node dist/index.js`                              | Run compiled CLI                          |
 | `test`              | `jest`                                            | Run the full test suite                   |
 | `prepublishOnly`    | `npm run build`                                   | Ensure a fresh build before publish       |
@@ -61,6 +65,20 @@ npm test
 # 3. Verify production build
 npm run build && npm start -- --help
 ```
+
+### Web dashboard workflow
+
+```bash
+# Run API + Vite together
+npm run dev:web
+
+# Build and serve the production UI locally
+npm run build:web-ui
+npm run build
+node dist/index.js web --no-open
+```
+
+The source dev loop uses `dotcontext web --api-only` so the backend can run without an existing `web-ui/dist`. The package workflow rebuilds `web-ui/dist`, copies it into `.release/packages/cli/web-ui/dist`, and verifies it in `npm run smoke:packages`.
 
 ### Release workflow
 
