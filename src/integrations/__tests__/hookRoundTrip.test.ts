@@ -218,6 +218,26 @@ describe('hook mapper unit tests', () => {
       });
     });
 
+    it('emits Stop workflow guidance as a Codex systemMessage', () => {
+      const output = mapCodexResponse(codexStopFixture, {
+        ok: true,
+        tool: 'workflow-guide',
+        source: 'codex',
+        result: {
+          kind: 'json',
+          data: {
+            workflow: { active: true },
+            excerpt: 'dotcontext workflow guide:\nWorkflow "feature-x" - phase V.',
+          },
+        },
+      });
+
+      expect(output).toEqual({
+        continue: true,
+        systemMessage: expect.stringContaining('feature-x'),
+      });
+    });
+
     it('suppresses Stop guidance during reentry', () => {
       const output = mapCodexResponse(
         { ...codexStopFixture, sessionEndActive: true },
@@ -535,8 +555,9 @@ describe('hook round-trip integrations', () => {
       },
       (output: ReturnType<typeof mapCodexResponse>) => {
         expect(output).not.toHaveProperty('source');
-        expect(output.hookSpecificOutput?.hookEventName).toBe('Stop');
-        expect(output.hookSpecificOutput?.additionalContext).toContain('feature-x');
+        expect(output).not.toHaveProperty('hookSpecificOutput');
+        expect(output.continue).toBe(true);
+        expect(output.systemMessage).toContain('feature-x');
       },
     ],
   ])('%s envelope round-trips through adapter and response mapper', async (

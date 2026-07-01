@@ -589,7 +589,7 @@ describe('HookDispatchService session lifecycle', () => {
     expect(stopResult.output).toEqual({ continue: true });
   });
 
-  it('emits Stop workflow guidance when a PREVC workflow is active', async () => {
+  it('emits Codex Stop workflow guidance as a systemMessage when a PREVC workflow is active', async () => {
     const workflowService = await WorkflowService.create(tempDir);
     await workflowService.init({
       name: 'feature-x',
@@ -615,12 +615,11 @@ describe('HookDispatchService session lifecycle', () => {
 
     expect(stopResult.exitCode).toBe(0);
     expect(stopResult.output).toMatchObject({
-      hookSpecificOutput: {
-        hookEventName: 'Stop',
-        additionalContext: expect.stringContaining('feature-x'),
-      },
+      continue: true,
+      systemMessage: expect.stringContaining('feature-x'),
     });
     expect(stopResult.output).not.toHaveProperty('source');
+    expect(stopResult.output).not.toHaveProperty('hookSpecificOutput');
   });
 
   it.each(['Stop', 'SubagentStop'])(
