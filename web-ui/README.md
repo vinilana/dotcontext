@@ -1,32 +1,68 @@
-# React + TypeScript + Vite
+# dotcontext Web UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite dashboard for the local `src/web` API. It renders `.context` docs, skills, agents, sessions, traces, artifacts, checkpoints, and PREVC workflow state.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+From the repository root:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm --prefix web-ui install
+npm run dev:web
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+This starts:
+
+- `dotcontext web --api-only --no-open` on `http://127.0.0.1:4317`
+- Vite on `http://localhost:5173`
+
+Open the Vite URL for HMR. Vite proxies `/api/*` and `/api/events` to the dotcontext web API. If the API port changes, set `VITE_API_PROXY_TARGET`.
+
+```bash
+VITE_API_PROXY_TARGET=http://127.0.0.1:4399 npm run dev:web-ui
+```
+
+You can also run the pieces separately:
+
+```bash
+npm run dev:web-api
+npm run dev:web-ui
+```
+
+## Production Build
+
+Build the static SPA:
+
+```bash
+npm run build:web-ui
+```
+
+Then serve it through the CLI:
+
+```bash
+npm run build
+node dist/index.js web --no-open
+```
+
+For an installed package, run:
+
+```bash
+dotcontext web
+```
+
+The published `@dotcontext/cli` package includes `web-ui/dist`, so installed users do not need Vite or the `web-ui` source tree.
+
+## Validation
+
+Useful checks while changing the dashboard:
+
+```bash
+npm --prefix web-ui run build
+npm run build
+npm test -- --runInBand
+npm run build:packages
+npm run smoke:packages
+```
+
+`build:packages` rebuilds `web-ui/dist` and copies it into `.release/packages/cli/web-ui/dist`. `smoke:packages` verifies that bundle before release.

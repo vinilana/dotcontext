@@ -22,6 +22,7 @@ const bundles = [
     ],
     bin: 'dotcontext',
     requiresPrompts: true,
+    requiresWebUiDist: true,
   },
   {
     slug: 'harness',
@@ -148,6 +149,13 @@ function smokeBundle(bundle) {
     assert(fs.existsSync(path.join(bundleRoot, 'prompts')), `${bundle.slug}: prompts missing`);
   }
 
+  if (bundle.requiresWebUiDist) {
+    assert(
+      fs.existsSync(path.join(bundleRoot, 'web-ui', 'dist', 'index.html')),
+      `${bundle.slug}: built web UI missing`
+    );
+  }
+
   const mod = requireFresh(mainPath);
   for (const exportName of bundle.expectedExports) {
     assert(mod[exportName], `${bundle.slug}: missing export ${exportName}`);
@@ -156,6 +164,7 @@ function smokeBundle(bundle) {
   if (bundle.slug === 'cli') {
     const helpOutput = runBundleCommand(bundleRoot, ['@dotcontext/cli', '--help']);
     assert(helpOutput.includes('dotcontext'), 'cli: local npm exec help failed');
+    assert(/\n\s+web\b/.test(helpOutput), 'cli: dotcontext web command missing from help');
   }
 
   if (bundle.slug === 'mcp') {

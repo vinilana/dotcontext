@@ -53,6 +53,7 @@ These commands appear in `dotcontext --help` and are the ones most operators use
 | [`reverse-sync`](#reverse-sync) | Scan AI tool directories and import rules, agents, and skills into `.context/` |
 | [`export-rules`](#export-rules) | Export `.context/docs/` rules to AI tool directories |
 | [`mcp`](#mcp) | Start the MCP server (stdio transport) |
+| [`web`](#web) | Start the local web dashboard and REST + SSE API |
 | [`mcp:install`](#mcpinstall) | Install MCP server config into supported AI tools |
 | [`mcp:uninstall`](#mcpuninstall) | Remove dotcontext MCP server config from supported AI tools |
 
@@ -181,6 +182,30 @@ dotcontext mcp --repo-path /path/to/repo
 ::: note
 There is no separate global binary for the server in the published CLI package — the `dotcontext-mcp` bin only exists in the isolated `@dotcontext/mcp` package build. From the CLI, start the server with `dotcontext mcp`. See [Architecture](/about/architecture/) for how the surfaces are split.
 :::
+
+### web
+
+Start the local browser dashboard for the current repository. The command serves the bundled React UI plus the read-only REST + SSE API used by the dashboard.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `-p, --port <port>` | Port to listen on | `4317` |
+| `--host <host>` | Host to bind to | `127.0.0.1` |
+| `--api-only` | Start only the REST + SSE API for Vite development | `false` |
+| `--no-open` | Do not open the dashboard in a browser automatically | open by default |
+
+```bash
+dotcontext web
+dotcontext web --no-open
+dotcontext web --port 4399 --no-open
+dotcontext web --api-only --no-open
+```
+
+::: caution
+The web dashboard has no authentication. It binds to `127.0.0.1` by default; use `--host` only on a trusted local network.
+:::
+
+For development, prefer `npm run dev:web` from the repository root. See [Web dashboard](/guides/web-dashboard/).
 
 ### mcp:install
 

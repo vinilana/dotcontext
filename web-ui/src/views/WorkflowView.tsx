@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useWorkflowHarness, useWorkflowPlanDetails, useWorkflowPlans, useWorkflowStatus } from '../hooks/useApi';
-import { EmptyNote, ErrorNote, LoadingNote, StatusPill } from '../components/common';
+import { EmptyNote, ErrorNote, LoadingNote, StatusPill, ToolBadge } from '../components/common';
 import type { PrevcPhase } from '../types/api';
 
 const PHASE_ORDER: PrevcPhase[] = ['P', 'R', 'E', 'V', 'C'];
@@ -76,6 +76,14 @@ export function WorkflowView() {
               <dd>
                 {harness.session.name} <StatusPill status={harness.session.status} />
               </dd>
+              <dt>Tool</dt>
+              <dd>
+                <ToolBadge
+                  host={
+                    typeof harness.session.metadata?.host === 'string' ? (harness.session.metadata.host as string) : undefined
+                  }
+                />
+              </dd>
               <dt>Gate status</dt>
               <dd>
                 <StatusPill status={harness.completionCheck.blocked ? 'blocked' : 'clear'} />
@@ -110,6 +118,25 @@ export function WorkflowView() {
       </section>
 
       <section>
+        <h2>Agents &amp; tools</h2>
+        {!planSlug && <EmptyNote label="No plan linked -- nothing to attribute yet." />}
+        {planSlug && planLoading && <LoadingNote />}
+        {planSlug && planDetails?.plan && planDetails.plan.agentLineup.length === 0 && (
+          <EmptyNote label="This plan does not record an agent lineup." />
+        )}
+        {planDetails?.plan && planDetails.plan.agentLineup.length > 0 && (
+          <div className="lineup-grid">
+            {planDetails.plan.agentLineup.map((entry, index) => (
+              <div className="lineup-card" key={`${entry.type}-${index}`}>
+                <div className="lineup-card-type">{entry.type}</div>
+                {entry.role && <div className="lineup-card-role">{entry.role}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
         <h2>Linked plan</h2>
         {!planSlug && <EmptyNote label="No plan linked to the active workflow." />}
         {planSlug && planLoading && <LoadingNote />}
@@ -133,6 +160,7 @@ export function WorkflowView() {
                       {phase.steps.map((step) => (
                         <li key={step.order}>
                           <StatusPill status={step.status} /> {step.description}
+                          {step.assignee && <span className="tag">{step.assignee}</span>}
                         </li>
                       ))}
                     </ul>

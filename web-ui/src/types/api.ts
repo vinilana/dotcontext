@@ -101,6 +101,7 @@ export interface AgentDetailResult {
   info: {
     success: boolean;
     agent?: Record<string, unknown>;
+    content?: string;
   };
   docs: {
     agent: string;

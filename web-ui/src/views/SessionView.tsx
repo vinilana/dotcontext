@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   useSession,
   useSessionArtifacts,
@@ -6,7 +6,17 @@ import {
   useSessionTraces,
   useSessions,
 } from '../hooks/useApi';
-import { DetailPanel, EmptyNote, ErrorNote, ListPanel, LoadingNote, StatusPill, TwoPaneView } from '../components/common';
+import {
+  DetailPanel,
+  EmptyNote,
+  ErrorNote,
+  ListPanel,
+  LoadingNote,
+  PageHeader,
+  StatusPill,
+  ToolBadge,
+  TwoPaneView,
+} from '../components/common';
 
 function formatTime(iso?: string): string {
   if (!iso) return '—';
@@ -17,9 +27,15 @@ function formatTime(iso?: string): string {
   }
 }
 
+function hostOf(metadata?: Record<string, unknown>): string | undefined {
+  const host = metadata?.host;
+  return typeof host === 'string' ? host : undefined;
+}
+
 export function SessionView() {
   const { data: sessions, loading, error } = useSessions();
   const [selected, setSelected] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     if (selected === null && sessions && sessions.length > 0) {
@@ -32,6 +48,12 @@ export function SessionView() {
   const { data: artifacts, loading: artifactsLoading, error: artifactsError } = useSessionArtifacts(selected);
   const { data: checkpoints, loading: checkpointsLoading, error: checkpointsError } = useSessionCheckpoints(selected);
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q || !sessions) return sessions ?? [];
+    return sessions.filter((s) => (s.name || s.id).toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
+  }, [sessions, query]);
+
   return (
     <TwoPaneView
       list={
@@ -41,11 +63,13 @@ export function SessionView() {
           error={error}
           selectedKey={selected}
           onSelect={setSelected}
-          entries={(sessions ?? []).map((s) => ({
+          search={{ value: query, onChange: setQuery, placeholder: 'Search sessions…' }}
+          entries={filtered.map((s) => ({
             key: s.id,
             title: s.name || s.id,
             subtitle: formatTime(s.updatedAt),
             badge: s.status,
+            meta: <ToolBadge host={hostOf(s.metadata)} />,
           }))}
         />
       }
@@ -56,9 +80,14 @@ export function SessionView() {
           {selected && sessionError && <ErrorNote message={sessionError} />}
           {selected && session && (
             <>
-              <h1>
-                {session.name} <StatusPill status={session.status} />
-              </h1>
+              <PageHeader
+                title={
+                  <>
+                    {session.name} <StatusPill status={session.status} />
+                  </>
+                }
+                actions={<ToolBadge host={hostOf(session.metadata)} />}
+              />
               <dl className="kv-grid">
                 <dt>Session ID</dt>
                 <dd>{session.id}</dd>

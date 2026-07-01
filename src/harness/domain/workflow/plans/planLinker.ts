@@ -98,6 +98,10 @@ export class PlanLinker {
     return this.agentRegistry.getAgentMetadata(agentType);
   }
 
+  async getAgentContent(agentType: string): Promise<string | null> {
+    return this.agentRegistry.getPlaybookContent(agentType);
+  }
+
   // ---------------------------------------------------------------------------
   // Initial linking + queries
   // ---------------------------------------------------------------------------

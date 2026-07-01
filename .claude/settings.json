@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @dotcontext/cli@latest hook dispatch --source claude-code"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^Write$|^Edit$|^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @dotcontext/cli@latest hook dispatch --source claude-code"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @dotcontext/cli@latest hook dispatch --source claude-code"
+          }
+        ]
+      }
+    ]
+  }
+}

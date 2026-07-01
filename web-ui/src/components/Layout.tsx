@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useEventStream } from '../hooks/useEventStream';
+import { IconAgents, IconDocs, IconSession, IconSkills, IconWorkflow } from './icons';
 
 const NAV_ITEMS = [
-  { to: '/docs', label: 'Docs' },
-  { to: '/skills', label: 'Skills' },
-  { to: '/agents', label: 'Agents' },
-  { to: '/session', label: 'Session' },
-  { to: '/workflow', label: 'Workflow' },
+  { to: '/docs', label: 'Docs', icon: IconDocs },
+  { to: '/skills', label: 'Skills', icon: IconSkills },
+  { to: '/agents', label: 'Agents', icon: IconAgents },
+  { to: '/session', label: 'Session', icon: IconSession },
+  { to: '/workflow', label: 'Workflow', icon: IconWorkflow },
 ];
 
 function ConnectionBadge() {
@@ -27,7 +28,10 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <span className="sidebar-title">dotcontext</span>
+          <span className="sidebar-title">
+            <span className="sidebar-title-mark">dc</span>
+            dotcontext
+          </span>
           <span className="sidebar-subtitle">Web Dashboard</span>
         </div>
         <nav className="sidebar-nav">
@@ -37,6 +41,7 @@ export function Layout({ children }: { children: ReactNode }) {
               to={item.to}
               className={({ isActive }) => `sidebar-link${isActive ? ' sidebar-link--active' : ''}`}
             >
+              <item.icon size={16} />
               {item.label}
             </NavLink>
           ))}

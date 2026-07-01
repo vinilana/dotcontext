@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSkill, useSkills } from '../hooks/useApi';
-import { DetailPanel, EmptyNote, ErrorNote, ListPanel, LoadingNote, MarkdownContent, TwoPaneView } from '../components/common';
+import {
+  CopyButton,
+  DetailPanel,
+  DownloadButton,
+  EmptyNote,
+  ErrorNote,
+  ListPanel,
+  LoadingNote,
+  MarkdownContent,
+  PageHeader,
+  TwoPaneView,
+} from '../components/common';
+import { withFrontMatter } from '../lib/markdown';
 import type { SkillSummary } from '../types/api';
 
 export function SkillsView() {
   const { data, loading, error } = useSkills();
   const [selected, setSelected] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const allSkills = useMemo<SkillSummary[]>(() => {
     if (!data) return [];
@@ -20,6 +33,29 @@ export function SkillsView() {
 
   const { data: skillContent, loading: contentLoading, error: contentError } = useSkill(selected);
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return allSkills;
+    return allSkills.filter(
+      (skill) =>
+        (skill.name || skill.slug).toLowerCase().includes(q) ||
+        skill.slug.toLowerCase().includes(q) ||
+        skill.description?.toLowerCase().includes(q)
+    );
+  }, [allSkills, query]);
+
+  const fileContent =
+    skillContent?.skill && skillContent.content
+      ? withFrontMatter(
+          {
+            name: skillContent.skill.name,
+            description: skillContent.skill.description,
+            phases: skillContent.skill.phases,
+          },
+          skillContent.content
+        )
+      : '';
+
   return (
     <TwoPaneView
       list={
@@ -29,7 +65,8 @@ export function SkillsView() {
           error={error}
           selectedKey={selected}
           onSelect={setSelected}
-          entries={allSkills.map((skill) => ({
+          search={{ value: query, onChange: setQuery, placeholder: 'Search skills…' }}
+          entries={filtered.map((skill) => ({
             key: skill.slug,
             title: skill.name || skill.slug,
             subtitle: skill.phases?.join(', '),
@@ -47,8 +84,27 @@ export function SkillsView() {
           )}
           {selected && skillContent?.skill && (
             <>
-              <h1>{skillContent.skill.name || skillContent.skill.slug}</h1>
-              {skillContent.skill.description && <p className="muted">{skillContent.skill.description}</p>}
+              <PageHeader
+                title={skillContent.skill.name || skillContent.skill.slug}
+                subtitle={skillContent.skill.description}
+                actions={
+                  fileContent && (
+                    <>
+                      <CopyButton text={fileContent} label="Copy" />
+                      <DownloadButton content={fileContent} filename={`${skillContent.skill.slug}.SKILL.md`} label="Download" />
+                    </>
+                  )
+                }
+              />
+              {skillContent.skill.phases && skillContent.skill.phases.length > 0 && (
+                <div className="tag-row">
+                  {skillContent.skill.phases.map((phase) => (
+                    <span key={phase} className="tag">
+                      {phase}
+                    </span>
+                  ))}
+                </div>
+              )}
               {skillContent.content && <MarkdownContent content={skillContent.content} />}
             </>
           )}

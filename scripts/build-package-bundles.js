@@ -130,11 +130,12 @@ function buildBundles() {
           exports: { '.': './dist/cli/index.js' },
           bin: { dotcontext: 'dist/index.js' },
           dependencies: rootPkg.dependencies,
-          files: ['dist/**/*', 'prompts/**/*', 'README.md', 'LICENSE'],
+          files: ['dist/**/*', 'web-ui/dist/**/*', 'prompts/**/*', 'README.md', 'LICENSE'],
         }
       ),
       readme: loadTemplate('cli.README.md'),
       copyPrompts: true,
+      copyWebUiDist: true,
     },
     {
       slug: 'harness',
@@ -238,6 +239,13 @@ function buildBundles() {
 
     if (pkg.copyPrompts && fs.existsSync(path.join(repoRoot, 'prompts'))) {
       copyDir(path.join(repoRoot, 'prompts'), path.join(pkgRoot, 'prompts'));
+    }
+    if (pkg.copyWebUiDist) {
+      const webUiDist = path.join(repoRoot, 'web-ui', 'dist');
+      if (!fs.existsSync(webUiDist)) {
+        throw new Error('web-ui/dist does not exist. Run "npm run build:web-ui" first.');
+      }
+      copyDir(webUiDist, path.join(pkgRoot, 'web-ui', 'dist'));
     }
     for (const file of commonFiles) {
       copyFile(path.join(repoRoot, file), path.join(pkgRoot, file));

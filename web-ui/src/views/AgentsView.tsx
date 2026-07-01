@@ -1,10 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAgent, useAgents } from '../hooks/useApi';
-import { DetailPanel, EmptyNote, ErrorNote, ListPanel, LoadingNote, TwoPaneView } from '../components/common';
+import {
+  CopyButton,
+  DetailPanel,
+  DownloadButton,
+  EmptyNote,
+  ErrorNote,
+  ListPanel,
+  LoadingNote,
+  PageHeader,
+  TwoPaneView,
+} from '../components/common';
 
 export function AgentsView() {
   const { data, loading, error } = useAgents();
   const [selected, setSelected] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const allTypes = useMemo<string[]>(() => {
     if (!data) return [];
@@ -19,6 +30,14 @@ export function AgentsView() {
 
   const { data: agent, loading: agentLoading, error: agentError } = useAgent(selected);
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return allTypes;
+    return allTypes.filter((type) => type.toLowerCase().includes(q));
+  }, [allTypes, query]);
+
+  const content = agent?.info?.content;
+
   return (
     <TwoPaneView
       list={
@@ -28,7 +47,8 @@ export function AgentsView() {
           error={error}
           selectedKey={selected}
           onSelect={setSelected}
-          entries={allTypes.map((type) => ({
+          search={{ value: query, onChange: setQuery, placeholder: 'Search agents…' }}
+          entries={filtered.map((type) => ({
             key: type,
             title: type,
             badge: data?.agents.builtIn.includes(type) ? 'built-in' : 'custom',
@@ -42,8 +62,18 @@ export function AgentsView() {
           {selected && agentError && <ErrorNote message={agentError} />}
           {selected && agent && (
             <>
-              <h1>{selected}</h1>
-              {agent.docs?.description && <p className="muted">{agent.docs.description}</p>}
+              <PageHeader
+                title={selected}
+                subtitle={agent.docs?.description}
+                actions={
+                  content && (
+                    <>
+                      <CopyButton text={content} label="Copy" />
+                      <DownloadButton content={content} filename={`${selected}.md`} label="Download" />
+                    </>
+                  )
+                }
+              />
 
               {agent.info?.agent && (
                 <section>

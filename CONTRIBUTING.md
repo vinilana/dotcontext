@@ -28,7 +28,9 @@ Useful commands:
 
 ```bash
 npm run dev
+npm run dev:web
 npm run build
+npm run build:web-ui
 npm test -- --runInBand
 npm run build:packages
 npm run smoke:packages
@@ -42,6 +44,38 @@ npm run smoke:packages
 4. Update docs when commands, package surfaces, workflows, or MCP install behavior change.
 5. Run `npm run build` and `npm test -- --runInBand` before opening a PR.
 6. If the change affects packaging, also run `npm run build:packages` and `npm run smoke:packages`.
+
+## Web Dashboard Development
+
+The local dashboard has two parts:
+
+- `src/web` — the Node `http` REST + SSE adapter over the harness runtime
+- `web-ui/` — the React + Vite SPA served by `src/web` in production
+
+For day-to-day UI work, install both dependency sets and run the combined dev script:
+
+```bash
+npm install
+npm --prefix web-ui install
+npm run dev:web
+```
+
+`dev:web` starts `dotcontext web --api-only --no-open` on `127.0.0.1:4317` and Vite on `localhost:5173`. Open the Vite URL while developing. If you only need one side, use `npm run dev:web-api` or `npm run dev:web-ui`.
+
+For a local production-style run:
+
+```bash
+npm run build:web-ui
+npm run build
+node dist/index.js web --no-open
+```
+
+The published CLI bundle includes `web-ui/dist`. Any change that affects `dotcontext web`, `src/web`, `web-ui/`, package manifests, or release scripts must run:
+
+```bash
+npm run build:packages
+npm run smoke:packages
+```
 
 ## Documentation Expectations
 

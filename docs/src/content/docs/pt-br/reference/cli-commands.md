@@ -53,6 +53,7 @@ Estes comandos aparecem em `dotcontext --help` e são os mais usados no dia a di
 | [`reverse-sync`](#reverse-sync) | Escaneia diretórios de ferramentas de IA e importa regras, agentes e skills para `.context/` |
 | [`export-rules`](#export-rules) | Exporta as regras de `.context/docs/` para diretórios de ferramentas de IA |
 | [`mcp`](#mcp) | Inicia o servidor MCP (transporte stdio) |
+| [`web`](#web) | Inicia o dashboard web local e a API REST + SSE |
 | [`mcp:install`](#mcpinstall) | Instala a configuração do servidor MCP em ferramentas de IA suportadas |
 | [`mcp:uninstall`](#mcpuninstall) | Remove a configuração do servidor MCP dotcontext de ferramentas de IA suportadas |
 
@@ -181,6 +182,30 @@ dotcontext mcp --repo-path /caminho/do/repo
 ::: note
 Não existe um binário global separado para o servidor no pacote `@dotcontext/cli` publicado — o bin `dotcontext-mcp` existe apenas no build isolado do pacote `@dotcontext/mcp`. A partir da CLI, inicie o servidor com `dotcontext mcp`. Veja [Arquitetura](/pt-br/about/architecture/) para entender como as superfícies são separadas.
 :::
+
+### web
+
+Inicia o dashboard local no navegador para o repositório atual. O comando serve a UI React empacotada e a API REST + SSE somente leitura usada pelo dashboard.
+
+| Flag | Descrição | Padrão |
+| --- | --- | --- |
+| `-p, --port <port>` | Porta para escutar | `4317` |
+| `--host <host>` | Host para bind | `127.0.0.1` |
+| `--api-only` | Inicia apenas a API REST + SSE para desenvolvimento com Vite | `false` |
+| `--no-open` | Não abre o dashboard no navegador automaticamente | abre por padrão |
+
+```bash
+dotcontext web
+dotcontext web --no-open
+dotcontext web --port 4399 --no-open
+dotcontext web --api-only --no-open
+```
+
+::: caution
+O dashboard web não tem autenticação. Ele faz bind em `127.0.0.1` por padrão; use `--host` somente em uma rede local confiável.
+:::
+
+Para desenvolvimento, prefira `npm run dev:web` a partir da raiz do repositório. Veja [Dashboard web](/pt-br/guides/web-dashboard/).
 
 ### mcp:install
 

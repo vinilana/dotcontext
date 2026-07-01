@@ -47,11 +47,15 @@ export class HarnessAgentsService {
 
   async getInfo(agentType: string): Promise<Record<string, unknown>> {
     const linker = createPlanLinker(this.repoPath);
-    const info = await linker.getAgentInfo(agentType);
+    const [info, content] = await Promise.all([
+      linker.getAgentInfo(agentType),
+      linker.getAgentContent(agentType),
+    ]);
 
     return {
       success: true,
       agent: info,
+      content: content ?? undefined,
     };
   }
 

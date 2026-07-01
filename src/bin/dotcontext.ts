@@ -297,6 +297,7 @@ interface WebCommandOptions {
   port: string;
   host: string;
   open: boolean;
+  apiOnly?: boolean;
 }
 
 /**
@@ -322,12 +323,13 @@ program
   .description('Start the dotcontext web dashboard (REST + SSE API and the built web UI)')
   .option('-p, --port <port>', 'Port to listen on', String(DEFAULT_WEB_PORT))
   .option('--host <host>', `Host to bind to (default: ${DEFAULT_WEB_HOST}; binding elsewhere has no auth)`, DEFAULT_WEB_HOST)
+  .option('--api-only', 'Start only the REST + SSE API for web-ui development')
   .option('--no-open', 'Do not open the dashboard in a browser automatically')
   .action(async (options: WebCommandOptions) => {
     const repoPath = process.cwd();
     const distDir = resolveWebUiDistDir();
 
-    if (!(await fs.pathExists(distDir))) {
+    if (!options.apiOnly && !(await fs.pathExists(distDir))) {
       ui.displayError(
         'Web UI is not built yet.',
         new Error(`Expected to find ${distDir}. Run "npm run build:web-ui" first, then retry "dotcontext web".`)
@@ -350,9 +352,14 @@ program
         host: options.host,
       });
 
-      ui.displaySuccess(`dotcontext web dashboard running at ${handle.url}`);
+      if (options.apiOnly) {
+        ui.displaySuccess(`dotcontext web API running at ${handle.url}`);
+        ui.displayInfo('Web UI dev server', 'Run "npm run dev:web-ui" and open the Vite URL.');
+      } else {
+        ui.displaySuccess(`dotcontext web dashboard running at ${handle.url}`);
+      }
 
-      if (options.open) {
+      if (options.open && !options.apiOnly) {
         openInBrowser(handle.url);
       }
 
