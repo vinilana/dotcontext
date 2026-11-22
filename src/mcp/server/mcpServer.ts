@@ -19,6 +19,7 @@ import { ContextCache } from '../../harness/adapters/out/semantic/contextCache';
 import { VERSION } from '../../version';
 import { WorkflowService } from '../../harness/application/workflow';
 import { clearMcpActionSessionCache, logMcpAction } from '../logging/actionLogger';
+import { installMcpStdioProtocolGuard } from '../stdio/stdioProtocolGuard';
 import {
   createBoundedResourceJson,
   createBoundedResourceText,
@@ -1115,6 +1116,7 @@ Actions:
    * Start the MCP server with stdio transport
    */
   async start(): Promise<void> {
+    installMcpStdioProtocolGuard();
     this.transport = new StdioServerTransport();
     await this.server.connect(this.transport);
     this.log('MCP Server started on stdio');
