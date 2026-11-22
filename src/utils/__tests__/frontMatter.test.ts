@@ -164,6 +164,36 @@ phases:
       });
       expect(body).toBe('# Structured Delivery');
     });
+
+    it('parses scaffold plans when generated is an unquoted YAML date', () => {
+      const content = `---
+type: plan
+name: Unquoted Generated
+description: Scaffold output shape
+generated: 2026-04-12
+status: filled
+scaffoldVersion: "2.0.0"
+planSlug: unquoted-generated
+phases:
+  - id: phase-2
+    name: Implementation
+    prevc: E
+    required_sensors:
+      - verify
+    steps:
+      - order: 1
+        description: Build
+---
+
+# Plan
+`;
+
+      const { frontMatter } = parseScaffoldFrontMatter(content);
+
+      expect(frontMatter).not.toBeNull();
+      expect(frontMatter?.generated).toBe('2026-04-12');
+      expect(frontMatter?.planPhases?.[0]?.requiredSensors).toEqual(['verify']);
+    });
   });
 
   describe('addFrontMatter', () => {

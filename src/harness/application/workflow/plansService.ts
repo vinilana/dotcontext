@@ -17,6 +17,7 @@ import { PrevcStatusManager } from '../../domain/workflow/status/statusManager';
 import { GitService } from '../../../utils/gitService';
 import { resolveRuntimeLayoutFromRepo, toPosixContextPath } from '../../../shared/fs/pathHelpers';
 import type { PrevcPhase } from '../../domain/workflow/types';
+import type { LinkedPlan } from '../../domain/workflow/plans/types';
 
 export interface HarnessPlansServiceOptions {
   repoPath: string;
@@ -37,59 +38,42 @@ export class HarnessPlansService {
   }
 
   async link(planSlug: string): Promise<Record<string, unknown>> {
-    const ref = await this.linker.linkPlan(planSlug);
+    const documentPlan = await this.linker.parsePlanDocument(planSlug);
 
-    if (!ref) {
+    if (!documentPlan) {
       return {
         success: false,
         error: `Plan not found: ${planSlug}`,
       };
     }
 
-    // Enforce that the linked plan declares execution evidence for any E
-    // (Execution) phase. Without it, the `execution_evidence` gate on E -> V
-    // would degrade to phase-default sensors only, and the plan author would
-    // have no visible contract surface for the actual required evidence.
-    // Hard-fail at link time so the caller must either declare requirements
-    // in `phases[].required_sensors` / `phases[].required_artifacts` or
-    // remove the E phase from the plan.
-    const linkedPlan = await this.linker.getLinkedPlan(planSlug);
-    const emptyExecutionPhases = (linkedPlan?.phases ?? [])
-      .filter((phase) => phase.prevcPhase === 'E')
-      .filter((phase) => {
-        const req = phase.requirements;
-        return !req || req.requiredSensors.length === 0;
-      });
+    this.assertExecutionPhasesDeclareSensors(documentPlan, planSlug);
 
-    if (emptyExecutionPhases.length > 0) {
-      const ids = emptyExecutionPhases.map((phase) => phase.id).join(', ');
-      throw new Error(
-        `Plan "${planSlug}" has Execution phase(s) [${ids}] without ` +
-          `"required_sensors". Declare them in the plan frontmatter so the ` +
-          `execution_evidence gate can verify the work actually happened. ` +
-          `Example:\n\n` +
-          `  phases:\n` +
-          `    - id: phase-2\n` +
-          `      prevc: E\n` +
-          `      required_sensors: [tests]\n` +
-          `      required_artifacts: [handoff-summary]\n`
-      );
-    }
+    const hadTracking = (await this.linker.getPlanExecutionStatus(planSlug)) !== null;
 
-    const service = new WorkflowService(this.repoPath);
-    const workflowLink = await service.linkPlanToActiveWorkflow(planSlug);
-    const workflowActive = workflowLink.workflowActive;
-    const taskContract = workflowLink.taskContract;
+    try {
+      const ref = await this.linker.linkPlan(planSlug);
+      if (!ref) {
+        return {
+          success: false,
+          error: `Plan not found: ${planSlug}`,
+        };
+      }
 
-    let canAdvanceToReview = false;
-    if (workflowActive) {
-      const gateResult = await service.checkGates();
-      canAdvanceToReview = gateResult.gates.plan_required.passed;
-    }
+      const service = new WorkflowService(this.repoPath);
+      const workflowLink = await service.linkPlanToActiveWorkflow(planSlug);
+      const workflowActive = workflowLink.workflowActive;
+      const taskContract = workflowLink.taskContract;
 
-    const workflowStatePath = toPosixContextPath(resolveRuntimeLayoutFromRepo(this.repoPath).prevcFile);
-    const enhancementPrompt = workflowActive
-      ? `PLAN LINKED TO ACTIVE WORKFLOW
+      let canAdvanceToReview = false;
+      if (workflowActive) {
+        const gateResult = await service.checkGates();
+        canAdvanceToReview = gateResult.gates.plan_required.passed;
+      }
+
+      const workflowStatePath = toPosixContextPath(resolveRuntimeLayoutFromRepo(this.repoPath).prevcFile);
+      const enhancementPrompt = workflowActive
+        ? `PLAN LINKED TO ACTIVE WORKFLOW
 
 The linked plan is now attached to the harness-backed PREVC workflow.
 
@@ -97,7 +81,7 @@ Next:
 1. Use workflow-guide() to confirm the active phase, next steps, and harness binding
 2. Continue planning work
 3. Use workflow-advance() when the planning phase is complete`
-      : `PLAN LINKED - WORKFLOW NOT STARTED
+        : `PLAN LINKED - WORKFLOW NOT STARTED
 
 The plan reference was created, but no PREVC workflow is active yet.
 Until workflow-init runs, the harness does not have canonical workflow state and plan gates are not armed.
@@ -107,28 +91,60 @@ Next:
 2. Call plan({ action: "link", planSlug: "${planSlug}" }) again after workflow-init
 3. Use workflow-guide() to verify the plan is bound to the harness workflow`;
 
-    const nextSteps = workflowActive
-      ? [
-          'RECOMMENDED: Call workflow-guide() to confirm the linked plan and harness binding',
-          'THEN: Continue planning and call workflow-advance() when ready to leave phase P',
-        ]
-      : [
-          `REQUIRED: Call workflow-init({ name: "${planSlug}" }) to start the harness-backed PREVC workflow`,
-          `REQUIRED: Call plan({ action: "link", planSlug: "${planSlug}" }) again after workflow-init so gates see the plan`,
-          'THEN: Call workflow-guide() to confirm the workflow and harness binding are active',
-        ];
+      const nextSteps = workflowActive
+        ? [
+            'RECOMMENDED: Call workflow-guide() to confirm the linked plan and harness binding',
+            'THEN: Continue planning and call workflow-advance() when ready to leave phase P',
+          ]
+        : [
+            `REQUIRED: Call workflow-init({ name: "${planSlug}" }) to start the harness-backed PREVC workflow`,
+            `REQUIRED: Call plan({ action: "link", planSlug: "${planSlug}" }) again after workflow-init so gates see the plan`,
+            'THEN: Call workflow-guide() to confirm the workflow and harness binding are active',
+          ];
 
-    return {
-      success: true,
-      plan: ref,
-      workflowActive,
-      workflowStatePath,
-      planCreatedForGates: workflowLink.planCreatedForGates,
-      canAdvanceToReview,
-      taskContract,
-      enhancementPrompt,
-      nextSteps,
-    };
+      return {
+        success: true,
+        plan: ref,
+        workflowActive,
+        workflowStatePath,
+        planCreatedForGates: workflowLink.planCreatedForGates,
+        canAdvanceToReview,
+        taskContract,
+        enhancementPrompt,
+        nextSteps,
+      };
+    } catch (error) {
+      if (!hadTracking) {
+        await this.linker.revokePlanLink(planSlug);
+      }
+      throw error;
+    }
+  }
+
+  private assertExecutionPhasesDeclareSensors(plan: LinkedPlan, planSlug: string): void {
+    const emptyExecutionPhases = plan.phases
+      .filter((phase) => phase.prevcPhase === 'E')
+      .filter((phase) => {
+        const req = phase.requirements;
+        return !req || req.requiredSensors.length === 0;
+      });
+
+    if (emptyExecutionPhases.length === 0) {
+      return;
+    }
+
+    const ids = emptyExecutionPhases.map((phase) => phase.id).join(', ');
+    throw new Error(
+      `Plan "${planSlug}" has Execution phase(s) [${ids}] without ` +
+        `"required_sensors". Declare them in the plan frontmatter so the ` +
+        `execution_evidence gate can verify the work actually happened. ` +
+        `Example:\n\n` +
+        `  phases:\n` +
+        `    - id: phase-2\n` +
+        `      prevc: E\n` +
+        `      required_sensors: [tests]\n` +
+        `      required_artifacts: [handoff-summary]\n`
+    );
   }
 
   async getLinked(): Promise<Record<string, unknown>> {
