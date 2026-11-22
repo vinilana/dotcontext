@@ -62,4 +62,29 @@ describe('SkillExportService', () => {
     expect(content).toContain('## Resource Strategy');
     expect(content).not.toContain('## When to Use');
   });
+
+  it('dry run previews skill exports without writing files', async () => {
+    const scaffoldPath = path.join(repoPath, '.context', 'skills', 'sample', 'SKILL.md');
+    await fs.outputFile(
+      scaffoldPath,
+      '---\nname: sample\ndescription: Sample skill\n---\n# Sample\n',
+      'utf-8'
+    );
+
+    const service = new SkillExportService({
+      ui: minimalUI as any,
+      t: mockTranslate,
+      version: 'test',
+    });
+
+    const result = await service.run(repoPath, {
+      targets: ['.claude/skills'],
+      skills: ['sample'],
+      dryRun: true,
+    });
+
+    expect(result.filesCreated).toBe(1);
+    expect(result.skillsExported).toEqual(['sample']);
+    expect(await fs.pathExists(path.join(repoPath, '.claude', 'skills', 'sample', 'SKILL.md'))).toBe(false);
+  });
 });
