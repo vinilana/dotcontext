@@ -92,49 +92,47 @@ The hook installer is the source of truth for supported hosts and config shapes.
 
 - Do not bump `package.json` version in feature PRs unless the change is explicitly part of release preparation.
 - Keep `CHANGELOG.md` aligned with the intended release line.
-- For local packaging validation, use:
+- Every shipped version needs a `CHANGELOG.md` section headed `## [<version>]` (for example `## [1.2.0] - YYYY-MM-DD`). The Release workflow uses that section for the GitHub Release body.
+
+### Preparing a release locally
+
+Bump the root `package.json` version, update `CHANGELOG.md`, then validate bundles:
 
 ```bash
 npm run release:packages:patch
 ```
 
-This prepares local release bundles under `.release/packages/` and `.release/releases/<version>`.
+This runs `build:packages`, `smoke:packages`, and copies bundles to `.release/releases/<version>`.
 
-### Publishing split packages
+### Automated release (preferred)
 
-`release:packages:*` does not publish anything to npm. Publishing the split packages is a separate step.
+Pushing a tag that matches the root version (for example `v1.2.0` when `package.json` is `1.2.0`) runs [`.github/workflows/release.yml`](./.github/workflows/release.yml). The workflow:
 
-1. Build and validate the package bundles:
+1. Builds and smoke-tests all five bundles.
+2. Asserts the tag matches `package.json` and every bundle version under `.release/packages/`.
+3. Publishes `@dotcontext/harness`, `@dotcontext/cli`, `@dotcontext/mcp`, `@dotcontext/integrations`, and `@dotcontext/pi` in dependency order using the `NPM_TOKEN` secret.
+4. Skips any package version that is already on npm so reruns stay safe.
+5. Opens a GitHub Release for the tag with notes from the matching `CHANGELOG.md` section.
+
+`workflow_dispatch` on the same workflow performs the build, smoke, and `npm publish --dry-run` checks only; it does not publish or create a GitHub Release.
+
+Repository setup (maintainers):
+
+- Store an npm **Automation** token with publish access to the `@dotcontext` scope in the `NPM_TOKEN` Actions secret, **or** configure [npm Trusted Publishers](https://docs.npmjs.com/trusted-publishers) for each package to trust `vinilana/dotcontext` and this workflow file.
+- Prefer Trusted Publishers together with `--provenance` (the workflow enables provenance on tag pushes). If provenance must be disabled temporarily, set job env `NPM_PROVENANCE: '0'`.
+- `npm publish --dry-run` does not prove registry auth; rely on the real publish step (or a manual token check) before tagging.
+
+### Manual publish (fallback)
+
+If Actions cannot publish, build locally and publish from each bundle directory in order: `harness`, `cli`, `mcp`, `integrations`, `pi`.
 
 ```bash
 npm run build:packages
 npm run smoke:packages
+node scripts/publish-package-bundles.js "$(node -p "require('./package.json').version")"
 ```
 
-2. Publish from the generated bundle directory for each package you intend to release:
-
-```bash
-cd .release/packages/cli
-npm publish --access public
-
-cd ../harness
-npm publish --access public
-
-cd ../mcp
-npm publish --access public
-
-cd ../integrations
-npm publish --access public
-
-cd ../pi
-npm publish --access public
-```
-
-3. If npm 2FA is enabled for publishes, pass the current OTP:
-
-```bash
-npm publish --access public --otp=<code>
-```
+For a one-off manual publish you still need a valid `NODE_AUTH_TOKEN` in the environment. If npm 2FA blocks automation tokens, use a one-time OTP on each `npm publish` as before.
 
 Useful verification commands:
 
@@ -151,7 +149,6 @@ Notes:
 - Publish from `.release/packages/<slug>`, not from the repo root.
 - `@dotcontext/mcp` is a separately published package. If it is missing from npm, `npx @dotcontext/mcp install` will fail with a registry `404`.
 - `@dotcontext/integrations` is for extension authors and host hook mappers; `@dotcontext/pi` is the Pi npm extension package.
-- Run `npm publish --dry-run --access public` first if you want to inspect the tarball before the real publish.
 
 ## Pull Requests
 
