@@ -323,7 +323,7 @@ export class PlanUpdateOrchestrator {
       try {
         const stagedFiles = gitService.stageFiles(['.context/**']);
         if (stagedFiles.length === 0) {
-          console.info('[AutoCommit] No files to commit - skipping');
+          console.error('[AutoCommit] No files to commit - skipping');
           return false;
         }
 
@@ -336,7 +336,7 @@ export class PlanUpdateOrchestrator {
           committedBy: coAuthor,
         });
 
-        console.info(`[AutoCommit] Created commit ${commitResult.shortHash} for phase ${phaseId}`);
+        console.error(`[AutoCommit] Created commit ${commitResult.shortHash} for phase ${phaseId}`);
         return true;
       } catch (error) {
         console.warn(`[AutoCommit] Failed to create commit for phase ${phaseId}:`, error);
