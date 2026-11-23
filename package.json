@@ -35,7 +35,7 @@
     "release:packages:major": "node scripts/release-packages.js major",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
-    "test": "jest",
+    "test": "node --expose-gc ./node_modules/jest/bin/jest.js",
     "prepublishOnly": "npm run build",
     "version": "npm run build",
     "release": "npm version patch && npm publish --access public",
