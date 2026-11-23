@@ -29,6 +29,7 @@
     "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
     "build:packages": "npm run build && node scripts/build-package-bundles.js",
     "smoke:packages": "node scripts/smoke-package-bundles.js",
+    "test:release-scripts": "node --test scripts/extract-changelog-section.test.js",
     "release:packages": "node scripts/release-packages.js",
     "release:packages:patch": "node scripts/release-packages.js patch",
     "release:packages:minor": "node scripts/release-packages.js minor",
