@@ -376,7 +376,7 @@ export function serializeFrontmatter(fm: ScaffoldFrontmatter): string {
   }
 
   // Common trailing fields
-  lines.push(`generated: ${fm.generated}`);
+  lines.push(`generated: ${JSON.stringify(fm.generated)}`);
   lines.push(`status: ${fm.status}`);
   lines.push(`scaffoldVersion: "${fm.scaffoldVersion}"`);
 

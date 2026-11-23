@@ -17,6 +17,41 @@ describe('PlanLinker plan parsing', () => {
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
+  it('hydrates Execution phase requirements from canonical frontmatter with unquoted generated', async () => {
+    const planSlug = 'requirements-plan';
+    const planPath = path.join(tempDir, '.context', 'plans', `${planSlug}.md`);
+
+    await fs.writeFile(
+      planPath,
+      `---
+type: plan
+name: Requirements Plan
+description: Required sensors regression
+generated: 2026-04-12
+status: filled
+scaffoldVersion: "2.0.0"
+planSlug: "${planSlug}"
+phases:
+  - id: "phase-2"
+    name: "Implementation"
+    prevc: "E"
+    required_sensors: [verify]
+    steps:
+      - order: 1
+        description: "Build feature"
+---
+
+# Requirements Plan
+`
+    );
+
+    const linker = await createPlanLinker(tempDir, undefined, false);
+    await linker.linkPlan(planSlug);
+    const linked = await linker.getLinkedPlan(planSlug);
+
+    expect(linked?.phases[0].requirements?.requiredSensors).toEqual(['verify']);
+  });
+
   it('prefers canonical frontmatter phases and steps over body content', async () => {
     const planSlug = 'structured-delivery';
     const planPath = path.join(tempDir, '.context', 'plans', `${planSlug}.md`);

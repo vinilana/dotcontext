@@ -102,6 +102,35 @@ export class PlanLinker {
   // Initial linking + queries
   // ---------------------------------------------------------------------------
 
+  async parsePlanDocument(planSlug: string): Promise<LinkedPlan | null> {
+    const planPath = path.join(this.plansPath, `${planSlug}.md`);
+    if (!await fs.pathExists(planPath)) {
+      return null;
+    }
+
+    const content = await fs.readFile(planPath, 'utf-8');
+    const planInfo = this.parser.parsePlanFile(content, planSlug);
+    const ref: PlanReference = {
+      slug: planSlug,
+      path: `plans/${planSlug}.md`,
+      title: planInfo.title,
+      summary: planInfo.summary,
+      linkedAt: new Date().toISOString(),
+      status: 'active',
+    };
+
+    return this.parser.parsePlanToLinked(content, ref);
+  }
+
+  async revokePlanLink(planSlug: string): Promise<void> {
+    const trackingFile = this.trackingStore.getTrackingFile(planSlug);
+    if (await fs.pathExists(trackingFile)) {
+      await fs.remove(trackingFile);
+    }
+    this.indexProjector.invalidateCache();
+    await this.refreshWorkflowPlanIndex();
+  }
+
   async linkPlan(planSlug: string): Promise<PlanReference | null> {
     const planPath = path.join(this.plansPath, `${planSlug}.md`);
     if (!await fs.pathExists(planPath)) {

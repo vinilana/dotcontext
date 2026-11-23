@@ -84,6 +84,22 @@ function loadYamlFrontMatter(content: string): Record<string, unknown> | null {
   }
 }
 
+/**
+ * js-yaml parses unquoted ISO dates (e.g. `generated: 2026-04-12`) as Date objects.
+ * Scaffold output uses unquoted dates — coerce back to the YYYY-MM-DD string shape.
+ */
+function coerceScaffoldDateString(value: unknown): string {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().split('T')[0];
+  }
+
+  return '';
+}
+
 function normalizeStringArray(value: unknown): string[] | undefined {
   if (typeof value === 'string') {
     return [value];
@@ -247,7 +263,7 @@ function normalizeParsedScaffoldFrontMatter(frontMatter: Record<string, unknown>
     type,
     name: typeof frontMatter.name === 'string' ? frontMatter.name : '',
     description: typeof frontMatter.description === 'string' ? frontMatter.description : '',
-    generated: typeof frontMatter.generated === 'string' ? frontMatter.generated : '',
+    generated: coerceScaffoldDateString(frontMatter.generated),
     status: frontMatter.status === 'filled' ? 'filled' : 'unfilled',
     scaffoldVersion: '2.0.0',
   };
