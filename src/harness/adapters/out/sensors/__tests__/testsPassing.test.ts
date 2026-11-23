@@ -8,6 +8,24 @@ import {
   runShell,
 } from '../testsPassing';
 
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((left, right) => left - right);
+  return sorted[Math.floor(sorted.length / 2)]!;
+}
+
+async function measureRetainedHeapGrowth(operation: () => Promise<void>, iterations = 3): Promise<number> {
+  const samples: number[] = [];
+  for (let index = 0; index < iterations; index += 1) {
+    global.gc?.();
+    const before = process.memoryUsage().heapUsed;
+    await operation();
+    global.gc?.();
+    samples.push(process.memoryUsage().heapUsed - before);
+  }
+  return median(samples);
+}
+
 describe('tests-passing sensor', () => {
   let tempDir: string;
 
@@ -269,9 +287,7 @@ describe('tests-passing sensor', () => {
     await handle.write('","testResults":[]}');
     await handle.close();
 
-    const before = process.memoryUsage().heapUsed;
     const projected = await readJestResultFile(nearLimit);
-    const heapGrowth = process.memoryUsage().heapUsed - before;
 
     expect(projected).toEqual({
       status: 'ok',
@@ -282,8 +298,14 @@ describe('tests-passing sensor', () => {
         failures: [],
       },
     });
+
+    const heapGrowth = await measureRetainedHeapGrowth(
+      async () => { await readJestResultFile(nearLimit); },
+      3,
+    );
     // The file is ~31 MiB; projection should stay far below a full string plus
-    // parsed object. Leave headroom for Jest/GC noise while catching regressions.
+    // parsed object. Measure post-GC retained heap (median of several passes) so
+    // Node/GC timing noise does not look like a multi-megabyte leak.
     expect(heapGrowth).toBeLessThan(16 * 1024 * 1024);
   }, 30_000);
 });
