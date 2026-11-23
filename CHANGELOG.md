@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Stabilized the `tests-passing` Jest result projector heap regression test by running Jest with `--expose-gc` and asserting median post-GC retained heap growth instead of a single pre-GC delta.
 - Routed PREVC phase auto-commit diagnostics to stderr and installed an MCP stdio console guard so non-protocol output cannot corrupt JSON-RPC on stdout (fixes MCP client disconnect on phase completion).
+- Honoured `dryRun` on MCP `exportSkills` sync actions so previews no longer write skill export files to the repository.
 - Removed MCP response-body reparsing from action logging and replaced oversized response truncation risk with typed smaller-page or artifact-reference responses.
 - Applied the same bounded UTF-8 budget to every MCP resource, rejected oversized files before reading their bodies, enforced action-specific list maxima, and paginated `explore` file listings.
 - Bounded `explore` reads before file materialization and replaced whole-glob/whole-file code search with byte-capped streaming discovery, search, and cursor pages.

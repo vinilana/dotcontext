@@ -184,8 +184,21 @@ export class SkillExportService {
       this.deps.ui.startSpinner(`Exporting skills to ${target.name}...`);
 
       if (options.dryRun) {
+        for (const skill of skills) {
+          const skillFile = path.join(targetPath, skill.slug, 'SKILL.md');
+
+          if (await pathExists(skillFile) && !options.force) {
+            result.filesSkipped++;
+            continue;
+          }
+
+          result.filesCreated++;
+          if (!result.skillsExported.includes(skill.slug)) {
+            result.skillsExported.push(skill.slug);
+          }
+        }
+
         this.deps.ui.updateSpinner(`[DRY-RUN] Would export to ${targetPath}`, 'success');
-        result.filesSkipped++;
         this.deps.ui.stopSpinner();
         return;
       }

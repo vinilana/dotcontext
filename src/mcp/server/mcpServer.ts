@@ -488,7 +488,7 @@ Actions:
 - exportDocs: Export docs to AI tools (params: preset?, indexMode?, force?, dryRun?)
 - exportAgents: Export agents to AI tools (params: preset?, mode?, force?, dryRun?)
 - exportContext: Export all context (params: preset?, skipDocs?, skipAgents?, skipSkills?, docsIndexMode?, agentMode?, force?, dryRun?)
-- exportSkills: Export skills to AI tools (params: preset?, includeBuiltIn?, force?)
+- exportSkills: Export skills to AI tools (params: preset?, includeBuiltIn?, force?, dryRun?)
 - reverseSync: Import from AI tools to .context/ (params: skipRules?, skipAgents?, skipSkills?, mergeStrategy?, dryRun?, force?, addMetadata?)
 - importDocs: Import docs from AI tools (params: autoDetect?, force?, dryRun?)
 - importAgents: Import agents from AI tools (params: autoDetect?, force?, dryRun?)

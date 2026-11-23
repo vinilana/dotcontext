@@ -153,14 +153,16 @@ export class HarnessSyncActionService {
           preset: params.preset,
           includeBuiltIn: params.includeBuiltIn,
           force: params.force,
+          dryRun: params.dryRun,
         });
 
         return {
-          success: result.filesCreated > 0,
+          success: params.dryRun ? result.filesCreated > 0 || result.filesSkipped > 0 : result.filesCreated > 0,
           targets: result.targets,
           skillsExported: result.skillsExported,
           filesCreated: result.filesCreated,
           filesSkipped: result.filesSkipped,
+          dryRun: params.dryRun || false,
         };
       }
       case 'reverseSync': {
