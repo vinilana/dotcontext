@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-23
+
+Hardening release: bounded resources across MCP, hooks, traces and runtime history, plus several bug fixes.
+
 ### Changed
 
 - Removed unreachable migration barrels, obsolete prompt/example artifacts, and unused internal helpers; builds now reject unused locals and parameters.
@@ -42,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added aggregate UTF-8 page budgets to runtime history so large valid records cannot multiply count limits into unbounded materialization.
 - Made replay use one count/byte budget and one continuation cursor across every source, without persisting duplicate source arrays; datasets now enforce per-failure, aggregate, and on-disk byte limits.
 - Made retention inspect bounded metadata prefixes and include young terminal sessions when enforcing the repository runtime quota.
+- Normalized Windows repository paths to POSIX in harness outputs and workflow bindings (#72).
+- Extended the release workflow to build, verify, and publish all five `@dotcontext/*` packages from bundle artifacts (#94).
 
 ## [1.1.1] - 2026-06-27
 
